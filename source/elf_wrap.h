@@ -12,6 +12,7 @@
 #define ELF_ST_VISIBILITY  ELF64_ST_VISIBILITY
 #define EM_MACHINE         EM_X86_64
 
+#define ELF_ST_BIND        ELF64_ST_BIND
 #define ELF_ST_INFO        ELF64_ST_INFO
 
 typedef Elf64_Addr    Elf_Addr;

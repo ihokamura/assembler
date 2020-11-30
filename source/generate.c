@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "elf_wrap.h"
@@ -13,9 +14,14 @@ typedef struct
     char body[SECTION_BODY_MAX_SIZE];
 } SectionContent;
 
+static const Elf_Xword DEFAULT_SECTION_ALIGNMENT = 1;
+static const Elf_Xword SYMTAB_SECTION_ALIGNMENT = 8;
+
 static Elf_Off e_shoff = sizeof(Elf_Ehdr);  // offset of section header table
 static Elf_Half e_shnum = 0;                // number of section header table entries
 static Elf_Half e_shstrndx = 0;             // index of section ".shstrtab"
+
+static size_t local_symols = 0; // number of local symbols
 
 static char strtab_body[STRING_MAX_SIZE];   // body of string containing names of symbols
 static char shstrtab_body[STRING_MAX_SIZE]; // body of string containing names of sections
@@ -33,30 +39,30 @@ static void set_elf_header
     Elf_Ehdr *ehdr
 )
 {
-    ehdr->e_ident[EI_MAG0]       = ELFMAG0;
-    ehdr->e_ident[EI_MAG1]       = ELFMAG1;
-    ehdr->e_ident[EI_MAG2]       = ELFMAG2;
-    ehdr->e_ident[EI_MAG3]       = ELFMAG3;
-    ehdr->e_ident[EI_CLASS]      = ELF_CLASS;
-    ehdr->e_ident[EI_DATA]       = ELF_DATA;
-    ehdr->e_ident[EI_VERSION]    = EV_CURRENT;
-    ehdr->e_ident[EI_OSABI]      = ELFOSABI_NONE;
+    ehdr->e_ident[EI_MAG0] = ELFMAG0;
+    ehdr->e_ident[EI_MAG1] = ELFMAG1;
+    ehdr->e_ident[EI_MAG2] = ELFMAG2;
+    ehdr->e_ident[EI_MAG3] = ELFMAG3;
+    ehdr->e_ident[EI_CLASS] = ELF_CLASS;
+    ehdr->e_ident[EI_DATA] = ELF_DATA;
+    ehdr->e_ident[EI_VERSION] = EV_CURRENT;
+    ehdr->e_ident[EI_OSABI] = ELFOSABI_NONE;
     ehdr->e_ident[EI_ABIVERSION] = 0;
 
-    ehdr->e_type    = ET_REL;
+    ehdr->e_type = ET_REL;
     ehdr->e_machine = EM_MACHINE;
     ehdr->e_version = EV_CURRENT;
 
-    ehdr->e_entry     = 0;
-    ehdr->e_phoff     = 0;
-    ehdr->e_shoff     = e_shoff;
-    ehdr->e_flags     = 0;
-    ehdr->e_ehsize    = sizeof(Elf_Ehdr);
+    ehdr->e_entry = 0;
+    ehdr->e_phoff = 0;
+    ehdr->e_shoff = e_shoff;
+    ehdr->e_flags = 0;
+    ehdr->e_ehsize = sizeof(Elf_Ehdr);
     ehdr->e_phentsize = 0;
-    ehdr->e_phnum     = 0;
+    ehdr->e_phnum = 0;
     ehdr->e_shentsize = sizeof(Elf_Shdr);
-    ehdr->e_shnum     = e_shnum;
-    ehdr->e_shstrndx  = e_shstrndx;
+    ehdr->e_shnum = e_shnum;
+    ehdr->e_shstrndx = e_shstrndx;
 }
 
 
@@ -116,12 +122,19 @@ static void set_symbol_table
     Elf_Sym *sym
 )
 {
-    sym->st_name  = st_name;
-    sym->st_info  = st_info;
-    sym->st_other  = st_other;
-    sym->st_shndx  = st_shndx;
-    sym->st_value  = st_value;
-    sym->st_size  = st_size;
+    // set members
+    sym->st_name = st_name;
+    sym->st_info = st_info;
+    sym->st_other = st_other;
+    sym->st_shndx = st_shndx;
+    sym->st_value = st_value;
+    sym->st_size = st_size;
+
+    // count number of local symbols
+    if(ELF_ST_BIND(st_info) == STB_LOCAL)
+    {
+        local_symols++;
+    }
 }
 
 
@@ -130,7 +143,7 @@ generate an object file
 */
 void generate(const char *file_name)
 {
-   // NULL section
+   // undefined section
     SectionContent shdr_null;
     set_section_header_table(
         "",
@@ -139,7 +152,7 @@ void generate(const char *file_name)
         0,
         0,
         0,
-        0,
+        SHN_UNDEF,
         0,
         0,
         0,
@@ -148,27 +161,21 @@ void generate(const char *file_name)
     // .text section
     SectionContent shdr_text;
     {
-    size_t sh_size = 8;
-    set_section_header_table(
-        ".text",
-        SHT_PROGBITS,
-        SHF_ALLOC | SHF_EXECINSTR,
-        0,
-        e_shoff,
-        sh_size,
-        0,
-        0,
-        1,
-        0,
-        &shdr_text.shdr);
-    shdr_text.body[0] = 0x48;
-    shdr_text.body[1] = 0xc7;
-    shdr_text.body[2] = 0xc0;
-    shdr_text.body[3] = 0x2a;
-    shdr_text.body[4] = 0x00;
-    shdr_text.body[5] = 0x00;
-    shdr_text.body[6] = 0x00;
-    shdr_text.body[7] = 0xc3;
+        const char *text_body = "\x48\xc7\xc0\x2a\x00\x00\x00\xc3";
+        Elf_Xword sh_size = 8;
+        set_section_header_table(
+            ".text",
+            SHT_PROGBITS,
+            SHF_ALLOC | SHF_EXECINSTR,
+            0,
+            e_shoff,
+            sh_size,
+            0,
+            0,
+            DEFAULT_SECTION_ALIGNMENT,
+            0,
+            &shdr_text.shdr);
+        memcpy(shdr_text.body, text_body, sh_size);
     }
 
     // .data section
@@ -182,7 +189,7 @@ void generate(const char *file_name)
         0,
         0,
         0,
-        1,
+        DEFAULT_SECTION_ALIGNMENT,
         0,
         &shdr_data.shdr);
 
@@ -197,114 +204,122 @@ void generate(const char *file_name)
         0,
         0,
         0,
-        1,
+        DEFAULT_SECTION_ALIGNMENT,
         0,
         &shdr_bss.shdr);
 
     // .symtab section
     SectionContent shdr_symtab;
     {
-    size_t sh_size = 5 * sizeof(Elf_Sym);
-    set_section_header_table(
-        ".symtab",
-        SHT_SYMTAB,
-        0,
-        0,
-        e_shoff,
-        sh_size,
-        5,
-        4,
-        8,
-        sizeof(Elf_Sym),
-        &shdr_symtab.shdr);
-    Elf_Sym sym[5];
-    set_symbol_table(
-        0,
-        ELF_ST_INFO(STB_LOCAL, STT_NOTYPE),
-        0,
-        SHN_UNDEF,
-        0,
-        0,
-        &sym[0]
-    );
-    set_symbol_table(
-        0,
-        ELF_ST_INFO(STB_LOCAL, STT_SECTION),
-        0,
-        1,
-        0,
-        0,
-        &sym[1]
-    );
-    set_symbol_table(
-        0,
-        ELF_ST_INFO(STB_LOCAL, STT_SECTION),
-        0,
-        2,
-        0,
-        0,
-        &sym[2]
-    );
-    set_symbol_table(
-        0,
-        ELF_ST_INFO(STB_LOCAL, STT_SECTION),
-        0,
-        3,
-        0,
-        0,
-        &sym[3]
-    );
-    set_symbol_table(
-        1,
-        ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
-        0,
-        1,
-        0,
-        0,
-        &sym[4]
-    );
-    memcpy(shdr_symtab.body, &sym, sh_size);
+        // define symbol table entries
+        Elf_Sym *sym = calloc(e_shnum + 1, sizeof(Elf_Sym));
+        // undefined symbol
+        set_symbol_table(
+            0,
+            ELF_ST_INFO(STB_LOCAL, STT_NOTYPE),
+            0,
+            SHN_UNDEF,
+            0,
+            0,
+            &sym[0]
+        );
+        // .text section
+        set_symbol_table(
+            0,
+            ELF_ST_INFO(STB_LOCAL, STT_SECTION),
+            0,
+            1,
+            0,
+            0,
+            &sym[1]
+        );
+        // .data section
+        set_symbol_table(
+            0,
+            ELF_ST_INFO(STB_LOCAL, STT_SECTION),
+            0,
+            2,
+            0,
+            0,
+            &sym[2]
+        );
+        // .bss section
+        set_symbol_table(
+            0,
+            ELF_ST_INFO(STB_LOCAL, STT_SECTION),
+            0,
+            3,
+            0,
+            0,
+            &sym[3]
+        );
+        // 'main'
+        set_symbol_table(
+            1,
+            ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
+            0,
+            1,
+            0,
+            0,
+            &sym[4]
+        );
+
+        Elf_Xword sh_size = (e_shnum + 1) * sizeof(Elf_Sym); // add 1 for the symbol 'main'
+        set_section_header_table(
+            ".symtab",
+            SHT_SYMTAB,
+            0,
+            0,
+            e_shoff,
+            sh_size,
+            e_shnum + 1, // sh_link holds section header index of the associated string table (i.e. .strtab section)
+            local_symols, // sh_info holds one greater than the symbol table index of the laxt local symbol
+            SYMTAB_SECTION_ALIGNMENT,
+            sizeof(Elf_Sym),
+            &shdr_symtab.shdr);
+        memcpy(shdr_symtab.body, sym, sh_size);
     }
 
     // .strtab section
     SectionContent shdr_strtab;
     {
-    size_t sh_size = 6;
-    memcpy(strtab_body, "\0main\0", sh_size);
-    set_section_header_table(
-        ".strtab",
-        SHT_STRTAB,
-        0,
-        0,
-        e_shoff,
-        sh_size,
-        0,
-        0,
-        1,
-        0,
-        &shdr_strtab.shdr);
-    memcpy(shdr_strtab.body, strtab_body, sh_size);
+        Elf_Xword sh_size = 1 + strlen("main") + 1; // add 1 for the trailing '\0'
+        memcpy(strtab_body, "\0main\0", sh_size);
+        set_section_header_table(
+            ".strtab",
+            SHT_STRTAB,
+            0,
+            0,
+            e_shoff,
+            sh_size,
+            0,
+            0,
+            DEFAULT_SECTION_ALIGNMENT,
+            0,
+            &shdr_strtab.shdr);
+        memcpy(shdr_strtab.body, strtab_body, sh_size);
     }
 
     // .shstrtab section
     SectionContent shdr_shstrtab;
     {
-    size_t sh_size = sh_name + strlen(".shstrtab") + 1; // add 1 for the trailing '\0'
-    set_section_header_table(
-        ".shstrtab",
-        SHT_STRTAB,
-        0,
-        0,
-        e_shoff,
-        sh_size,
-        0,
-        0,
-        1,
-        0,
-        &shdr_shstrtab.shdr);
-    memcpy(shdr_shstrtab.body, shstrtab_body, sh_size);
+        Elf_Xword sh_size = sh_name + strlen(".shstrtab") + 1; // add 1 for the trailing '\0'
+        set_section_header_table(
+            ".shstrtab",
+            SHT_STRTAB,
+            0,
+            0,
+            e_shoff,
+            sh_size,
+            0,
+            0,
+            DEFAULT_SECTION_ALIGNMENT,
+            0,
+            &shdr_shstrtab.shdr);
+        memcpy(shdr_shstrtab.body, shstrtab_body, sh_size);
     }
 
+    // set ELF header
     Elf_Ehdr ehdr;
     e_shstrndx--;
     set_elf_header(
@@ -313,6 +328,8 @@ void generate(const char *file_name)
         e_shstrndx,
         &ehdr
     );
+
+    // define sections
     SectionContent *section_list[] =
     {
         &shdr_null,
@@ -323,7 +340,6 @@ void generate(const char *file_name)
         &shdr_strtab,
         &shdr_shstrtab
     };
-
 
     // output an object file
     FILE *fp = fopen(file_name, "wb");
