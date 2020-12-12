@@ -7,29 +7,13 @@
 #include "generate.h"
 #include "parser.h"
 
+#define INIT_SECTION_CONTENT    {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, NULL}
 
 typedef struct
 {
     Elf_Shdr shdr;
     ByteBufferType *body;
 } SectionContent;
-
-#define INIT_SECTION_CONTENT    {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, NULL}
-
-static const Elf_Xword DEFAULT_SECTION_ALIGNMENT = 1;
-static const Elf_Xword SYMTAB_SECTION_ALIGNMENT = 8;
-
-static Elf_Off e_shoff = sizeof(Elf_Ehdr);  // offset of section header table
-static Elf_Half e_shnum = 0;                // number of section header table entries
-static Elf_Half e_shstrndx = 0;             // index of section ".shstrtab"
-
-static size_t local_symols = 0; // number of local symbols
-
-static ByteBufferType text_body = {NULL, 0, 0};     // buffer for section ".text"
-static ByteBufferType symtab_body = {NULL, 0, 0};   // buffer for section ".symtab"
-static ByteBufferType strtab_body = {NULL, 0, 0};   // buffer for string containing names of symbols
-static ByteBufferType shstrtab_body = {NULL, 0, 0}; // buffer for string containing names of sections
-static Elf_Word sh_name = 0;                        // index of string where a section name starts
 
 static void set_elf_header
 (
@@ -64,8 +48,32 @@ static void set_symbol_table
 );
 static void generate_operations(const List(Operation) *operations);
 static void generate_operation(const Operation *operation);
+static void generate_op_mov(const List(Operand) *operands);
+static void generate_op_ret(const List(Operand) *operands);
 static void generate_symbols(const List(Symbol) *symbols);
 
+// list of functions to generate operation
+static const void (*generate_op_functions[])(const List(Operand) *) =
+{
+    NULL,
+    generate_op_mov,
+    generate_op_ret,
+};
+
+static const Elf_Xword DEFAULT_SECTION_ALIGNMENT = 1;
+static const Elf_Xword SYMTAB_SECTION_ALIGNMENT = 8;
+
+static Elf_Off e_shoff = sizeof(Elf_Ehdr);  // offset of section header table
+static Elf_Half e_shnum = 0;                // number of section header table entries
+static Elf_Half e_shstrndx = 0;             // index of section ".shstrtab"
+
+static size_t local_symols = 0; // number of local symbols
+
+static ByteBufferType text_body = {NULL, 0, 0};     // buffer for section ".text"
+static ByteBufferType symtab_body = {NULL, 0, 0};   // buffer for section ".symtab"
+static ByteBufferType strtab_body = {NULL, 0, 0};   // buffer for string containing names of symbols
+static ByteBufferType shstrtab_body = {NULL, 0, 0}; // buffer for string containing names of sections
+static Elf_Word sh_name = 0;                        // index of string where a section name starts
 
 /*
 set members of an ELF header
@@ -195,27 +203,29 @@ generate an operation
 */
 static void generate_operation(const Operation *operation)
 {
-    switch(operation->kind)
-    {
-    case OP_MOV:
-    {
-        const char *opecode = "\x48\xc7\xc0";
-        append_bytes(opecode, 3, &text_body);
-        uint32_t immediate = 42;
-        append_bytes((char *)&immediate, sizeof(immediate), &text_body);
-        break;
-    }
+    generate_op_functions[operation->kind](operation->operands);
+}
 
-    case OP_RET:
-    {
-        uint8_t mnemonic = 0xc3;
-        append_bytes((char *)&mnemonic, sizeof(mnemonic), &text_body);
-        break;
-    }
 
-    default:
-        break;
-    }
+/*
+generate mov operation
+*/
+static void generate_op_mov(const List(Operand) *operands)
+{
+    const char *opecode = "\x48\xc7\xc0";
+    append_bytes(opecode, 3, &text_body);
+    uint32_t immediate = 42;
+    append_bytes((char *)&immediate, sizeof(immediate), &text_body);
+}
+
+
+/*
+generate ret operation
+*/
+static void generate_op_ret(const List(Operand) *operands)
+{
+    uint8_t mnemonic = 0xc3;
+    append_bytes((char *)&mnemonic, sizeof(mnemonic), &text_body);
 }
 
 
