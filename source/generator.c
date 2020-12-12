@@ -4,7 +4,7 @@
 
 #include "buffer.h"
 #include "elf_wrap.h"
-#include "generate.h"
+#include "generator.h"
 #include "parser.h"
 
 #define INIT_SECTION_CONTENT    {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, NULL}

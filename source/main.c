@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "generate.h"
+#include "generator.h"
 #include "parser.h"
 #include "tokenizer.h"
 

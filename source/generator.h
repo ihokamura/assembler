@@ -1,8 +1,8 @@
-#ifndef __GENERATE_H__
-#define __GENERATE_H__
+#ifndef __GENERATOR_H__
+#define __GENERATOR_H__
 
 #include "parser.h"
 
 void generate(const char *output_file, const Program *program);
 
-#endif /* !__GENERATE_H__ */
+#endif /* !__GENERATOR_H__ */
