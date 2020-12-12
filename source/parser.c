@@ -11,33 +11,52 @@ define_list_operations(Operation)
 define_list_operations(Operand)
 define_list_operations(Symbol)
 
+typedef struct RegisterMap RegisterMap;
+struct RegisterMap
+{
+    const char *name;
+    OperandKind op_kind;
+    RegisterKind reg_kind;
+};
+
 // function prototype
 static void program(void);
 static void statement(void);
 static Directive *directive(void);
 static Symbol *symbol(const Token *token);
 static Operation *operation(const Token *token);
-static OperationKind mnemonic(const Token *token);
+static MnemonicKind mnemonic(const Token *token);
 static List(Operand) *operands(void);
 static Operand *operand(void);
 static Directive *new_directive(const Symbol *symbol);
 static Symbol *new_symbol(SymbolKind kind, const char *body);
-static Operation *new_operation(OperationKind kind, const List(Operand) *operands);
+static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
 static Operand *new_operand(OperandKind kind);
 static Operand *new_operand_immediate(long immediate);
-static Operand *new_operand_register(const char *reg);
+static Operand *new_operand_register(const char *name);
 
 // global variable
 static List(Operation) *operation_list = NULL; // list of operations
 static List(Symbol) *symbol_list = NULL; // list of symbols
 // mapping from mnemonic string to operation kind
-static struct {const char *mnemonic; OperationKind kind;} mnemonic_map[] = 
+static const struct {const char *mnemonic; MnemonicKind kind;} mnemonic_map[] = 
 {
-    {"mov", OP_MOV},
-    {"ret", OP_RET},
+    {"mov", MN_MOV},
+    {"ret", MN_RET},
 };
 static size_t MNIMONIC_MAP_SIZE = sizeof(mnemonic_map) / sizeof(mnemonic_map[0]);
-
+static const RegisterMap register_maps[] = 
+{
+    {"rax", OP_R64, REG_RAX},
+    {"rcx", OP_R64, REG_RCX},
+    {"rdx", OP_R64, REG_RDX},
+    {"rbx", OP_R64, REG_RBX},
+    {"rsp", OP_R64, REG_RSP},
+    {"rbp", OP_R64, REG_RBP},
+    {"rsi", OP_R64, REG_RSI},
+    {"rdi", OP_R64, REG_RDI},
+};
+static const size_t REGISTER_MAP_SIZE = sizeof(register_maps) / sizeof(register_maps[0]);
 
 /*
 construct program
@@ -150,14 +169,14 @@ operation ::= mnemonic operands?
 */
 static Operation *operation(const Token *token)
 {
-    OperationKind kind = mnemonic(token);
+    MnemonicKind kind = mnemonic(token);
 
     switch(kind)
     {
-    case OP_MOV:
+    case MN_MOV:
         return new_operation(kind, operands());
 
-    case OP_RET:
+    case MN_RET:
     default:
         return new_operation(kind, NULL);
     }
@@ -171,7 +190,7 @@ mnemonic ::= "mov"
            | "ret"
 ```
 */
-static OperationKind mnemonic(const Token *token)
+static MnemonicKind mnemonic(const Token *token)
 {
     for(size_t i = 0; i < MNIMONIC_MAP_SIZE; i++)
     {
@@ -183,7 +202,7 @@ static OperationKind mnemonic(const Token *token)
 
     report_error(NULL, "invalid mnemonic '%s.", make_symbol(token));
 
-    return OP_NOP;
+    return MN_NOP;
 }
 
 
@@ -219,13 +238,14 @@ static Operand *operand(void)
     {
         return new_operand_immediate(token->value);
     }
+    else if(consume_token(TK_REGISTER, &token))
+    {
+        return new_operand_register(make_symbol(token));
+    }
     else
     {
-        consume_token(TK_REGISTER, &token);
-        char *reg = calloc(token->len + 1, sizeof(char));
-        strncpy(reg, token->str, token->len);
-
-        return new_operand_register(reg);
+        report_error(NULL, "expected immediate or register.");
+        return NULL;
     }
 }
 
@@ -261,7 +281,7 @@ static Symbol *new_symbol(SymbolKind kind, const char *body)
 /*
 make a new operation
 */
-static Operation *new_operation(OperationKind kind, const List(Operand) *operands)
+static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands)
 {
     Operation *operation = calloc(1, sizeof(Operation));
     operation->kind = kind;
@@ -291,7 +311,7 @@ make a new operand for immediate
 */
 static Operand *new_operand_immediate(long immediate)
 {
-    Operand *operand = new_operand(OP_IMMEDIATE);
+    Operand *operand = new_operand(OP_IMM32);
     operand->immediate = immediate;
 
     return operand;
@@ -301,10 +321,19 @@ static Operand *new_operand_immediate(long immediate)
 /*
 make a new operand for register
 */
-static Operand *new_operand_register(const char *reg)
+static Operand *new_operand_register(const char *name)
 {
-    Operand *operand = new_operand(OP_REGISTER);
-    operand->reg = reg;
+    for(size_t i = 0; i < REGISTER_MAP_SIZE; i++)
+    {
+        RegisterMap map = register_maps[i];
+        if(strcmp(name, map.name) == 0)
+        {
+            Operand *operand = new_operand(map.op_kind);
+            operand->reg = map.reg_kind;
+            return operand;
+        }
+    }
 
-    return operand;
+    report_error(NULL, "invalid register name '%s'.", name);
+    return NULL;
 }

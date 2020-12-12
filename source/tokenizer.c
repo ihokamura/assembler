@@ -54,6 +54,13 @@ static const size_t MNEMONIC_LIST_SIZE = sizeof(mnemonic_list) / sizeof(mnemonic
 // list of registers
 static const char *register_list[] = {
     "rax",
+    "rcx",
+    "rdx",
+    "rbx",
+    "rsp",
+    "rbp",
+    "rsi",
+    "rdi",
 };
 static const size_t REGISTER_LIST_SIZE = sizeof(register_list) / sizeof(register_list[0]); // number of registers
 static char *user_input; // input of assembler

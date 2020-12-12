@@ -3,7 +3,8 @@
 
 #include "list.h"
 typedef enum OperandKind OperandKind;
-typedef enum OperationKind OperationKind;
+typedef enum MnemonicKind MnemonicKind;
+typedef enum RegisterKind RegisterKind;
 typedef enum SymbolKind SymbolKind;
 typedef struct Directive Directive;
 typedef struct Operand Operand;
@@ -14,19 +15,32 @@ define_list(Operand)
 define_list(Operation)
 define_list(Symbol)
 
+// kind of mnemonic
+enum MnemonicKind
+{
+    MN_NOP, // nop
+    MN_MOV, // mov
+    MN_RET, // ret
+};
+
 // kind of operand
 enum OperandKind
 {
-    OP_IMMEDIATE, // immediate
-    OP_REGISTER,  // register
+    OP_IMM32, // 32-bit immediate
+    OP_R64,   // 64-bit register
 };
 
-// kind of mnemonic
-enum OperationKind
+// kind of register
+enum RegisterKind
 {
-    OP_NOP, // nop
-    OP_MOV, // mov
-    OP_RET, // ret
+    REG_RAX, // rax
+    REG_RCX, // rcx
+    REG_RDX, // rdx
+    REG_RBX, // rbx
+    REG_RSP, // rsp
+    REG_RBP, // rbp
+    REG_RSI, // rsi
+    REG_RDI, // rdi
 };
 
 // kind of symbol
@@ -48,15 +62,15 @@ struct Operand
     OperandKind kind;    // kind of operand
     union
     {
-        long immediate;  // immediate value
-        const char *reg; // register name
+        long immediate;   // immediate value
+        RegisterKind reg; // kind of register
     };
 };
 
 // structure for operation
 struct Operation
 {
-    OperationKind kind;            // kind of operation
+    MnemonicKind kind;            // kind of operation
     const List(Operand) *operands; // list of operands
 };
 
