@@ -10,17 +10,16 @@ asm <input-file> -c -o <output-file>
 
 ```
 program ::= statement*
-statement ::= directive
-            | symbol ":"
-            | operation
+statement ::= (symbol ":")? directive | operation
 directive ::= ".intel_syntax noprefix"
             | ".globl" symbol
 operation ::= mnemonic operands?
-mnemonic ::= "mov"
+mnemonic ::= "call"
+           | "mov"
            | "ret"
 operands ::= operand ("," operand)?
-operand ::= immediate | register
-register ::= "rax"
+operand ::= immediate | register | symbol
+register ::= "rax" | "rdx" | "rcx" | "rbx" | "rsp" | "rbp" | "rsi" | "rdi"
 ```
 
 ## Reference

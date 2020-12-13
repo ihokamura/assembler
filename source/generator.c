@@ -15,6 +15,18 @@ typedef struct
     ByteBufferType *body;
 } SectionContent;
 
+typedef struct UnresolvedSymbol UnresolvedSymbol;
+struct UnresolvedSymbol
+{
+    const Symbol *symbol; // symbol to be resolved
+    Elf_Addr address;     // address to be replaced
+};
+
+#include "list.h"
+define_list(UnresolvedSymbol)
+define_list_operations(UnresolvedSymbol)
+
+static UnresolvedSymbol *new_unresolved_symbol(const Symbol *symbol, Elf_Addr address);
 static void set_elf_header
 (
     Elf_Off e_shoff,
@@ -48,17 +60,20 @@ static void set_symbol_table
 static void set_symbol_table_entries(const List(Symbol) *symbols);
 static void generate_operations(const List(Operation) *operations);
 static void generate_operation(const Operation *operation);
+static void generate_op_call(const List(Operand) *operands);
 static void generate_op_mov(const List(Operand) *operands);
 static void generate_op_ret(const List(Operand) *operands);
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
 static uint8_t get_encoding_index_rm(RegisterKind kind);
 static void generate_symbols(const List(Symbol) *symbols);
+static void resolve_symbol(const List(Symbol) *symbols);
 
 // list of functions to generate operation
 static const void (*generate_op_functions[])(const List(Operand) *) =
 {
-    NULL,
+    generate_op_call,
     generate_op_mov,
+    NULL,
     generate_op_ret,
 };
 
@@ -73,6 +88,7 @@ static Elf_Off e_shoff = sizeof(Elf_Ehdr);  // offset of section header table
 static Elf_Half e_shnum = 0;                // number of section header table entries
 static Elf_Half e_shstrndx = 0;             // index of section ".shstrtab"
 
+static List(UnresolvedSymbol) *unresolved_symbols; // unresolved symbols
 static size_t local_symols = 0; // number of local symbols
 
 static ByteBufferType text_body = {NULL, 0, 0};     // buffer for section ".text"
@@ -80,6 +96,19 @@ static ByteBufferType symtab_body = {NULL, 0, 0};   // buffer for section ".symt
 static ByteBufferType strtab_body = {NULL, 0, 0};   // buffer for string containing names of symbols
 static ByteBufferType shstrtab_body = {NULL, 0, 0}; // buffer for string containing names of sections
 static Elf_Word sh_name = 0;                        // index of string where a section name starts
+
+/*
+make a new unresolved symbol
+*/
+static UnresolvedSymbol *new_unresolved_symbol(const Symbol *symbol, Elf_Addr address)
+{
+    UnresolvedSymbol *unresolved_symbol = calloc(1, sizeof(UnresolvedSymbol));
+    unresolved_symbol->symbol = symbol;
+    unresolved_symbol->address = address;
+
+    return unresolved_symbol;
+}
+
 
 /*
 set members of an ELF header
@@ -241,18 +270,20 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
     );
 
     // defined symbols
+    Elf_Word st_name = 1;
     for_each_entry(Symbol, cursor, symbols)
     {
         Symbol *symbol = get_element(Symbol)(cursor);
         unsigned char bind = (symbol->kind == SY_GLOBAL) ? STB_GLOBAL : STB_LOCAL;
         set_symbol_table(
-            1,
+            st_name,
             ELF_ST_INFO(bind, STT_NOTYPE),
             0,
             SHNDX_TEXT,
-            0,
+            symbol->operation->address,
             0
         );
+        st_name += strlen(symbol->body) + 1;
     }
 }
 
@@ -265,6 +296,8 @@ static void generate_operations(const List(Operation) *operations)
     for_each_entry(Operation, cursor, operations)
     {
         Operation *operation = get_element(Operation)(cursor);
+        operation->address = text_body.size;
+
         generate_operation(operation);
     }
 }
@@ -276,6 +309,26 @@ generate an operation
 static void generate_operation(const Operation *operation)
 {
     generate_op_functions[operation->kind](operation->operands);
+}
+
+
+/*
+generate call operation
+*/
+static void generate_op_call(const List(Operand) *operands)
+{
+    Operand *operand = get_first_element(Operand)(operands);
+    if(operand->kind == OP_SYMBOL)
+    {
+        UnresolvedSymbol *unresolved_symbol = new_unresolved_symbol(operand->symbol, text_body.size + 1);
+        add_list_entry_tail(UnresolvedSymbol)(unresolved_symbols, unresolved_symbol);
+
+        const char *opecode = "\xe8";
+        append_bytes(opecode, 1, &text_body);
+
+        uint32_t rel32 = 0; // temporal value
+        append_bytes((char *)&rel32, sizeof(rel32), &text_body);
+    }
 }
 
 
@@ -393,10 +446,35 @@ static void generate_symbols(const List(Symbol) *symbols)
 
 
 /*
+resolve symbols
+*/
+static void resolve_symbol(const List(Symbol) *symbols)
+{
+    for_each_entry(UnresolvedSymbol, target_cursor, unresolved_symbols)
+    {
+        UnresolvedSymbol *target = get_element(UnresolvedSymbol)(target_cursor);
+
+        for_each_entry(Symbol, symbol_cursor, symbols)
+        {
+            Symbol *symbol = get_element(Symbol)(symbol_cursor);
+            if(strcmp(target->symbol->body, symbol->body) == 0)
+            {
+                uint32_t rel32 = symbol->operation->address - (target->address + sizeof(uint32_t));
+                *(uint32_t *)&text_body.body[target->address] = rel32;
+                break;
+            }
+        }
+    }
+}
+
+
+/*
 generate an object file
 */
 void generate(const char *output_file, const Program *program)
 {
+    unresolved_symbols = new_list(UnresolvedSymbol)();
+
    // undefined section
     SectionContent shdr_null = INIT_SECTION_CONTENT;
     set_section_header_table(
@@ -415,6 +493,7 @@ void generate(const char *output_file, const Program *program)
     // .text section
     SectionContent shdr_text = INIT_SECTION_CONTENT;
     generate_operations(program->operations);
+    resolve_symbol(program->symbols);
     set_section_header_table(
         ".text",
         SHT_PROGBITS,

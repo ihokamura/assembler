@@ -34,6 +34,7 @@ static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands
 static Operand *new_operand(OperandKind kind);
 static Operand *new_operand_immediate(long immediate);
 static Operand *new_operand_register(const char *name);
+static Operand *new_operand_symbol(const Token *token);
 
 // global variable
 static List(Operation) *operation_list = NULL; // list of operations
@@ -41,6 +42,7 @@ static List(Symbol) *symbol_list = NULL; // list of symbols
 // mapping from mnemonic string to operation kind
 static const struct {const char *mnemonic; MnemonicKind kind;} mnemonic_map[] = 
 {
+    {"call", MN_CALL},
     {"mov", MN_MOV},
     {"ret", MN_RET},
 };
@@ -91,26 +93,28 @@ static void program(void)
 /*
 parse a statement
 ```
-statement ::= directive
-            | symbol ":"
-            | operation
+statement ::= (symbol ":")? directive | operation
 ```
 */
 static void statement(void)
 {
     Token *token;
+    Symbol *sym;
+    if(consume_token(TK_SYMBOL, &token))
+    {
+        sym = symbol(token);
+        expect_reserved(":");
+    }
+
     if(consume_reserved("."))
     {
+        // symbol is ignored if exists
         directive();
-    }
-    else if(consume_token(TK_SYMBOL, &token))
-    {
-        symbol(token);
-        expect_reserved(":");
     }
     else if(consume_token(TK_MNEMONIC, &token))
     {
-        operation(token);
+        Operation *op = operation(token);
+        sym->operation = op;
     }
 }
 
@@ -173,6 +177,7 @@ static Operation *operation(const Token *token)
 
     switch(kind)
     {
+    case MN_CALL:
     case MN_MOV:
         return new_operation(kind, operands());
 
@@ -186,7 +191,8 @@ static Operation *operation(const Token *token)
 /*
 parse a mnemonic
 ```
-mnemonic ::= "mov"
+mnemonic ::= "call"
+           | "mov"
            | "ret"
 ```
 */
@@ -228,7 +234,7 @@ static List(Operand) *operands(void)
 /*
 parse an operand
 ```
-operand ::= immediate | register
+operand ::= immediate | register | symbol
 ```
 */
 static Operand *operand(void)
@@ -242,9 +248,13 @@ static Operand *operand(void)
     {
         return new_operand_register(make_symbol(token));
     }
+    else if (consume_token(TK_SYMBOL, &token))
+    {
+        return new_operand_symbol(token);
+    }
     else
     {
-        report_error(NULL, "expected immediate or register.");
+        report_error(NULL, "expected immediate, register or symbol.");
         return NULL;
     }
 }
@@ -336,4 +346,16 @@ static Operand *new_operand_register(const char *name)
 
     report_error(NULL, "invalid register name '%s'.", name);
     return NULL;
+}
+
+
+/*
+make a new operand for symbol
+*/
+static Operand *new_operand_symbol(const Token *token)
+{
+    Operand *operand = new_operand(OP_SYMBOL);
+    operand->symbol = symbol(token);
+
+    return operand;
 }

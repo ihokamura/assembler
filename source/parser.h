@@ -1,6 +1,8 @@
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
+#include "elf_wrap.h"
+
 #include "list.h"
 typedef enum OperandKind OperandKind;
 typedef enum MnemonicKind MnemonicKind;
@@ -18,16 +20,18 @@ define_list(Symbol)
 // kind of mnemonic
 enum MnemonicKind
 {
-    MN_NOP, // nop
-    MN_MOV, // mov
-    MN_RET, // ret
+    MN_CALL, // call
+    MN_MOV,  // mov
+    MN_NOP,  // nop
+    MN_RET,  // ret
 };
 
 // kind of operand
 enum OperandKind
 {
-    OP_IMM32, // 32-bit immediate
-    OP_R64,   // 64-bit register
+    OP_IMM32,  // 32-bit immediate
+    OP_R64,    // 64-bit register
+    OP_SYMBOL, // symbol
 };
 
 // kind of register
@@ -62,16 +66,18 @@ struct Operand
     OperandKind kind;    // kind of operand
     union
     {
-        long immediate;   // immediate value
-        RegisterKind reg; // kind of register
+        long immediate;       // immediate value
+        RegisterKind reg;     // kind of register
+        const Symbol *symbol; // symbol
     };
 };
 
 // structure for operation
 struct Operation
 {
-    MnemonicKind kind;            // kind of operation
+    MnemonicKind kind;             // kind of operation
     const List(Operand) *operands; // list of operands
+    Elf_Addr address;              // address of operation
 };
 
 // structure for program
@@ -84,8 +90,9 @@ struct Program
 // structure for symbol
 struct Symbol
 {
-    SymbolKind kind;  // kind of symbol
-    const char *body; // contents of symbol
+    SymbolKind kind;            // kind of symbol
+    const char *body;           // contents of symbol
+    const Operation *operation; // operation labeled by symbol
 };
 
 void construct(Program *prog);
