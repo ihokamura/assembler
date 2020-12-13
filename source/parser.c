@@ -358,7 +358,7 @@ make a new operand for symbol
 static Operand *new_operand_symbol(const Token *token)
 {
     Operand *operand = new_operand(OP_SYMBOL);
-    operand->symbol = symbol(token);
+    operand->label = make_symbol(token);
 
     return operand;
 }

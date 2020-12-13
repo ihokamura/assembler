@@ -66,9 +66,9 @@ struct Operand
     OperandKind kind;    // kind of operand
     union
     {
-        long immediate;       // immediate value
-        RegisterKind reg;     // kind of register
-        const Symbol *symbol; // symbol
+        long immediate;    // immediate value
+        RegisterKind reg;  // kind of register
+        const char *label; // label
     };
 };
 

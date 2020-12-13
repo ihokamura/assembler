@@ -5,6 +5,9 @@
 main:
 	call local_func
 	nop
+	mov rdi, rdx
+	mov rsi, 42
+	call assert_equal
 	mov rax, rdx
 	ret
 

@@ -17,8 +17,9 @@ test()
     $asm $source -c -o $object
 
     # link the object file with the standard library
+    external=test_function.c
     binary=test_bin
-    gcc $object -o $binary
+    gcc $object $external -o $binary
 
     # run the binary and check the return value
     ./$binary

@@ -5,6 +5,7 @@
 
 #define ELF_CLASS          ELFCLASS64
 #define ELF_DATA           ELFDATA2LSB
+#define ELF_R_INFO         ELF64_R_INFO
 #define ELF_R_SYM          ELF64_R_SYM
 #define ELF_R_TYPE         ELF64_R_TYPE
 #define ELF_ST_BIND        ELF64_ST_BIND
@@ -25,8 +26,8 @@ typedef Elf64_Rela    Elf_Rela;
 typedef Elf64_Section Elf_Section;
 typedef Elf64_Shdr    Elf_Shdr;
 typedef Elf64_Sxword  Elf_Size;
-typedef Elf64_Sym     Elf_Sym;
 typedef Elf64_Sxword  Elf_Sxword;
+typedef Elf64_Sym     Elf_Sym;
 typedef Elf64_Xword   Elf_Xword;
 typedef Elf64_Word    Elf_Word;
 
