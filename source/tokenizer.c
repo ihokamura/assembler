@@ -49,6 +49,7 @@ static const size_t DIRECTIVE_LIST_SIZE = sizeof(directive_list) / sizeof(direct
 static const char *mnemonic_list[] = {
     "call",
     "mov",
+    "nop",
     "ret",
 };
 static const size_t MNEMONIC_LIST_SIZE = sizeof(mnemonic_list) / sizeof(mnemonic_list[0]); // number of mnemonics

@@ -44,6 +44,7 @@ static const struct {const char *mnemonic; MnemonicKind kind;} mnemonic_map[] =
 {
     {"call", MN_CALL},
     {"mov", MN_MOV},
+    {"nop", MN_NOP},
     {"ret", MN_RET},
 };
 static size_t MNIMONIC_MAP_SIZE = sizeof(mnemonic_map) / sizeof(mnemonic_map[0]);
@@ -181,6 +182,7 @@ static Operation *operation(const Token *token)
     case MN_MOV:
         return new_operation(kind, operands());
 
+    case MN_NOP:
     case MN_RET:
     default:
         return new_operation(kind, NULL);
@@ -193,6 +195,7 @@ parse a mnemonic
 ```
 mnemonic ::= "call"
            | "mov"
+           | "nop"
            | "ret"
 ```
 */

@@ -61,6 +61,7 @@ static void set_symbol_table_entries(const List(Symbol) *symbols);
 static void generate_operations(const List(Operation) *operations);
 static void generate_operation(const Operation *operation);
 static void generate_op_call(const List(Operand) *operands);
+static void generate_op_nop(const List(Operand) *operands);
 static void generate_op_mov(const List(Operand) *operands);
 static void generate_op_ret(const List(Operand) *operands);
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
@@ -73,7 +74,7 @@ static const void (*generate_op_functions[])(const List(Operand) *) =
 {
     generate_op_call,
     generate_op_mov,
-    NULL,
+    generate_op_nop,
     generate_op_ret,
 };
 
@@ -371,6 +372,16 @@ static void generate_op_mov(const List(Operand) *operands)
         uint32_t immediate = second->immediate;
         append_bytes((char *)&immediate, sizeof(immediate), &text_body);
     }
+}
+
+
+/*
+generate nop operation
+*/
+static void generate_op_nop(const List(Operand) *operands)
+{
+    uint8_t mnemonic = 0x90;
+    append_bytes((char *)&mnemonic, sizeof(mnemonic), &text_body);
 }
 
 

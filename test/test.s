@@ -4,6 +4,7 @@
 	.globl main
 main:
 	call local_func
+	nop
 	mov rax, rdx
 	ret
 

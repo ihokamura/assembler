@@ -16,6 +16,7 @@ directive ::= ".intel_syntax noprefix"
 operation ::= mnemonic operands?
 mnemonic ::= "call"
            | "mov"
+           | "nop"
            | "ret"
 operands ::= operand ("," operand)?
 operand ::= immediate | register | symbol
