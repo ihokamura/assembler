@@ -85,6 +85,7 @@ static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t s
 static uint8_t get_encoding_index_rm(RegisterKind kind);
 static void generate_symbols(const List(Symbol) *symbols);
 static void resolve_symbol(const List(Symbol) *symbols);
+static bool is_unresolved(const LabelInfo *label);
 
 // list of functions to generate operation
 static const void (*generate_op_functions[])(const List(Operand) *) =
@@ -560,6 +561,12 @@ static void resolve_symbol(const List(Symbol) *symbols)
     for_each_entry(LabelInfo, label_cursor, label_info_list)
     {
         LabelInfo *label = get_element(LabelInfo)(label_cursor);
+
+        if(is_unresolved(label))
+        {
+            continue;
+        }
+
         bool resolved = false;
 
         for_each_entry(Symbol, symbol_cursor, symbols)
@@ -579,6 +586,24 @@ static void resolve_symbol(const List(Symbol) *symbols)
             add_list_entry_tail(UnresolvedSymbol)(unresolved_symbol_list, new_unresolved_symbol(label->body, label->address));
         }
     }
+}
+
+
+/*
+check if a label is unresolved.
+*/
+static bool is_unresolved(const LabelInfo *label)
+{
+    for_each_entry(UnresolvedSymbol, cursor, unresolved_symbol_list)
+    {
+        UnresolvedSymbol *unresolved_symbol = get_element(UnresolvedSymbol)(cursor);
+        if(strcmp(label->body, unresolved_symbol->body) == 0)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 
