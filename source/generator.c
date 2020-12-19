@@ -84,7 +84,6 @@ static void generate_op_mov(const List(Operand) *operands);
 static void generate_op_ret(const List(Operand) *operands);
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
 static uint8_t get_encoding_index_rm(RegisterKind kind);
-static void generate_symbols(void);
 static void resolve_symbols(const List(Symbol) *symbols);
 static void classify_symbols(const List(Symbol) *symbols);
 static bool is_unresolved(const LabelInfo *label);
@@ -114,6 +113,8 @@ static const Elf_Section SHNDX_BSS = 4;
 static const Elf_Section SHNDX_SYMTAB = 5;
 static const Elf_Section SHNDX_STRTAB = 6;
 
+size_t RESERVED_SYMTAB_ENTRIES = 4; // number of reserved symbol table entries (undefined, .text, .data, .bss)
+
 static Elf_Off e_shoff = 0;     // offset of section header table
 static Elf_Half e_shnum = 0;    // number of section header table entries
 static Elf_Half e_shstrndx = 0; // index of section ".shstrtab"
@@ -123,7 +124,6 @@ static List(LabelInfo) *label_info_list;               // list of label informat
 static List(Symbol) *local_symbol_list;                // list of local symbols
 static List(Symbol) *global_symbol_list;               // list of global symbols
 static List(UnresolvedSymbol) *unresolved_symbol_list; // list of unresolved symbols
-static size_t local_symols = 0; // number of local symbols
 
 static ByteBufferType text_body = {NULL, 0, 0};      // buffer for section ".text"
 static ByteBufferType rela_text_body = {NULL, 0, 0}; // buffer for section ".rela.text"
@@ -298,12 +298,6 @@ static void set_symbol_table
 
     // update buffer
     append_bytes((char *)&sym, sizeof(sym), &symtab_body);
-
-    // count number of local symbols
-    if(ELF_ST_BIND(st_info) == STB_LOCAL)
-    {
-        local_symols++;
-    }
 }
 
 
@@ -374,12 +368,15 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
         0
     );
 
+    // put '\0' for invalid symbols at first
+    append_bytes("\x00", 1, &strtab_body);
     Elf_Word st_name = 1;
 
     // local symbols
     for_each_entry(Symbol, cursor, local_symbol_list)
     {
         Symbol *symbol = get_element(Symbol)(cursor);
+        const char *body = symbol->body;
         set_symbol_table(
             st_name,
             ELF_ST_INFO(STB_LOCAL, STT_NOTYPE),
@@ -388,13 +385,15 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
             symbol->operation->address,
             0
         );
-        st_name += strlen(symbol->body) + 1;
+        append_bytes(body, strlen(body) + 1, &strtab_body);
+        st_name += strlen(body) + 1;
     }
 
     // global symbols
     for_each_entry(Symbol, cursor, global_symbol_list)
     {
         Symbol *symbol = get_element(Symbol)(cursor);
+        const char *body = symbol->body;
         set_symbol_table(
             st_name,
             ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
@@ -403,13 +402,15 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
             symbol->operation->address,
             0
         );
-        st_name += strlen(symbol->body) + 1;
+        append_bytes(body, strlen(body) + 1, &strtab_body);
+        st_name += strlen(body) + 1;
     }
 
     // unresolved symbols
     for_each_entry(UnresolvedSymbol, cursor, unresolved_symbol_list)
     {
         UnresolvedSymbol *unresolved_symbol = get_element(UnresolvedSymbol)(cursor);
+        const char *body = unresolved_symbol->body;
         set_symbol_table(
             st_name,
             ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
@@ -418,7 +419,8 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
             0,
             0
         );
-        st_name += strlen(unresolved_symbol->body) + 1;
+        append_bytes(body, strlen(body) + 1, &strtab_body);
+        st_name += strlen(body) + 1;
     }
 }
 
@@ -428,7 +430,7 @@ set entries of relocation table
 */
 static void set_relocation_table_entries(size_t resolved_symbols)
 {
-    Elf64_Xword sym_index = 4 + resolved_symbols; // symbol table index with respect to which the relocation will be made
+    Elf64_Xword sym_index = RESERVED_SYMTAB_ENTRIES + resolved_symbols; // symbol table index with respect to which the relocation will be made
     for_each_entry(UnresolvedSymbol, cursor, unresolved_symbol_list)
     {
         UnresolvedSymbol *unresolved_symbol = get_element(UnresolvedSymbol)(cursor);
@@ -594,33 +596,6 @@ static uint8_t get_encoding_index_rm(RegisterKind kind)
 
 
 /*
-generate symbols
-*/
-static void generate_symbols(void)
-{
-    append_bytes("\x00", 1, &strtab_body);
-    for_each_entry(Symbol, cursor, local_symbol_list)
-    {
-        Symbol *symbol = get_element(Symbol)(cursor);
-        const char *body = symbol->body;
-        append_bytes(body, strlen(body) + 1, &strtab_body);
-    }
-    for_each_entry(Symbol, cursor, global_symbol_list)
-    {
-        Symbol *symbol = get_element(Symbol)(cursor);
-        const char *body = symbol->body;
-        append_bytes(body, strlen(body) + 1, &strtab_body);
-    }
-    for_each_entry(UnresolvedSymbol, cursor, unresolved_symbol_list)
-    {
-        UnresolvedSymbol *unresolved_symbol = get_element(UnresolvedSymbol)(cursor);
-        const char *body = unresolved_symbol->body;
-        append_bytes(body, strlen(body) + 1, &strtab_body);
-    }
-}
-
-
-/*
 resolve symbols
 */
 static void resolve_symbols(const List(Symbol) *symbols)
@@ -717,7 +692,6 @@ static void generate_sections(const Program *program)
     set_relocation_table_entries(get_length(Symbol)(program->symbols));
     classify_symbols(program->symbols);
     set_symbol_table_entries(program->symbols);
-    generate_symbols();
 }
 
 
@@ -810,7 +784,7 @@ static void generate_section_header_table_entries(void)
         0,
         symtab_body.size,
         SHNDX_STRTAB, // sh_link holds section header index of the associated string table (i.e. .strtab section)
-        local_symols, // sh_info holds one greater than the symbol table index of the laxt local symbol
+        RESERVED_SYMTAB_ENTRIES + get_length(Symbol)(local_symbol_list), // sh_info holds one greater than the symbol table index of the laxt local symbol
         SYMTAB_SECTION_ALIGNMENT,
         sizeof(Elf_Sym),
         &shdr_symtab);
