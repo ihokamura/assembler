@@ -84,8 +84,9 @@ static void generate_op_mov(const List(Operand) *operands);
 static void generate_op_ret(const List(Operand) *operands);
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
 static uint8_t get_encoding_index_rm(RegisterKind kind);
-static void generate_symbols(const List(Symbol) *symbols);
+static void generate_symbols(void);
 static void resolve_symbols(const List(Symbol) *symbols);
+static void classify_symbols(const List(Symbol) *symbols);
 static bool is_unresolved(const LabelInfo *label);
 static void fill_paddings(size_t pad_size, FILE *fp);
 static void generate_sections(const Program *program);
@@ -119,6 +120,8 @@ static Elf_Half e_shstrndx = 0; // index of section ".shstrtab"
 
 static List(SectionInfo) *section_info_list;           // list of section information
 static List(LabelInfo) *label_info_list;               // list of label information
+static List(Symbol) *local_symbol_list;                // list of local symbols
+static List(Symbol) *global_symbol_list;               // list of global symbols
 static List(UnresolvedSymbol) *unresolved_symbol_list; // list of unresolved symbols
 static size_t local_symols = 0; // number of local symbols
 
@@ -371,15 +374,30 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
         0
     );
 
-    // resolved symbols
     Elf_Word st_name = 1;
-    for_each_entry(Symbol, cursor, symbols)
+
+    // local symbols
+    for_each_entry(Symbol, cursor, local_symbol_list)
     {
         Symbol *symbol = get_element(Symbol)(cursor);
-        unsigned char bind = (symbol->kind == SY_GLOBAL) ? STB_GLOBAL : STB_LOCAL;
         set_symbol_table(
             st_name,
-            ELF_ST_INFO(bind, STT_NOTYPE),
+            ELF_ST_INFO(STB_LOCAL, STT_NOTYPE),
+            0,
+            SHNDX_TEXT,
+            symbol->operation->address,
+            0
+        );
+        st_name += strlen(symbol->body) + 1;
+    }
+
+    // global symbols
+    for_each_entry(Symbol, cursor, global_symbol_list)
+    {
+        Symbol *symbol = get_element(Symbol)(cursor);
+        set_symbol_table(
+            st_name,
+            ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
             0,
             SHNDX_TEXT,
             symbol->operation->address,
@@ -578,10 +596,16 @@ static uint8_t get_encoding_index_rm(RegisterKind kind)
 /*
 generate symbols
 */
-static void generate_symbols(const List(Symbol) *symbols)
+static void generate_symbols(void)
 {
     append_bytes("\x00", 1, &strtab_body);
-    for_each_entry(Symbol, cursor, symbols)
+    for_each_entry(Symbol, cursor, local_symbol_list)
+    {
+        Symbol *symbol = get_element(Symbol)(cursor);
+        const char *body = symbol->body;
+        append_bytes(body, strlen(body) + 1, &strtab_body);
+    }
+    for_each_entry(Symbol, cursor, global_symbol_list)
     {
         Symbol *symbol = get_element(Symbol)(cursor);
         const char *body = symbol->body;
@@ -633,6 +657,26 @@ static void resolve_symbols(const List(Symbol) *symbols)
 
 
 /*
+classify symbols
+*/
+static void classify_symbols(const List(Symbol) *symbols)
+{
+    for_each_entry(Symbol, cursor, symbols)
+    {
+        Symbol *symbol = get_element(Symbol)(cursor);
+        if(symbol->kind == SY_LOCAL)
+        {
+            add_list_entry_tail(Symbol)(local_symbol_list, symbol);
+        }
+        else
+        {
+            add_list_entry_tail(Symbol)(global_symbol_list, symbol);
+        }
+    }
+}
+
+
+/*
 check if a label is unresolved.
 */
 static bool is_unresolved(const LabelInfo *label)
@@ -671,8 +715,9 @@ static void generate_sections(const Program *program)
     generate_operations(program->operations);
     resolve_symbols(program->symbols);
     set_relocation_table_entries(get_length(Symbol)(program->symbols));
+    classify_symbols(program->symbols);
     set_symbol_table_entries(program->symbols);
-    generate_symbols(program->symbols);
+    generate_symbols();
 }
 
 
@@ -827,6 +872,8 @@ void generate(const char *output_file, const Program *program)
     // initialize lists
     section_info_list = new_list(SectionInfo)();
     label_info_list = new_list(LabelInfo)();
+    local_symbol_list = new_list(Symbol)();
+    global_symbol_list = new_list(Symbol)();
     unresolved_symbol_list = new_list(UnresolvedSymbol)();
 
     // generate contents

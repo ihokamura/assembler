@@ -135,7 +135,9 @@ static Directive *directive(void)
     }
     else if(consume_reserved("globl"))
     {
-        return new_directive(symbol(expect_symbol()));
+        Symbol *sym = symbol(expect_symbol());
+        sym->kind = SY_GLOBAL; // overwrite the kind
+        return new_directive(sym);
     }
     else
     {
@@ -162,7 +164,7 @@ static Symbol *symbol(const Token *token)
         }
     }
 
-    return new_symbol(SY_GLOBAL, body);
+    return new_symbol(SY_LOCAL, body);
 }
 
 
@@ -283,6 +285,7 @@ static Symbol *new_symbol(SymbolKind kind, const char *body)
     Symbol *symbol = calloc(1, sizeof(Symbol));
     symbol->kind = kind;
     symbol->body = body;
+    symbol->operation = NULL;
 
     // update list of symbols
     add_list_entry_tail(Symbol)(symbol_list, symbol);
