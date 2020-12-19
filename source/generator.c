@@ -85,9 +85,12 @@ static void generate_op_ret(const List(Operand) *operands);
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
 static uint8_t get_encoding_index_rm(RegisterKind kind);
 static void generate_symbols(const List(Symbol) *symbols);
-static void resolve_symbol(const List(Symbol) *symbols);
+static void resolve_symbols(const List(Symbol) *symbols);
 static bool is_unresolved(const LabelInfo *label);
 static void fill_paddings(size_t pad_size, FILE *fp);
+static void generate_sections(const Program *program);
+static void generate_section_header_table_entries(void);
+static void generate_elf_header(void);
 
 // list of functions to generate operation
 static const void (*generate_op_functions[])(const List(Operand) *) =
@@ -108,6 +111,7 @@ static const Elf_Section SHNDX_TEXT = 1;
 static const Elf_Section SHNDX_DATA = 3;
 static const Elf_Section SHNDX_BSS = 4;
 static const Elf_Section SHNDX_SYMTAB = 5;
+static const Elf_Section SHNDX_STRTAB = 6;
 
 static Elf_Off e_shoff = 0;     // offset of section header table
 static Elf_Half e_shnum = 0;    // number of section header table entries
@@ -125,6 +129,9 @@ static ByteBufferType strtab_body = {NULL, 0, 0};    // buffer for string contai
 static ByteBufferType shstrtab_body = {NULL, 0, 0};  // buffer for string containing names of sections
 
 static Elf_Word sh_name = 0; // index of string where a section name starts
+
+static Elf_Ehdr elf_header;
+
 
 /*
 make a new label information
@@ -592,7 +599,7 @@ static void generate_symbols(const List(Symbol) *symbols)
 /*
 resolve symbols
 */
-static void resolve_symbol(const List(Symbol) *symbols)
+static void resolve_symbols(const List(Symbol) *symbols)
 {
     for_each_entry(LabelInfo, label_cursor, label_info_list)
     {
@@ -657,14 +664,23 @@ static void fill_paddings(size_t pad_size, FILE *fp)
 
 
 /*
-generate an object file
+generate section bodies
 */
-void generate(const char *output_file, const Program *program)
+static void generate_sections(const Program *program)
 {
-    section_info_list = new_list(SectionInfo)();
-    label_info_list = new_list(LabelInfo)();
-    unresolved_symbol_list = new_list(UnresolvedSymbol)();
+    generate_operations(program->operations);
+    resolve_symbols(program->symbols);
+    set_relocation_table_entries(get_length(Symbol)(program->symbols));
+    set_symbol_table_entries(program->symbols);
+    generate_symbols(program->symbols);
+}
 
+
+/*
+generate section header table entries
+*/
+static void generate_section_header_table_entries(void)
+{
    // undefined section
     Elf_Shdr shdr_null;
     set_section_header_table(
@@ -682,8 +698,6 @@ void generate(const char *output_file, const Program *program)
 
     // .text section
     Elf_Shdr shdr_text;
-    generate_operations(program->operations);
-    resolve_symbol(program->symbols);
     set_section_header_table(
         ".text",
         SHT_PROGBITS,
@@ -699,7 +713,6 @@ void generate(const char *output_file, const Program *program)
 
     // .rela.text section
     Elf_Shdr shdr_rela_text;
-    set_relocation_table_entries(get_length(Symbol)(program->symbols));
     set_section_header_table(
         ".rela.text",
         SHT_RELA,
@@ -745,14 +758,13 @@ void generate(const char *output_file, const Program *program)
 
     // .symtab section
     Elf_Shdr shdr_symtab;
-    set_symbol_table_entries(program->symbols);
     set_section_header_table(
         ".symtab",
         SHT_SYMTAB,
         0,
         0,
         symtab_body.size,
-        e_shnum + 1, // sh_link holds section header index of the associated string table (i.e. .strtab section)
+        SHNDX_STRTAB, // sh_link holds section header index of the associated string table (i.e. .strtab section)
         local_symols, // sh_info holds one greater than the symbol table index of the laxt local symbol
         SYMTAB_SECTION_ALIGNMENT,
         sizeof(Elf_Sym),
@@ -761,7 +773,6 @@ void generate(const char *output_file, const Program *program)
 
     // .strtab section
     Elf_Shdr shdr_strtab;
-    generate_symbols(program->symbols);
     set_section_header_table(
         ".strtab",
         SHT_STRTAB,
@@ -789,23 +800,45 @@ void generate(const char *output_file, const Program *program)
         0,
         &shdr_shstrtab);
     new_section_info(&shstrtab_body, &shdr_shstrtab);
+}
 
-    // set ELF header
-    Elf_Ehdr ehdr;
+
+/*
+generate ELF header
+*/
+static void generate_elf_header(void)
+{
     e_shoff = align_to(e_shoff, sizeof(Elf_Shdr));
     e_shstrndx--;
     set_elf_header(
         e_shoff,
         e_shnum,
         e_shstrndx,
-        &ehdr
+        &elf_header
     );
+}
+
+
+/*
+generate an object file
+*/
+void generate(const char *output_file, const Program *program)
+{
+    // initialize lists
+    section_info_list = new_list(SectionInfo)();
+    label_info_list = new_list(LabelInfo)();
+    unresolved_symbol_list = new_list(UnresolvedSymbol)();
+
+    // generate contents
+    generate_sections(program);
+    generate_section_header_table_entries();
+    generate_elf_header();
 
     // output an object file
     FILE *fp = fopen(output_file, "wb");
 
     // ELF header
-    fwrite(&ehdr, sizeof(Elf_Ehdr), 1, fp);
+    fwrite(&elf_header, sizeof(Elf_Ehdr), 1, fp);
 
     // sections
     size_t end_pos = sizeof(Elf_Ehdr);
@@ -825,8 +858,8 @@ void generate(const char *output_file, const Program *program)
         }
     }
 
-    // section table
-    fill_paddings(ehdr.e_shoff - end_pos, fp);
+    // section header table entries
+    fill_paddings(elf_header.e_shoff - end_pos, fp);
     for_each_entry(SectionInfo, cursor, section_info_list)
     {
         SectionInfo *section_info = get_element(SectionInfo)(cursor);
