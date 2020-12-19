@@ -7,19 +7,18 @@
 #include "generator.h"
 #include "parser.h"
 
-#define INIT_SECTION_CONTENT    {{0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, NULL}
-
-typedef struct
-{
-    Elf_Shdr shdr;
-    ByteBufferType *body;
-} SectionContent;
-
 typedef struct LabelInfo LabelInfo;
 struct LabelInfo
 {
     const char *body; // label body
     Elf_Addr address; // address to be replaced
+};
+
+typedef struct SectionInfo SectionInfo;
+struct SectionInfo
+{
+    ByteBufferType *body; // section body
+    Elf_Shdr shdr;        // section header table entry
 };
 
 typedef struct UnresolvedSymbol UnresolvedSymbol;
@@ -31,11 +30,14 @@ struct UnresolvedSymbol
 
 #include "list.h"
 define_list(LabelInfo)
+define_list(SectionInfo)
 define_list(UnresolvedSymbol)
 define_list_operations(LabelInfo)
+define_list_operations(SectionInfo)
 define_list_operations(UnresolvedSymbol)
 
 static LabelInfo *new_label_info(const char *body, Elf_Addr address);
+static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr);
 static UnresolvedSymbol *new_unresolved_symbol(const char *body, Elf_Addr address);
 static void set_elf_header
 (
@@ -108,6 +110,7 @@ static Elf_Off e_shoff = sizeof(Elf_Ehdr);  // offset of section header table
 static Elf_Half e_shnum = 0;                // number of section header table entries
 static Elf_Half e_shstrndx = 0;             // index of section ".shstrtab"
 
+static List(SectionInfo) *section_info_list;           // list of section information
 static List(LabelInfo) *label_info_list;               // list of label information
 static List(UnresolvedSymbol) *unresolved_symbol_list; // list of unresolved symbols
 static size_t local_symols = 0; // number of local symbols
@@ -128,8 +131,23 @@ static LabelInfo *new_label_info(const char *body, Elf_Addr address)
     LabelInfo *label_info = calloc(1, sizeof(LabelInfo));
     label_info->body = body;
     label_info->address = address;
+    add_list_entry_tail(LabelInfo)(label_info_list, label_info);
 
     return label_info;
+}
+
+
+/*
+make a new section information
+*/
+static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr)
+{
+    SectionInfo *section_info = calloc(1, sizeof(SectionInfo));
+    section_info->body = body;
+    section_info->shdr = *shdr;
+    add_list_entry_tail(SectionInfo)(section_info_list, section_info);
+
+    return section_info;
 }
 
 
@@ -141,6 +159,7 @@ static UnresolvedSymbol *new_unresolved_symbol(const char *body, Elf_Addr addres
     UnresolvedSymbol *unresolved_symbol = calloc(1, sizeof(UnresolvedSymbol));
     unresolved_symbol->body = body;
     unresolved_symbol->address = address;
+    add_list_entry_tail(UnresolvedSymbol)(unresolved_symbol_list, unresolved_symbol);
 
     return unresolved_symbol;
 }
@@ -412,8 +431,7 @@ static void generate_op_call(const List(Operand) *operands)
     Operand *operand = get_first_element(Operand)(operands);
     if(operand->kind == OP_SYMBOL)
     {
-        LabelInfo *label_info = new_label_info(operand->label, text_body.size + 1);
-        add_list_entry_tail(LabelInfo)(label_info_list, label_info);
+        new_label_info(operand->label, text_body.size + 1);
 
         const char *opecode = "\xe8";
         append_bytes(opecode, 1, &text_body);
@@ -583,7 +601,7 @@ static void resolve_symbol(const List(Symbol) *symbols)
 
         if(!resolved)
         {
-            add_list_entry_tail(UnresolvedSymbol)(unresolved_symbol_list, new_unresolved_symbol(label->body, label->address));
+            new_unresolved_symbol(label->body, label->address);
         }
     }
 }
@@ -612,11 +630,12 @@ generate an object file
 */
 void generate(const char *output_file, const Program *program)
 {
+    section_info_list = new_list(SectionInfo)();
     label_info_list = new_list(LabelInfo)();
     unresolved_symbol_list = new_list(UnresolvedSymbol)();
 
    // undefined section
-    SectionContent shdr_null = INIT_SECTION_CONTENT;
+    Elf_Shdr shdr_null;
     set_section_header_table(
         "",
         SHT_NULL,
@@ -628,10 +647,11 @@ void generate(const char *output_file, const Program *program)
         0,
         0,
         0,
-        &shdr_null.shdr);
+        &shdr_null);
+    new_section_info(NULL, &shdr_null);
 
     // .text section
-    SectionContent shdr_text = INIT_SECTION_CONTENT;
+    Elf_Shdr shdr_text;
     generate_operations(program->operations);
     resolve_symbol(program->symbols);
     set_section_header_table(
@@ -645,11 +665,11 @@ void generate(const char *output_file, const Program *program)
         0,
         DEFAULT_SECTION_ALIGNMENT,
         0,
-        &shdr_text.shdr);
-    shdr_text.body = &text_body;
+        &shdr_text);
+    new_section_info(&text_body, &shdr_text);
 
     // .rela.text section
-    SectionContent shdr_rela_text = INIT_SECTION_CONTENT;
+    Elf_Shdr shdr_rela_text;
     set_relocation_table_entries(get_length(Symbol)(program->symbols));
     set_section_header_table(
         ".rela.text",
@@ -662,11 +682,11 @@ void generate(const char *output_file, const Program *program)
         SHNDX_TEXT,
         DEFAULT_SECTION_ALIGNMENT,
         sizeof(Elf_Rela),
-        &shdr_rela_text.shdr);
-    shdr_rela_text.body = &rela_text_body;
+        &shdr_rela_text);
+    new_section_info(&rela_text_body, &shdr_rela_text);
 
     // .data section
-    SectionContent shdr_data = INIT_SECTION_CONTENT;
+    Elf_Shdr shdr_data;
     set_section_header_table(
         ".data",
         SHT_PROGBITS,
@@ -678,10 +698,11 @@ void generate(const char *output_file, const Program *program)
         0,
         DEFAULT_SECTION_ALIGNMENT,
         0,
-        &shdr_data.shdr);
+        &shdr_data);
+    new_section_info(NULL, &shdr_data);
 
     // .bss section
-    SectionContent shdr_bss = INIT_SECTION_CONTENT;
+    Elf_Shdr shdr_bss;
     set_section_header_table(
         ".bss",
         SHT_NOBITS,
@@ -693,10 +714,11 @@ void generate(const char *output_file, const Program *program)
         0,
         DEFAULT_SECTION_ALIGNMENT,
         0,
-        &shdr_bss.shdr);
+        &shdr_bss);
+    new_section_info(NULL, &shdr_bss);
 
     // .symtab section
-    SectionContent shdr_symtab = INIT_SECTION_CONTENT;
+    Elf_Shdr shdr_symtab;
     set_symbol_table_entries(program->symbols);
     set_section_header_table(
         ".symtab",
@@ -709,11 +731,11 @@ void generate(const char *output_file, const Program *program)
         local_symols, // sh_info holds one greater than the symbol table index of the laxt local symbol
         SYMTAB_SECTION_ALIGNMENT,
         sizeof(Elf_Sym),
-        &shdr_symtab.shdr);
-    shdr_symtab.body = &symtab_body;
+        &shdr_symtab);
+    new_section_info(&symtab_body, &shdr_symtab);
 
     // .strtab section
-    SectionContent shdr_strtab = INIT_SECTION_CONTENT;
+    Elf_Shdr shdr_strtab;
     generate_symbols(program->symbols);
     set_section_header_table(
         ".strtab",
@@ -726,11 +748,11 @@ void generate(const char *output_file, const Program *program)
         0,
         DEFAULT_SECTION_ALIGNMENT,
         0,
-        &shdr_strtab.shdr);
-    shdr_strtab.body = &strtab_body;
+        &shdr_strtab);
+    new_section_info(&strtab_body, &shdr_strtab);
 
     // .shstrtab section
-    SectionContent shdr_shstrtab = INIT_SECTION_CONTENT;
+    Elf_Shdr shdr_shstrtab;
     set_section_header_table(
         ".shstrtab",
         SHT_STRTAB,
@@ -742,8 +764,8 @@ void generate(const char *output_file, const Program *program)
         0,
         DEFAULT_SECTION_ALIGNMENT,
         0,
-        &shdr_shstrtab.shdr);
-    shdr_shstrtab.body = &shstrtab_body;
+        &shdr_shstrtab);
+    new_section_info(&shstrtab_body, &shdr_shstrtab);
 
     // set ELF header
     Elf_Ehdr ehdr;
@@ -755,19 +777,6 @@ void generate(const char *output_file, const Program *program)
         &ehdr
     );
 
-    // define sections
-    SectionContent *section_list[] =
-    {
-        &shdr_null,
-        &shdr_text,
-        &shdr_rela_text,
-        &shdr_data,
-        &shdr_bss,
-        &shdr_symtab,
-        &shdr_strtab,
-        &shdr_shstrtab
-    };
-
     // output an object file
     FILE *fp = fopen(output_file, "wb");
 
@@ -775,20 +784,22 @@ void generate(const char *output_file, const Program *program)
     fwrite(&ehdr, sizeof(Elf_Ehdr), 1, fp);
 
     // sections
-    for(size_t i = 0; i < e_shnum; i++)
+    for_each_entry(SectionInfo, cursor, section_info_list)
     {
-        size_t size = section_list[i]->shdr.sh_size;
+        SectionInfo *section_info = get_element(SectionInfo)(cursor);
+        size_t size = section_info->shdr.sh_size;
         if(size > 0)
         {
-            char *body = section_list[i]->body->body;
+            char *body = section_info->body->body;
             fwrite(body, size, 1, fp);
         }
     }
 
     // section table
-    for(size_t i = 0; i < e_shnum; i++)
+    for_each_entry(SectionInfo, cursor, section_info_list)
     {
-        Elf_Shdr *shdr = &section_list[i]->shdr;
+        SectionInfo *section_info = get_element(SectionInfo)(cursor);
+        Elf_Shdr *shdr = &section_info->shdr;
         fwrite(shdr, sizeof(Elf_Shdr), 1, fp);
     }
 
