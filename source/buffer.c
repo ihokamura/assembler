@@ -10,7 +10,7 @@ static const size_t REALLOC_SIZE = 1024;
 /*
 align value
 */
-static size_t align_to(size_t n, size_t alignment)
+size_t align_to(size_t n, size_t alignment)
 {
     return (n + (alignment - 1)) & ~(alignment - 1);
 }

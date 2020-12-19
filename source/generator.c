@@ -52,7 +52,6 @@ static void set_section_header_table
     Elf_Word sh_type,
     Elf_Xword sh_flags,
     Elf_Addr sh_addr,
-    Elf_Off sh_offset,
     Elf_Xword sh_size,
     Elf_Word sh_link,
     Elf_Word sh_info,
@@ -88,6 +87,7 @@ static uint8_t get_encoding_index_rm(RegisterKind kind);
 static void generate_symbols(const List(Symbol) *symbols);
 static void resolve_symbol(const List(Symbol) *symbols);
 static bool is_unresolved(const LabelInfo *label);
+static void fill_paddings(size_t pad_size, FILE *fp);
 
 // list of functions to generate operation
 static const void (*generate_op_functions[])(const List(Operand) *) =
@@ -99,16 +99,17 @@ static const void (*generate_op_functions[])(const List(Operand) *) =
 };
 
 static const Elf_Xword DEFAULT_SECTION_ALIGNMENT = 1;
+static const Elf_Xword RELA_SECTION_ALIGNMENT = 8;
 static const Elf_Xword SYMTAB_SECTION_ALIGNMENT = 8;
 
 static const Elf_Section SHNDX_TEXT = 1;
-static const Elf_Section SHNDX_DATA = 2;
-static const Elf_Section SHNDX_BSS = 3;
+static const Elf_Section SHNDX_DATA = 3;
+static const Elf_Section SHNDX_BSS = 4;
 static const Elf_Section SHNDX_SYMTAB = 5;
 
-static Elf_Off e_shoff = sizeof(Elf_Ehdr);  // offset of section header table
-static Elf_Half e_shnum = 0;                // number of section header table entries
-static Elf_Half e_shstrndx = 0;             // index of section ".shstrtab"
+static Elf_Off e_shoff = 0;     // offset of section header table
+static Elf_Half e_shnum = 0;    // number of section header table entries
+static Elf_Half e_shstrndx = 0; // index of section ".shstrtab"
 
 static List(SectionInfo) *section_info_list;           // list of section information
 static List(LabelInfo) *label_info_list;               // list of label information
@@ -212,7 +213,6 @@ static void set_section_header_table
     Elf_Word sh_type,
     Elf_Xword sh_flags,
     Elf_Addr sh_addr,
-    Elf_Off sh_offset,
     Elf_Xword sh_size,
     Elf_Word sh_link,
     Elf_Word sh_info,
@@ -221,6 +221,22 @@ static void set_section_header_table
     Elf_Shdr *shdr
 )
 {
+    // set offset
+    Elf_Off sh_offset;
+    if(e_shoff == 0)
+    {
+        e_shoff = sizeof(Elf_Ehdr);
+        sh_offset = 0;
+    }
+    else
+    {
+        if(sh_addralign > 1)
+        {
+            e_shoff = align_to(e_shoff, sh_addralign);
+        }
+        sh_offset = e_shoff;
+    }
+    
     // set members
     shdr->sh_name = sh_name;
     shdr->sh_type = sh_type;
@@ -626,6 +642,19 @@ static bool is_unresolved(const LabelInfo *label)
 
 
 /*
+fill padding bytes
+*/
+static void fill_paddings(size_t pad_size, FILE *fp)
+{
+    for(size_t i = 0; i < pad_size; i++)
+    {
+        char pad_byte = 0x00;
+        fwrite(&pad_byte, sizeof(char), 1, fp);
+    }
+}
+
+
+/*
 generate an object file
 */
 void generate(const char *output_file, const Program *program)
@@ -639,7 +668,6 @@ void generate(const char *output_file, const Program *program)
     set_section_header_table(
         "",
         SHT_NULL,
-        0,
         0,
         0,
         0,
@@ -659,7 +687,6 @@ void generate(const char *output_file, const Program *program)
         SHT_PROGBITS,
         SHF_ALLOC | SHF_EXECINSTR,
         0,
-        e_shoff,
         text_body.size,
         0,
         0,
@@ -676,11 +703,10 @@ void generate(const char *output_file, const Program *program)
         SHT_RELA,
         SHF_INFO_LINK,
         0,
-        e_shoff,
         rela_text_body.size,
         SHNDX_SYMTAB,
         SHNDX_TEXT,
-        DEFAULT_SECTION_ALIGNMENT,
+        RELA_SECTION_ALIGNMENT,
         sizeof(Elf_Rela),
         &shdr_rela_text);
     new_section_info(&rela_text_body, &shdr_rela_text);
@@ -692,7 +718,6 @@ void generate(const char *output_file, const Program *program)
         SHT_PROGBITS,
         SHF_WRITE | SHF_ALLOC,
         0,
-        e_shoff,
         0,
         0,
         0,
@@ -708,7 +733,6 @@ void generate(const char *output_file, const Program *program)
         SHT_NOBITS,
         SHF_WRITE | SHF_ALLOC,
         0,
-        e_shoff,
         0,
         0,
         0,
@@ -725,7 +749,6 @@ void generate(const char *output_file, const Program *program)
         SHT_SYMTAB,
         0,
         0,
-        e_shoff,
         symtab_body.size,
         e_shnum + 1, // sh_link holds section header index of the associated string table (i.e. .strtab section)
         local_symols, // sh_info holds one greater than the symbol table index of the laxt local symbol
@@ -742,7 +765,6 @@ void generate(const char *output_file, const Program *program)
         SHT_STRTAB,
         0,
         0,
-        e_shoff,
         strtab_body.size,
         0,
         0,
@@ -758,7 +780,6 @@ void generate(const char *output_file, const Program *program)
         SHT_STRTAB,
         0,
         0,
-        e_shoff,
         sh_name + strlen(".shstrtab") + 1, // add 1 for the trailing '\0'
         0,
         0,
@@ -769,6 +790,7 @@ void generate(const char *output_file, const Program *program)
 
     // set ELF header
     Elf_Ehdr ehdr;
+    e_shoff = align_to(e_shoff, sizeof(Elf_Shdr));
     e_shstrndx--;
     set_elf_header(
         e_shoff,
@@ -784,18 +806,25 @@ void generate(const char *output_file, const Program *program)
     fwrite(&ehdr, sizeof(Elf_Ehdr), 1, fp);
 
     // sections
+    size_t end_pos = sizeof(Elf_Ehdr);
     for_each_entry(SectionInfo, cursor, section_info_list)
     {
         SectionInfo *section_info = get_element(SectionInfo)(cursor);
         size_t size = section_info->shdr.sh_size;
         if(size > 0)
         {
+            size_t pad_size = section_info->shdr.sh_offset - end_pos;
+            fill_paddings(pad_size, fp);
+
             char *body = section_info->body->body;
-            fwrite(body, size, 1, fp);
+            fwrite(body, sizeof(char), size, fp);
+
+            end_pos += (pad_size + size);
         }
     }
 
     // section table
+    fill_paddings(ehdr.e_shoff - end_pos, fp);
     for_each_entry(SectionInfo, cursor, section_info_list)
     {
         SectionInfo *section_info = get_element(SectionInfo)(cursor);
