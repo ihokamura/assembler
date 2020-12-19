@@ -98,6 +98,8 @@ static const void (*generate_op_functions[])(const List(Operand) *) =
     generate_op_ret,
 };
 
+static const Elf_Word DEFAULT_SECTION_INFO = 0;
+
 static const Elf_Xword DEFAULT_SECTION_ALIGNMENT = 1;
 static const Elf_Xword RELA_SECTION_ALIGNMENT = 8;
 static const Elf_Xword SYMTAB_SECTION_ALIGNMENT = 8;
@@ -688,8 +690,8 @@ void generate(const char *output_file, const Program *program)
         SHF_ALLOC | SHF_EXECINSTR,
         0,
         text_body.size,
-        0,
-        0,
+        SHN_UNDEF,
+        DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
         0,
         &shdr_text);
@@ -704,8 +706,8 @@ void generate(const char *output_file, const Program *program)
         SHF_INFO_LINK,
         0,
         rela_text_body.size,
-        SHNDX_SYMTAB,
-        SHNDX_TEXT,
+        SHNDX_SYMTAB, // sh_link holds section header index of the associated symbol table (i.e. .symtab section)
+        SHNDX_TEXT, // sh_info holds section header index of the section to which the relocation applies (i.e. .text section)
         RELA_SECTION_ALIGNMENT,
         sizeof(Elf_Rela),
         &shdr_rela_text);
@@ -719,8 +721,8 @@ void generate(const char *output_file, const Program *program)
         SHF_WRITE | SHF_ALLOC,
         0,
         0,
-        0,
-        0,
+        SHN_UNDEF,
+        DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
         0,
         &shdr_data);
@@ -734,8 +736,8 @@ void generate(const char *output_file, const Program *program)
         SHF_WRITE | SHF_ALLOC,
         0,
         0,
-        0,
-        0,
+        SHN_UNDEF,
+        DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
         0,
         &shdr_bss);
@@ -766,8 +768,8 @@ void generate(const char *output_file, const Program *program)
         0,
         0,
         strtab_body.size,
-        0,
-        0,
+        SHN_UNDEF,
+        DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
         0,
         &shdr_strtab);
@@ -781,8 +783,8 @@ void generate(const char *output_file, const Program *program)
         0,
         0,
         sh_name + strlen(".shstrtab") + 1, // add 1 for the trailing '\0'
-        0,
-        0,
+        SHN_UNDEF,
+        DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
         0,
         &shdr_shstrtab);
