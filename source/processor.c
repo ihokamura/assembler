@@ -8,17 +8,21 @@
 #include "processor.h"
 
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *text_body);
-static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_body);
+static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_body);
+static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_body);
+static void generate_op_push(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_body);
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
-static uint8_t get_encoding_index_rm(RegisterKind kind);
+static uint8_t get_register_field(RegisterKind kind);
 
 const MnemonicInfo mnemonic_info_list[] = 
 {
     {MN_CALL, "call", true,  generate_op_call},
     {MN_MOV,  "mov",  true,  generate_op_mov},
     {MN_NOP,  "nop",  false, generate_op_nop},
+    {MN_POP,  "pop",  true,  generate_op_pop},
+    {MN_PUSH, "push", true,  generate_op_push},
     {MN_RET,  "ret",  false, generate_op_ret},
 };
 const size_t MNEMONIC_INFO_LIST_SIZE = sizeof(mnemonic_info_list) / sizeof(mnemonic_info_list[0]);
@@ -82,8 +86,8 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         append_bytes(opecode, 1, text_body);
 
         uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_encoding_index_rm(first->reg);
-        uint8_t src_index = get_encoding_index_rm(second->reg);
+        uint8_t dst_index = get_register_field(first->reg);
+        uint8_t src_index = get_register_field(second->reg);
         uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
         append_bytes((char *)&modrm, sizeof(modrm), text_body);
     }
@@ -96,7 +100,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         append_bytes(opecode, 1, text_body);
 
         uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_encoding_index_rm(first->reg);
+        uint8_t dst_index = get_register_field(first->reg);
         uint8_t src_index = 0x00;
         uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
         append_bytes((char *)&modrm, sizeof(modrm), text_body);
@@ -114,6 +118,36 @@ static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_
 {
     uint8_t mnemonic = 0x90;
     append_bytes((char *)&mnemonic, sizeof(mnemonic), text_body);
+}
+
+
+/*
+generate pop operation
+*/
+static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_body)
+{
+    const Operand *operand = get_first_element(Operand)(operands);
+
+    if(operand->kind == OP_R64)
+    {
+        uint8_t mnemonic = 0x58 + get_register_field(operand->reg);
+        append_bytes((char *)&mnemonic, sizeof(mnemonic), text_body);
+    }
+}
+
+
+/*
+generate push operation
+*/
+static void generate_op_push(const List(Operand) *operands, ByteBufferType *text_body)
+{
+    const Operand *operand = get_first_element(Operand)(operands);
+
+    if(operand->kind == OP_R64)
+    {
+        uint8_t mnemonic = 0x50 + get_register_field(operand->reg);
+        append_bytes((char *)&mnemonic, sizeof(mnemonic), text_body);
+    }
 }
 
 
@@ -137,9 +171,9 @@ static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t s
 
 
 /*
-get index of register for addressing-mode encoding
+get value of register field
 */
-static uint8_t get_encoding_index_rm(RegisterKind kind)
+static uint8_t get_register_field(RegisterKind kind)
 {
     switch(kind)
     {

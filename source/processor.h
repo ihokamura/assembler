@@ -24,6 +24,8 @@ enum MnemonicKind
     MN_CALL, // call
     MN_MOV,  // mov
     MN_NOP,  // nop
+    MN_POP,  // pop
+    MN_PUSH, // push
     MN_RET,  // ret
 };
 
