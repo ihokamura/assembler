@@ -8,36 +8,37 @@
 #include "parser.h"
 #include "processor.h"
 
+typedef struct RelocationInfo RelocationInfo;
+typedef struct SectionInfo SectionInfo;
+
 struct LabelInfo
 {
     const char *body; // label body
     Elf_Addr address; // address to be replaced
 };
 
-typedef struct SectionInfo SectionInfo;
+struct RelocationInfo
+{
+    const LabelInfo *label; // information on label
+};
+
 struct SectionInfo
 {
     ByteBufferType *body; // section body
     Elf_Shdr shdr;        // section header table entry
 };
 
-typedef struct UnresolvedSymbol UnresolvedSymbol;
-struct UnresolvedSymbol
-{
-    const char *body;  // contents of symbol
-    Elf_Addr address;  // address to be replaced
-};
 
 #include "list.h"
 define_list(LabelInfo)
+define_list(RelocationInfo)
 define_list(SectionInfo)
-define_list(UnresolvedSymbol)
 define_list_operations(LabelInfo)
+define_list_operations(RelocationInfo)
 define_list_operations(SectionInfo)
-define_list_operations(UnresolvedSymbol)
 
+static RelocationInfo *new_relocation_info(const LabelInfo *label);
 static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr);
-static UnresolvedSymbol *new_unresolved_symbol(const char *body, Elf_Addr address);
 static void set_elf_header
 (
     Elf_Off e_shoff,
@@ -74,11 +75,11 @@ static void set_relocation_table
     Elf_Sxword r_addend
 );
 static void set_symbol_table_entries(const List(Symbol) *symbols);
+static Elf_Xword get_symtab_index(size_t resolved_symbols, const LabelInfo *label);
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_operations(const List(Operation) *operations);
 static void resolve_symbols(const List(Symbol) *symbols);
 static void classify_symbols(const List(Symbol) *symbols);
-static bool is_unresolved(const LabelInfo *label);
 static void fill_paddings(size_t pad_size, FILE *fp);
 static void generate_sections(const Program *program);
 static void generate_section_header_table_entries(void);
@@ -102,11 +103,12 @@ static Elf_Off e_shoff = 0;     // offset of section header table
 static Elf_Half e_shnum = 0;    // number of section header table entries
 static Elf_Half e_shstrndx = 0; // index of section ".shstrtab"
 
-static List(SectionInfo) *section_info_list;           // list of section information
-static List(LabelInfo) *label_info_list;               // list of label information
-static List(Symbol) *local_symbol_list;                // list of local symbols
-static List(Symbol) *global_symbol_list;               // list of global symbols
-static List(UnresolvedSymbol) *unresolved_symbol_list; // list of unresolved symbols
+static List(SectionInfo) *section_info_list;  // list of section information
+static List(LabelInfo) *label_info_list;      // list of label information
+static List(Symbol) *local_symbol_list;       // list of local symbols
+static List(Symbol) *global_symbol_list;      // list of global symbols
+static List(Symbol) *unresolved_symbol_list;  // list of unresolved symbols
+static List(RelocationInfo) *reloc_info_list; // list of relocatable symbols
 
 static ByteBufferType text_body = {NULL, 0, 0};      // buffer for section ".text"
 static ByteBufferType rela_text_body = {NULL, 0, 0}; // buffer for section ".rela.text"
@@ -134,6 +136,42 @@ LabelInfo *new_label_info(const char *body, Elf_Addr address)
 
 
 /*
+make a new relocatable symbol
+*/
+static RelocationInfo *new_relocation_info(const LabelInfo *label)
+{
+    // make a new relocation information
+    RelocationInfo *reloc_info = calloc(1, sizeof(RelocationInfo));
+    reloc_info->label = label;
+    add_list_entry_tail(RelocationInfo)(reloc_info_list, reloc_info);
+
+    // serch the existing symbols to avoid duplication
+    bool new_symbol = true;
+    for_each_entry(Symbol, cursor, unresolved_symbol_list)
+    {
+        Symbol *symbol = get_element(Symbol)(cursor);
+        if(strcmp(label->body, symbol->body) == 0)
+        {
+            new_symbol = false;
+            break;
+        }
+    }
+
+    if(new_symbol)
+    {
+        // make a new symbol
+        Symbol *symbol = calloc(1, sizeof(Symbol));
+        symbol->kind = SY_GLOBAL;
+        symbol->body = label->body;
+        symbol->operation = NULL;
+        add_list_entry_tail(Symbol)(unresolved_symbol_list, symbol);
+    }
+
+    return reloc_info;
+}
+
+
+/*
 make a new section information
 */
 static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr)
@@ -144,20 +182,6 @@ static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr)
     add_list_entry_tail(SectionInfo)(section_info_list, section_info);
 
     return section_info;
-}
-
-
-/*
-make a new unresolved symbol
-*/
-static UnresolvedSymbol *new_unresolved_symbol(const char *body, Elf_Addr address)
-{
-    UnresolvedSymbol *unresolved_symbol = calloc(1, sizeof(UnresolvedSymbol));
-    unresolved_symbol->body = body;
-    unresolved_symbol->address = address;
-    add_list_entry_tail(UnresolvedSymbol)(unresolved_symbol_list, unresolved_symbol);
-
-    return unresolved_symbol;
 }
 
 
@@ -390,10 +414,10 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
     }
 
     // unresolved symbols
-    for_each_entry(UnresolvedSymbol, cursor, unresolved_symbol_list)
+    for_each_entry(Symbol, cursor, unresolved_symbol_list)
     {
-        UnresolvedSymbol *unresolved_symbol = get_element(UnresolvedSymbol)(cursor);
-        const char *body = unresolved_symbol->body;
+        Symbol *symbol = get_element(Symbol)(cursor);
+        const char *body = symbol->body;
         set_symbol_table(
             st_name,
             ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
@@ -409,20 +433,39 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
 
 
 /*
+get index of symbol table entry for relocatable symbol
+*/
+static Elf_Xword get_symtab_index(size_t resolved_symbols, const LabelInfo *label)
+{
+    Elf_Xword sym_index = RESERVED_SYMTAB_ENTRIES + resolved_symbols;
+    for_each_entry(Symbol, cursor, unresolved_symbol_list)
+    {
+        Symbol *symbol = get_element(Symbol)(cursor);
+        if(strcmp(label->body, symbol->body) == 0)
+        {
+            break;
+        }
+        sym_index++;
+    }
+
+    return sym_index;
+}
+
+
+/*
 set entries of relocation table
 */
 static void set_relocation_table_entries(size_t resolved_symbols)
 {
-    Elf64_Xword sym_index = RESERVED_SYMTAB_ENTRIES + resolved_symbols; // symbol table index with respect to which the relocation will be made
-    for_each_entry(UnresolvedSymbol, cursor, unresolved_symbol_list)
+    for_each_entry(RelocationInfo, cursor, reloc_info_list)
     {
-        UnresolvedSymbol *unresolved_symbol = get_element(UnresolvedSymbol)(cursor);
+        RelocationInfo *reloc_info = get_element(RelocationInfo)(cursor);
+        const LabelInfo *label = reloc_info->label;
         set_relocation_table(
-            unresolved_symbol->address,
-            ELF_R_INFO(sym_index, R_X86_64_PC32),
+            label->address,
+            ELF_R_INFO(get_symtab_index(resolved_symbols, label), R_X86_64_PC32),
             -sizeof(uint32_t)
         );
-        sym_index++;
     }
 }
 
@@ -450,12 +493,6 @@ static void resolve_symbols(const List(Symbol) *symbols)
     for_each_entry(LabelInfo, label_cursor, label_info_list)
     {
         LabelInfo *label = get_element(LabelInfo)(label_cursor);
-
-        if(is_unresolved(label))
-        {
-            continue;
-        }
-
         bool resolved = false;
 
         for_each_entry(Symbol, symbol_cursor, symbols)
@@ -472,7 +509,7 @@ static void resolve_symbols(const List(Symbol) *symbols)
 
         if(!resolved)
         {
-            new_unresolved_symbol(label->body, label->address);
+            new_relocation_info(label);
         }
     }
 }
@@ -495,24 +532,6 @@ static void classify_symbols(const List(Symbol) *symbols)
             add_list_entry_tail(Symbol)(global_symbol_list, symbol);
         }
     }
-}
-
-
-/*
-check if a label is unresolved.
-*/
-static bool is_unresolved(const LabelInfo *label)
-{
-    for_each_entry(UnresolvedSymbol, cursor, unresolved_symbol_list)
-    {
-        UnresolvedSymbol *unresolved_symbol = get_element(UnresolvedSymbol)(cursor);
-        if(strcmp(label->body, unresolved_symbol->body) == 0)
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 
@@ -695,7 +714,8 @@ void generate(const char *output_file, const Program *program)
     label_info_list = new_list(LabelInfo)();
     local_symbol_list = new_list(Symbol)();
     global_symbol_list = new_list(Symbol)();
-    unresolved_symbol_list = new_list(UnresolvedSymbol)();
+    unresolved_symbol_list = new_list(Symbol)();
+    reloc_info_list = new_list(RelocationInfo)();
 
     // generate contents
     generate_sections(program);
