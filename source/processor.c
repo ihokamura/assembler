@@ -60,10 +60,10 @@ static void generate_op_call(const List(Operand) *operands, ByteBufferType *text
     {
         new_label_info(operand->label, text_body->size + 1);
 
-        const char *opecode = "\xe8";
-        append_bytes(opecode, 1, text_body);
+        uint8_t opecode = 0xe8;
+        append_bytes((char *)&opecode, sizeof(opecode), text_body);
 
-        uint32_t rel32 = 0; // temporal value
+        uint32_t rel32 = 0; // temporal value to be replaced during resolving symbols or relocation
         append_bytes((char *)&rel32, sizeof(rel32), text_body);
     }
 }
@@ -79,11 +79,11 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     Operand *second = get_element(Operand)(next_entry(Operand, entry));
     if((first->kind == OP_R64) && (second->kind == OP_R64))
     {
-        const char *prefixes = "\x48";
-        append_bytes(prefixes, 1, text_body);
+        uint8_t prefix = 0x48;
+        append_bytes((char *)&prefix, sizeof(prefix), text_body);
 
-        const char *opecode = "\x89";
-        append_bytes(opecode, 1, text_body);
+        uint8_t opecode = 0x89;
+        append_bytes((char *)&opecode, sizeof(opecode), text_body);
 
         uint8_t dst_encoding = 0x03;
         uint8_t dst_index = get_register_field(first->reg);
@@ -93,11 +93,11 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     }
     else if((first->kind == OP_R64) && (second->kind == OP_IMM32))
     {
-        const char *prefixes = "\x48";
-        append_bytes(prefixes, 1, text_body);
+        uint8_t prefix = 0x48;
+        append_bytes((char *)&prefix, sizeof(prefix), text_body);
 
-        const char *opecode = "\xc7";
-        append_bytes(opecode, 1, text_body);
+        uint8_t opecode = 0xc7;
+        append_bytes((char *)&opecode, sizeof(opecode), text_body);
 
         uint8_t dst_encoding = 0x03;
         uint8_t dst_index = get_register_field(first->reg);
@@ -116,8 +116,8 @@ generate nop operation
 */
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_body)
 {
-    uint8_t mnemonic = 0x90;
-    append_bytes((char *)&mnemonic, sizeof(mnemonic), text_body);
+    uint8_t opecode = 0x90;
+    append_bytes((char *)&opecode, sizeof(opecode), text_body);
 }
 
 
@@ -130,8 +130,8 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_
 
     if(operand->kind == OP_R64)
     {
-        uint8_t mnemonic = 0x58 + get_register_field(operand->reg);
-        append_bytes((char *)&mnemonic, sizeof(mnemonic), text_body);
+        uint8_t opecode = 0x58 + get_register_field(operand->reg);
+        append_bytes((char *)&opecode, sizeof(opecode), text_body);
     }
 }
 
@@ -145,8 +145,8 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *text
 
     if(operand->kind == OP_R64)
     {
-        uint8_t mnemonic = 0x50 + get_register_field(operand->reg);
-        append_bytes((char *)&mnemonic, sizeof(mnemonic), text_body);
+        uint8_t opecode = 0x50 + get_register_field(operand->reg);
+        append_bytes((char *)&opecode, sizeof(opecode), text_body);
     }
 }
 
@@ -156,8 +156,8 @@ generate ret operation
 */
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_body)
 {
-    uint8_t mnemonic = 0xc3;
-    append_bytes((char *)&mnemonic, sizeof(mnemonic), text_body);
+    uint8_t opecode = 0xc3;
+    append_bytes((char *)&opecode, sizeof(opecode), text_body);
 }
 
 
