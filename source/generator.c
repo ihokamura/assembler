@@ -6,8 +6,8 @@
 #include "elf_wrap.h"
 #include "generator.h"
 #include "parser.h"
+#include "processor.h"
 
-typedef struct LabelInfo LabelInfo;
 struct LabelInfo
 {
     const char *body; // label body
@@ -36,7 +36,6 @@ define_list_operations(LabelInfo)
 define_list_operations(SectionInfo)
 define_list_operations(UnresolvedSymbol)
 
-static LabelInfo *new_label_info(const char *body, Elf_Addr address);
 static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr);
 static UnresolvedSymbol *new_unresolved_symbol(const char *body, Elf_Addr address);
 static void set_elf_header
@@ -77,13 +76,6 @@ static void set_relocation_table
 static void set_symbol_table_entries(const List(Symbol) *symbols);
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_operations(const List(Operation) *operations);
-static void generate_operation(const Operation *operation);
-static void generate_op_call(const List(Operand) *operands);
-static void generate_op_nop(const List(Operand) *operands);
-static void generate_op_mov(const List(Operand) *operands);
-static void generate_op_ret(const List(Operand) *operands);
-static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
-static uint8_t get_encoding_index_rm(RegisterKind kind);
 static void resolve_symbols(const List(Symbol) *symbols);
 static void classify_symbols(const List(Symbol) *symbols);
 static bool is_unresolved(const LabelInfo *label);
@@ -91,15 +83,6 @@ static void fill_paddings(size_t pad_size, FILE *fp);
 static void generate_sections(const Program *program);
 static void generate_section_header_table_entries(void);
 static void generate_elf_header(void);
-
-// list of functions to generate operation
-static const void (*generate_op_functions[])(const List(Operand) *) =
-{
-    generate_op_call,
-    generate_op_mov,
-    generate_op_nop,
-    generate_op_ret,
-};
 
 static const Elf_Word DEFAULT_SECTION_INFO = 0;
 
@@ -139,7 +122,7 @@ static Elf_Ehdr elf_header;
 /*
 make a new label information
 */
-static LabelInfo *new_label_info(const char *body, Elf_Addr address)
+LabelInfo *new_label_info(const char *body, Elf_Addr address)
 {
     LabelInfo *label_info = calloc(1, sizeof(LabelInfo));
     label_info->body = body;
@@ -454,143 +437,7 @@ static void generate_operations(const List(Operation) *operations)
         Operation *operation = get_element(Operation)(cursor);
         operation->address = text_body.size;
 
-        generate_operation(operation);
-    }
-}
-
-
-/*
-generate an operation
-*/
-static void generate_operation(const Operation *operation)
-{
-    generate_op_functions[operation->kind](operation->operands);
-}
-
-
-/*
-generate call operation
-*/
-static void generate_op_call(const List(Operand) *operands)
-{
-    Operand *operand = get_first_element(Operand)(operands);
-    if(operand->kind == OP_SYMBOL)
-    {
-        new_label_info(operand->label, text_body.size + 1);
-
-        const char *opecode = "\xe8";
-        append_bytes(opecode, 1, &text_body);
-
-        uint32_t rel32 = 0; // temporal value
-        append_bytes((char *)&rel32, sizeof(rel32), &text_body);
-    }
-}
-
-
-/*
-generate mov operation
-*/
-static void generate_op_mov(const List(Operand) *operands)
-{
-    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
-    Operand *first = get_element(Operand)(entry);
-    Operand *second = get_element(Operand)(next_entry(Operand, entry));
-    if((first->kind == OP_R64) && (second->kind == OP_R64))
-    {
-        const char *prefixes = "\x48";
-        append_bytes(prefixes, 1, &text_body);
-
-        const char *opecode = "\x89";
-        append_bytes(opecode, 1, &text_body);
-
-        uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_encoding_index_rm(first->reg);
-        uint8_t src_index = get_encoding_index_rm(second->reg);
-        uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
-        append_bytes((char *)&modrm, sizeof(modrm), &text_body);
-    }
-    else if((first->kind == OP_R64) && (second->kind == OP_IMM32))
-    {
-        const char *prefixes = "\x48";
-        append_bytes(prefixes, 1, &text_body);
-
-        const char *opecode = "\xc7";
-        append_bytes(opecode, 1, &text_body);
-
-        uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_encoding_index_rm(first->reg);
-        uint8_t src_index = 0x00;
-        uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
-        append_bytes((char *)&modrm, sizeof(modrm), &text_body);
-
-        uint32_t immediate = second->immediate;
-        append_bytes((char *)&immediate, sizeof(immediate), &text_body);
-    }
-}
-
-
-/*
-generate nop operation
-*/
-static void generate_op_nop(const List(Operand) *operands)
-{
-    uint8_t mnemonic = 0x90;
-    append_bytes((char *)&mnemonic, sizeof(mnemonic), &text_body);
-}
-
-
-/*
-generate ret operation
-*/
-static void generate_op_ret(const List(Operand) *operands)
-{
-    uint8_t mnemonic = 0xc3;
-    append_bytes((char *)&mnemonic, sizeof(mnemonic), &text_body);
-}
-
-
-/*
-get value of ModR/M byte
-*/
-static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index)
-{
-    return (dst_encoding << 6) + (src_index << 3) + dst_index;
-}
-
-
-/*
-get index of register for addressing-mode encoding
-*/
-static uint8_t get_encoding_index_rm(RegisterKind kind)
-{
-    switch(kind)
-    {
-    case REG_RAX:
-        return 0x00;
-
-    case REG_RCX:
-        return 0x01;
-
-    case REG_RDX:
-        return 0x02;
-
-    case REG_RBX:
-        return 0x03;
-
-    case REG_RSP:
-        return 0x04;
-
-    case REG_RBP:
-        return 0x05;
-
-    case REG_RSI:
-        return 0x06;
-
-    case REG_RDI:
-        return 0x07;
-
-    default:
-        return 0x00;
+        generate_operation(operation, &text_body);
     }
 }
 

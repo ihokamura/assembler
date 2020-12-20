@@ -6,14 +6,10 @@
 
 typedef enum SymbolKind SymbolKind;
 typedef struct Directive Directive;
-typedef struct Operand Operand;
-typedef struct Operation Operation;
 typedef struct Program Program;
 typedef struct Symbol Symbol;
 
 #include "list.h"
-define_list(Operand)
-define_list(Operation)
 define_list(Symbol)
 
 // kind of symbol
@@ -27,26 +23,6 @@ enum SymbolKind
 struct Directive
 {
     const Symbol *symbol; // symbol associated with the directive
-};
-
-// structure for operand
-struct Operand
-{
-    OperandKind kind;    // kind of operand
-    union
-    {
-        long immediate;    // immediate value
-        RegisterKind reg;  // kind of register
-        const char *label; // label
-    };
-};
-
-// structure for operation
-struct Operation
-{
-    MnemonicKind kind;             // kind of operation
-    const List(Operand) *operands; // list of operands
-    Elf_Addr address;              // address of operation
 };
 
 // structure for program
