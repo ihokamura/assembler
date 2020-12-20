@@ -3,9 +3,9 @@
 
 
 /*
-check if two values are equal
+check if two 64-bit values are equal
 */
-uint32_t assert_equal(uint64_t expected, uint64_t actual)
+uint32_t assert_equal_uint64(uint64_t expected, uint64_t actual)
 {
     if(expected == actual)
     {

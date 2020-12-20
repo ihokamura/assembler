@@ -33,7 +33,7 @@ test()
 
 
 # execute tests
-test test.s 42
+test test.s 0
 
 
 # restore the directory
