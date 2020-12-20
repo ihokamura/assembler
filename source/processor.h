@@ -33,6 +33,7 @@ enum MnemonicKind
 enum OperandKind
 {
     OP_IMM32,  // 32-bit immediate
+    OP_R32,    // 32-bit register
     OP_R64,    // 64-bit register
     OP_SYMBOL, // symbol
 };
@@ -40,6 +41,14 @@ enum OperandKind
 // kind of register
 enum RegisterKind
 {
+    REG_EAX, // eax
+    REG_ECX, // ecx
+    REG_EDX, // edx
+    REG_EBX, // ebx
+    REG_ESP, // esp
+    REG_EBP, // ebp
+    REG_ESI, // esi
+    REG_EDI, // edi
     REG_RAX, // rax
     REG_RCX, // rcx
     REG_RDX, // rdx

@@ -13,10 +13,15 @@ main:
 
 # test mov
 test_mov:
-	mov rdx, 42
+	mov rdx, 64
 	mov rdi, rdx
-	mov rsi, 42
+	mov rsi, 64
 	call assert_equal_uint64
+
+	mov edx, 32
+	mov edi, edx
+	mov esi, 32
+	call assert_equal_uint32
 
 	ret
 
@@ -30,16 +35,16 @@ test_nop:
 
 # test push and pop
 test_push_pop:
-	mov rdx, 42
+	mov rdx, 64
 	push rdx
 
-	mov rdx, 21
+	mov rdx, 65
 	mov rdi, rdx
-	mov rsi, 21
+	mov rsi, 65
 	call assert_equal_uint64
 
 	pop rdi
-	mov rsi, 42
+	mov rsi, 64
 	call assert_equal_uint64
 
 	ret
