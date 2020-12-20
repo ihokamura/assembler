@@ -503,9 +503,9 @@ check if the following string is a mnemonic
 static int is_mnemonic(const char *str)
 {
     // check mnemonics
-    for(size_t i = 0; i < MNEMONIC_MAP_SIZE; i++)
+    for(size_t i = 0; i < MNEMONIC_INFO_LIST_SIZE; i++)
     {
-        const char *mnemonic = mnemonic_maps[i].name;
+        const char *mnemonic = mnemonic_info_list[i].name;
         size_t len = strlen(mnemonic);
         if((strncmp(str, mnemonic, len) == 0) && (!isalnum(str[len]) && (str[len] != '_')))
         {
@@ -546,9 +546,9 @@ check if the following string is a register
 */
 static int is_register(const char *str)
 {
-    for(size_t i = 0; i < REGISTER_MAP_SIZE; i++)
+    for(size_t i = 0; i < REGISTER_INFO_LIST_SIZE; i++)
     {
-        const char *reg = register_maps[i].name;
+        const char *reg = register_info_list[i].name;
         size_t len = strlen(reg);
         if((strncmp(str, reg, len) == 0) && (!isalnum(str[len]) && (str[len] != '_')))
         {

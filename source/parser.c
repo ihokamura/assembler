@@ -17,7 +17,7 @@ static void statement(void);
 static Directive *directive(void);
 static Symbol *symbol(const Token *token);
 static Operation *operation(const Token *token);
-static MnemonicKind mnemonic(const Token *token);
+static const MnemonicInfo *mnemonic(const Token *token);
 static List(Operand) *operands(void);
 static Operand *operand(void);
 static Directive *new_directive(const Symbol *symbol);
@@ -148,44 +148,28 @@ operation ::= mnemonic operands?
 */
 static Operation *operation(const Token *token)
 {
-    MnemonicKind kind = mnemonic(token);
+    const MnemonicInfo *map = mnemonic(token);
 
-    switch(kind)
-    {
-    case MN_CALL:
-    case MN_MOV:
-        return new_operation(kind, operands());
-
-    case MN_NOP:
-    case MN_RET:
-    default:
-        return new_operation(kind, NULL);
-    }
+    return new_operation(map->kind, map->take_operands ? operands() : NULL);
 }
 
 
 /*
 parse a mnemonic
-```
-mnemonic ::= "call"
-           | "mov"
-           | "nop"
-           | "ret"
-```
 */
-static MnemonicKind mnemonic(const Token *token)
+static const MnemonicInfo *mnemonic(const Token *token)
 {
-    for(size_t i = 0; i < MNEMONIC_MAP_SIZE; i++)
+    for(size_t i = 0; i < MNEMONIC_INFO_LIST_SIZE; i++)
     {
-        if(strncmp(token->str, mnemonic_maps[i].name, token->len) == 0)
+        if(strncmp(token->str, mnemonic_info_list[i].name, token->len) == 0)
         {
-            return mnemonic_maps[i].kind;
+            return &mnemonic_info_list[i];
         }
     }
 
     report_error(NULL, "invalid mnemonic '%s.", make_symbol(token));
 
-    return MN_NOP;
+    return &mnemonic_info_list[MN_NOP];
 }
 
 
@@ -311,13 +295,13 @@ make a new operand for register
 */
 static Operand *new_operand_register(const char *name)
 {
-    for(size_t i = 0; i < REGISTER_MAP_SIZE; i++)
+    for(size_t i = 0; i < REGISTER_INFO_LIST_SIZE; i++)
     {
-        RegisterMap map = register_maps[i];
-        if(strcmp(name, map.name) == 0)
+        const RegisterInfo *map = &register_info_list[i];
+        if(strcmp(name, map->name) == 0)
         {
-            Operand *operand = new_operand(map.op_kind);
-            operand->reg = map.reg_kind;
+            Operand *operand = new_operand(map->op_kind);
+            operand->reg = map->reg_kind;
             return operand;
         }
     }

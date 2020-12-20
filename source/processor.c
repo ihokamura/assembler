@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -13,27 +14,27 @@ static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
 static uint8_t get_encoding_index_rm(RegisterKind kind);
 
-const MnemonicMap mnemonic_maps[] = 
+const MnemonicInfo mnemonic_info_list[] = 
 {
-    {"call", MN_CALL, generate_op_call},
-    {"mov", MN_MOV, generate_op_mov},
-    {"nop", MN_NOP, generate_op_nop},
-    {"ret", MN_RET, generate_op_ret},
+    {MN_CALL, "call", true,  generate_op_call},
+    {MN_MOV,  "mov",  true,  generate_op_mov},
+    {MN_NOP,  "nop",  false, generate_op_nop},
+    {MN_RET,  "ret",  false, generate_op_ret},
 };
-const size_t MNEMONIC_MAP_SIZE = sizeof(mnemonic_maps) / sizeof(mnemonic_maps[0]);
+const size_t MNEMONIC_INFO_LIST_SIZE = sizeof(mnemonic_info_list) / sizeof(mnemonic_info_list[0]);
 
-const RegisterMap register_maps[] = 
+const RegisterInfo register_info_list[] = 
 {
-    {"rax", REG_RAX, OP_R64},
-    {"rcx", REG_RCX, OP_R64},
-    {"rdx", REG_RDX, OP_R64},
-    {"rbx", REG_RBX, OP_R64},
-    {"rsp", REG_RSP, OP_R64},
-    {"rbp", REG_RBP, OP_R64},
-    {"rsi", REG_RSI, OP_R64},
-    {"rdi", REG_RDI, OP_R64},
+    {REG_RAX, "rax", OP_R64},
+    {REG_RCX, "rcx", OP_R64},
+    {REG_RDX, "rdx", OP_R64},
+    {REG_RBX, "rbx", OP_R64},
+    {REG_RSP, "rsp", OP_R64},
+    {REG_RBP, "rbp", OP_R64},
+    {REG_RSI, "rsi", OP_R64},
+    {REG_RDI, "rdi", OP_R64},
 };
-const size_t REGISTER_MAP_SIZE = sizeof(register_maps) / sizeof(register_maps[0]);
+const size_t REGISTER_INFO_LIST_SIZE = sizeof(register_info_list) / sizeof(register_info_list[0]);
 
 
 /*
@@ -41,7 +42,7 @@ generate an operation
 */
 void generate_operation(const Operation *operation, ByteBufferType *text_body)
 {
-    mnemonic_maps[operation->kind].generate_function(operation->operands, text_body);
+    mnemonic_info_list[operation->kind].generate_function(operation->operands, text_body);
 }
 
 

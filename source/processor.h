@@ -1,16 +1,18 @@
 #ifndef __PROCESSOR_H__
 #define __PROCESSOR_H__
 
+#include <stdbool.h>
+
 #include "buffer.h"
 #include "elf_wrap.h"
 
 typedef enum OperandKind OperandKind;
 typedef enum MnemonicKind MnemonicKind;
 typedef enum RegisterKind RegisterKind;
-typedef struct MnemonicMap MnemonicMap;
+typedef struct MnemonicInfo MnemonicInfo;
 typedef struct Operand Operand;
 typedef struct Operation Operation;
-typedef struct RegisterMap RegisterMap;
+typedef struct RegisterInfo RegisterInfo;
 
 #include "list.h"
 define_list(Operand)
@@ -47,10 +49,11 @@ enum RegisterKind
 };
 
 // structure for mapping from string to kind of mnemonic
-struct MnemonicMap
+struct MnemonicInfo
 {
-    const char *name;                                                         // name of mnemonic
     MnemonicKind kind;                                                        // kind of mnemonic
+    const char *name;                                                         // name of mnemonic
+    bool take_operands;                                                       // flag indicating that the mnemonic takes operands
     const void (*generate_function)(const List(Operand) *, ByteBufferType *); // function to generate operation
 };
 
@@ -75,18 +78,18 @@ struct Operation
 };
 
 // structure for mapping from string to kind of register
-struct RegisterMap
+struct RegisterInfo
 {
-    const char *name;      // name of register
     RegisterKind reg_kind; // kind of register
+    const char *name;      // name of register
     OperandKind op_kind;   // kind of operand
 };
 
-extern const MnemonicMap mnemonic_maps[];
-extern const size_t MNEMONIC_MAP_SIZE;
+extern const MnemonicInfo mnemonic_info_list[];
+extern const size_t MNEMONIC_INFO_LIST_SIZE;
 
-extern const RegisterMap register_maps[];
-extern const size_t REGISTER_MAP_SIZE;
+extern const RegisterInfo register_info_list[];
+extern const size_t REGISTER_INFO_LIST_SIZE;
 
 void generate_operation(const Operation *operation, ByteBufferType *text_body);
 
