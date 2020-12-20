@@ -7,9 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "processor.h"
 #include "tokenizer.h"
 
-// definition of list
 #include "list.h"
 define_list(Token)
 define_list_operations(Token)
@@ -45,26 +45,6 @@ static const char *directive_list[] = {
     "globl",
 };
 static const size_t DIRECTIVE_LIST_SIZE = sizeof(directive_list) / sizeof(directive_list[0]); // number of directives
-// list of mnemonics
-static const char *mnemonic_list[] = {
-    "call",
-    "mov",
-    "nop",
-    "ret",
-};
-static const size_t MNEMONIC_LIST_SIZE = sizeof(mnemonic_list) / sizeof(mnemonic_list[0]); // number of mnemonics
-// list of registers
-static const char *register_list[] = {
-    "rax",
-    "rcx",
-    "rdx",
-    "rbx",
-    "rsp",
-    "rbp",
-    "rsi",
-    "rdi",
-};
-static const size_t REGISTER_LIST_SIZE = sizeof(register_list) / sizeof(register_list[0]); // number of registers
 static char *user_input; // input of assembler
 static List(Token) *token_list; // list of tokens
 static ListEntry(Token) *current_token; // currently parsing token
@@ -523,9 +503,9 @@ check if the following string is a mnemonic
 static int is_mnemonic(const char *str)
 {
     // check mnemonics
-    for(size_t i = 0; i < MNEMONIC_LIST_SIZE; i++)
+    for(size_t i = 0; i < MNEMONIC_MAP_SIZE; i++)
     {
-        const char *mnemonic = mnemonic_list[i];
+        const char *mnemonic = mnemonic_maps[i].name;
         size_t len = strlen(mnemonic);
         if((strncmp(str, mnemonic, len) == 0) && (!isalnum(str[len]) && (str[len] != '_')))
         {
@@ -566,9 +546,9 @@ check if the following string is a register
 */
 static int is_register(const char *str)
 {
-    for(size_t i = 0; i < REGISTER_LIST_SIZE; i++)
+    for(size_t i = 0; i < REGISTER_MAP_SIZE; i++)
     {
-        const char *reg = register_list[i];
+        const char *reg = register_maps[i].name;
         size_t len = strlen(reg);
         if((strncmp(str, reg, len) == 0) && (!isalnum(str[len]) && (str[len] != '_')))
         {

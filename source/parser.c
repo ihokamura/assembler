@@ -3,21 +3,13 @@
 #include <string.h>
 
 #include "parser.h"
+#include "processor.h"
 #include "tokenizer.h"
 
-// definition of list operations
 #include "list.h"
 define_list_operations(Operation)
 define_list_operations(Operand)
 define_list_operations(Symbol)
-
-typedef struct RegisterMap RegisterMap;
-struct RegisterMap
-{
-    const char *name;
-    OperandKind op_kind;
-    RegisterKind reg_kind;
-};
 
 // function prototype
 static void program(void);
@@ -39,27 +31,7 @@ static Operand *new_operand_symbol(const Token *token);
 // global variable
 static List(Operation) *operation_list = NULL; // list of operations
 static List(Symbol) *symbol_list = NULL; // list of symbols
-// mapping from mnemonic string to operation kind
-static const struct {const char *mnemonic; MnemonicKind kind;} mnemonic_map[] = 
-{
-    {"call", MN_CALL},
-    {"mov", MN_MOV},
-    {"nop", MN_NOP},
-    {"ret", MN_RET},
-};
-static size_t MNIMONIC_MAP_SIZE = sizeof(mnemonic_map) / sizeof(mnemonic_map[0]);
-static const RegisterMap register_maps[] = 
-{
-    {"rax", OP_R64, REG_RAX},
-    {"rcx", OP_R64, REG_RCX},
-    {"rdx", OP_R64, REG_RDX},
-    {"rbx", OP_R64, REG_RBX},
-    {"rsp", OP_R64, REG_RSP},
-    {"rbp", OP_R64, REG_RBP},
-    {"rsi", OP_R64, REG_RSI},
-    {"rdi", OP_R64, REG_RDI},
-};
-static const size_t REGISTER_MAP_SIZE = sizeof(register_maps) / sizeof(register_maps[0]);
+
 
 /*
 construct program
@@ -203,11 +175,11 @@ mnemonic ::= "call"
 */
 static MnemonicKind mnemonic(const Token *token)
 {
-    for(size_t i = 0; i < MNIMONIC_MAP_SIZE; i++)
+    for(size_t i = 0; i < MNEMONIC_MAP_SIZE; i++)
     {
-        if(strncmp(token->str, mnemonic_map[i].mnemonic, token->len) == 0)
+        if(strncmp(token->str, mnemonic_maps[i].name, token->len) == 0)
         {
-            return mnemonic_map[i].kind;
+            return mnemonic_maps[i].kind;
         }
     }
 
