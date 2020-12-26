@@ -10,6 +10,15 @@
 #include "processor.h"
 #include "tokenizer.h"
 
+typedef struct ReservedWordInfo ReservedWordInfo;
+
+struct ReservedWordInfo
+
+{
+    const char **list; // list of reserved words (longer strings should be followed by shorter strings)
+    size_t size;       // size of list
+};
+
 #include "list.h"
 define_list(Token)
 define_list_operations(Token)
@@ -31,7 +40,6 @@ static void report_position(const char *loc);
 
 // global variable
 // list of punctuators
-// It is necessary to put longer strings above than shorter strings.
 static const char *punctuator_list[] = {
     "\n",
     ",",
@@ -40,14 +48,23 @@ static const char *punctuator_list[] = {
     "[",
     "]",
 };
-static const size_t PUNCTUATOR_LIST_SIZE = sizeof(punctuator_list) / sizeof(punctuator_list[0]); // number of punctuators
 // list of directives
 static const char *directive_list[] = {
     "intel_syntax noprefix",
     "globl",
+};
+// list of size specifiers
+static const char *size_specifier_list[] = {
     "qword ptr",
 };
-static const size_t DIRECTIVE_LIST_SIZE = sizeof(directive_list) / sizeof(directive_list[0]); // number of directives
+// information on reserved words
+static const ReservedWordInfo reserved_word_info[] = 
+{
+    {punctuator_list, sizeof(punctuator_list) / sizeof(punctuator_list[0])},
+    {directive_list, sizeof(directive_list) / sizeof(directive_list[0])},
+    {size_specifier_list, sizeof(size_specifier_list) / sizeof(size_specifier_list[0])},
+};
+static size_t RESERVED_WORD_INFO_SIZE = sizeof(reserved_word_info) / sizeof(reserved_word_info[0]); // size of information on reserved words
 static char *user_input; // input of assembler
 static List(Token) *token_list; // list of tokens
 static ListEntry(Token) *current_token; // currently parsing token
@@ -474,25 +491,17 @@ check if the following string is reserved
 */
 static int is_reserved(const char *str)
 {
-    // check punctuators
-    for(size_t i = 0; i < PUNCTUATOR_LIST_SIZE; i++)
+    for(size_t i = 0; i < RESERVED_WORD_INFO_SIZE; i++)
     {
-        const char *punc = punctuator_list[i];
-        size_t len = strlen(punc);
-        if(strncmp(str, punc, len) == 0)
+        const ReservedWordInfo *info = &reserved_word_info[i];
+        for(size_t j = 0; j < info->size; j++)
         {
-            return len;
-        }
-    }
-
-    // check directives
-    for(size_t i = 0; i < DIRECTIVE_LIST_SIZE; i++)
-    {
-        const char *directive = directive_list[i];
-        size_t len = strlen(directive);
-        if((strncmp(str, directive, len) == 0) && (!isalnum(str[len]) && (str[len] != '_')))
-        {
-            return len;
+            const char *word = info->list[j];
+            size_t len = strlen(word);
+            if(strncmp(str, word, len) == 0)
+            {
+                return len;
+            }
         }
     }
 

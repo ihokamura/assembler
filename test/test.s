@@ -28,10 +28,10 @@ test_mov:
 	mov esi, 32
 	call assert_equal_uint32
 
-	mov rax, rsp
+	mov rax, rbp
 	sub rax, 8
 	mov qword ptr [rax], 64
-	mov rax, rsp
+	mov rax, rbp
 	sub rax, 8
 	mov rdi, qword ptr [rax]
 	mov rsi, 64
