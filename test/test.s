@@ -8,6 +8,8 @@ main:
 	call test_push_pop
 	call test_sub
 
+	call test_external_text
+
 	mov rax, 0
 	ret
 
@@ -101,5 +103,12 @@ test_sub:
 	mov edi, edx
 	mov esi, 62
 	call assert_equal_uint32
+
+	ret
+
+
+# test access to external text section
+test_external_text:
+	call test_external_function1
 
 	ret
