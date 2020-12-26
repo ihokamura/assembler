@@ -36,6 +36,7 @@ enum OperandKind
     OP_IMM32,  // 32-bit immediate
     OP_R32,    // 32-bit register
     OP_R64,    // 64-bit register
+    OP_M32,    // 32-bit memory
     OP_M64,    // 64-bit memory
     OP_SYMBOL, // symbol
 };

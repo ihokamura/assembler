@@ -55,6 +55,7 @@ static const char *directive_list[] = {
 };
 // list of size specifiers
 static const char *size_specifier_list[] = {
+    "dword ptr",
     "qword ptr",
 };
 // information on reserved words

@@ -26,7 +26,7 @@ operand ::= immediate | register | memory | symbol
 register ::= "eax" | "edx" | "ecx" | "ebx" | "esp" | "ebp" | "esi" | "edi"
            | "rax" | "rdx" | "rcx" | "rbx" | "rsp" | "rbp" | "rsi" | "rdi"
 memory ::= size-specifier "[" register "]"
-size-specifier ::= "qword ptr"
+size-specifier ::= "dword ptr" | "qword ptr"
 ```
 
 ## Reference

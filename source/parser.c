@@ -367,7 +367,11 @@ static bool consume_size_specifier(OperandKind *kind)
 {
     bool consumed = true;
 
-    if(consume_reserved("qword ptr"))
+    if(consume_reserved("dword ptr"))
+    {
+        *kind = OP_M32;
+    }
+    else if(consume_reserved("qword ptr"))
     {
         *kind = OP_M64;
     }
