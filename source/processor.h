@@ -27,6 +27,7 @@ enum MnemonicKind
     MN_POP,  // pop
     MN_PUSH, // push
     MN_RET,  // ret
+    MN_SUB,  // sub
 };
 
 // kind of operand
