@@ -99,6 +99,12 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         append_binary_opecode(0x89, text_body);
         append_binary_modrm(0x03, get_register_field(operand1->reg), get_register_field(operand2->reg), text_body);
     }
+    else if((operand1->kind == OP_R64) && (operand2->kind == OP_M64))
+    {
+        append_binary_prefix(0x48, text_body);
+        append_binary_opecode(0x8b, text_body);
+        append_binary_modrm(0x00, get_register_field(operand2->reg), get_register_field(operand1->reg), text_body);
+    }
     else if((operand1->kind == OP_R32) && (operand2->kind == OP_IMM32))
     {
         append_binary_opecode(0xb8 + get_register_field(operand1->reg), text_body);
@@ -109,6 +115,13 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         append_binary_prefix(0x48, text_body);
         append_binary_opecode(0xc7, text_body);
         append_binary_modrm(0x03, get_register_field(operand1->reg), 0x00, text_body);
+        append_binary_imm32(operand2->immediate, text_body);
+    }
+    else if((operand1->kind == OP_M64) && (operand2->kind == OP_IMM32))
+    {
+        append_binary_prefix(0x48, text_body);
+        append_binary_opecode(0xc7, text_body);
+        append_binary_modrm(0x00, get_register_field(operand1->reg), 0x00, text_body);
         append_binary_imm32(operand2->immediate, text_body);
     }
 }

@@ -1,3 +1,4 @@
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -25,8 +26,11 @@ static Symbol *new_symbol(SymbolKind kind, const char *body);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
 static Operand *new_operand(OperandKind kind);
 static Operand *new_operand_immediate(long immediate);
-static Operand *new_operand_register(const char *name);
+static Operand *new_operand_register(const Token *token);
+static Operand *new_operand_memory(OperandKind kind);
 static Operand *new_operand_symbol(const Token *token);
+static const RegisterInfo *get_register_info(const Token *token);
+static bool consume_size_specifier(OperandKind *kind);
 
 // global variable
 static List(Operation) *operation_list = NULL; // list of operations
@@ -195,21 +199,26 @@ static List(Operand) *operands(void)
 /*
 parse an operand
 ```
-operand ::= immediate | register | symbol
+operand ::= immediate | register | memory | symbol
 ```
 */
 static Operand *operand(void)
 {
     Token *token;
+    OperandKind kind;
     if(consume_token(TK_IMMEDIATE, &token))
     {
         return new_operand_immediate(token->value);
     }
     else if(consume_token(TK_REGISTER, &token))
     {
-        return new_operand_register(make_symbol(token));
+        return new_operand_register(token);
     }
-    else if (consume_token(TK_SYMBOL, &token))
+    else if(consume_size_specifier(&kind))
+    {
+        return new_operand_memory(kind);
+    }
+    else if(consume_token(TK_SYMBOL, &token))
     {
         return new_operand_symbol(token);
     }
@@ -293,21 +302,28 @@ static Operand *new_operand_immediate(long immediate)
 /*
 make a new operand for register
 */
-static Operand *new_operand_register(const char *name)
+static Operand *new_operand_register(const Token *token)
 {
-    for(size_t i = 0; i < REGISTER_INFO_LIST_SIZE; i++)
-    {
-        const RegisterInfo *map = &register_info_list[i];
-        if(strcmp(name, map->name) == 0)
-        {
-            Operand *operand = new_operand(map->op_kind);
-            operand->reg = map->reg_kind;
-            return operand;
-        }
-    }
+    const RegisterInfo *info = get_register_info(token);
+    Operand *operand = new_operand(info->op_kind);
+    operand->reg = info->reg_kind;
+    return operand;
+}
 
-    report_error(NULL, "invalid register name '%s'.", name);
-    return NULL;
+
+/*
+make a new operand for memory
+*/
+static Operand *new_operand_memory(OperandKind kind)
+{
+    Operand *operand = new_operand(kind);
+
+    expect_reserved("[");
+    Token *token = expect_register();
+    operand->reg = get_register_info(token)->reg_kind;
+    expect_reserved("]");
+
+    return operand;
 }
 
 
@@ -320,4 +336,45 @@ static Operand *new_operand_symbol(const Token *token)
     operand->label = make_symbol(token);
 
     return operand;
+}
+
+
+/*
+get register information by name
+*/
+static const RegisterInfo *get_register_info(const Token *token)
+{
+    for(size_t i = 0; i < REGISTER_INFO_LIST_SIZE; i++)
+    {
+        const RegisterInfo *info = &register_info_list[i];
+        if(strncmp(token->str, info->name, token->len) == 0)
+        {
+            return info;
+        }
+    }
+
+    return NULL;
+}
+
+
+/*
+consume a size specifier
+```
+size-specifier ::= "qword ptr"
+```
+*/
+static bool consume_size_specifier(OperandKind *kind)
+{
+    bool consumed = true;
+
+    if(consume_reserved("qword ptr"))
+    {
+        *kind = OP_M64;
+    }
+    else
+    {
+        consumed = false;
+    }
+
+    return consumed;
 }

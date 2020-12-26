@@ -14,6 +14,10 @@ main:
 
 # test mov
 test_mov:
+	push rbp
+	mov rbp, rsp
+	sub rsp, 8
+
 	mov rdx, 64
 	mov rdi, rdx
 	mov rsi, 64
@@ -24,6 +28,16 @@ test_mov:
 	mov esi, 32
 	call assert_equal_uint32
 
+	mov rax, rsp
+	sub rax, 8
+	mov qword ptr [rax], 64
+	mov rax, rsp
+	sub rax, 8
+	mov rdi, qword ptr [rax]
+	mov rsi, 64
+	call assert_equal_uint64
+
+	pop rbp
 	ret
 
 

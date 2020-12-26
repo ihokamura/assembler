@@ -34,15 +34,18 @@ static void report_position(const char *loc);
 // It is necessary to put longer strings above than shorter strings.
 static const char *punctuator_list[] = {
     "\n",
+    ",",
     ".",
     ":",
-    ",",
+    "[",
+    "]",
 };
 static const size_t PUNCTUATOR_LIST_SIZE = sizeof(punctuator_list) / sizeof(punctuator_list[0]); // number of punctuators
 // list of directives
 static const char *directive_list[] = {
     "intel_syntax noprefix",
     "globl",
+    "qword ptr",
 };
 static const size_t DIRECTIVE_LIST_SIZE = sizeof(directive_list) / sizeof(directive_list[0]); // number of directives
 static char *user_input; // input of assembler
@@ -569,6 +572,12 @@ static int is_immediate(const char *str, size_t *value)
     int base;
     const char *start;
     int (*check_digit)(int);
+
+    // check sign
+    if(strchr("+-", str[len]) != NULL)
+    {
+        len++;
+    }
 
     // check prefix
     if((strncmp(&str[len], "0x", 2) == 0) || (strncmp(&str[len], "0X", 2) == 0))

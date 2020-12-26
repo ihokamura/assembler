@@ -17,10 +17,16 @@ operation ::= mnemonic operands?
 mnemonic ::= "call"
            | "mov"
            | "nop"
+           | "pop"
+           | "push"
            | "ret"
+           | "sub"
 operands ::= operand ("," operand)?
-operand ::= immediate | register | symbol
-register ::= "rax" | "rdx" | "rcx" | "rbx" | "rsp" | "rbp" | "rsi" | "rdi"
+operand ::= immediate | register | memory | symbol
+register ::= "eax" | "edx" | "ecx" | "ebx" | "esp" | "ebp" | "esi" | "edi"
+           | "rax" | "rdx" | "rcx" | "rbx" | "rsp" | "rbp" | "rsi" | "rdi"
+memory ::= size-specifier "[" register "]"
+size-specifier ::= "qword ptr"
 ```
 
 ## Reference

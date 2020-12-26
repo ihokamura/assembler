@@ -34,6 +34,7 @@ void set_token(Token *token);
 void expect_reserved(const char *str);
 Token *expect_symbol(void);
 Token *expect_immediate(void);
+Token *expect_register(void);
 void tokenize(char *str);
 bool at_eof(void);
 char *make_symbol(const Token *token);
