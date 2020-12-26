@@ -16,6 +16,10 @@ static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_body);
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
 static uint8_t get_register_field(RegisterKind kind);
+static void append_binary_prefix(uint8_t prefix, ByteBufferType *text_body);
+static void append_binary_opecode(uint8_t opecode, ByteBufferType *text_body);
+static void append_binary_modrm(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index, ByteBufferType *text_body);
+static void append_binary_imm32(uint32_t imm32, ByteBufferType *text_body);
 
 const MnemonicInfo mnemonic_info_list[] = 
 {
@@ -70,11 +74,8 @@ static void generate_op_call(const List(Operand) *operands, ByteBufferType *text
     {
         new_label_info(operand->label, text_body->size + 1);
 
-        uint8_t opecode = 0xe8;
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
-
-        uint32_t rel32 = 0; // temporal value to be replaced during resolving symbols or relocation
-        append_bytes((char *)&rel32, sizeof(rel32), text_body);
+        append_binary_opecode(0xe8, text_body);
+        append_binary_imm32(0, text_body); // imm32 is a temporal value to be replaced during resolving symbols or relocation
     }
 }
 
@@ -89,53 +90,26 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
     if((operand1->kind == OP_R32) && (operand2->kind == OP_R32))
     {
-        uint8_t opecode = 0x89;
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
-
-        uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_register_field(operand1->reg);
-        uint8_t src_index = get_register_field(operand2->reg);
-        uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
-        append_bytes((char *)&modrm, sizeof(modrm), text_body);
+        append_binary_opecode(0x89, text_body);
+        append_binary_modrm(0x03, get_register_field(operand1->reg), get_register_field(operand2->reg), text_body);
     }
     else if((operand1->kind == OP_R64) && (operand2->kind == OP_R64))
     {
-        uint8_t prefix = 0x48;
-        append_bytes((char *)&prefix, sizeof(prefix), text_body);
-
-        uint8_t opecode = 0x89;
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
-
-        uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_register_field(operand1->reg);
-        uint8_t src_index = get_register_field(operand2->reg);
-        uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
-        append_bytes((char *)&modrm, sizeof(modrm), text_body);
+        append_binary_prefix(0x48, text_body);
+        append_binary_opecode(0x89, text_body);
+        append_binary_modrm(0x03, get_register_field(operand1->reg), get_register_field(operand2->reg), text_body);
     }
     else if((operand1->kind == OP_R32) && (operand2->kind == OP_IMM32))
     {
-        uint8_t opecode = 0xb8 + get_register_field(operand1->reg);
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
-
-        uint32_t imm32 = operand2->immediate;
-        append_bytes((char *)&imm32, sizeof(imm32), text_body);
+        append_binary_opecode(0xb8 + get_register_field(operand1->reg), text_body);
+        append_binary_imm32(operand2->immediate, text_body);
     }
     else if((operand1->kind == OP_R64) && (operand2->kind == OP_IMM32))
     {
-        uint8_t prefix = 0x48;
-        append_bytes((char *)&prefix, sizeof(prefix), text_body);
-
-        uint8_t opecode = 0xc7;
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
-
-        uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_register_field(operand1->reg);
-        uint8_t src_index = 0x00;
-        uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
-        append_bytes((char *)&modrm, sizeof(modrm), text_body);
-
-        uint32_t imm32 = operand2->immediate;
-        append_bytes((char *)&imm32, sizeof(imm32), text_body);
+        append_binary_prefix(0x48, text_body);
+        append_binary_opecode(0xc7, text_body);
+        append_binary_modrm(0x03, get_register_field(operand1->reg), 0x00, text_body);
+        append_binary_imm32(operand2->immediate, text_body);
     }
 }
 
@@ -145,8 +119,7 @@ generate nop operation
 */
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_body)
 {
-    uint8_t opecode = 0x90;
-    append_bytes((char *)&opecode, sizeof(opecode), text_body);
+    append_binary_opecode(0x90, text_body);
 }
 
 
@@ -159,8 +132,7 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_
 
     if(operand->kind == OP_R64)
     {
-        uint8_t opecode = 0x58 + get_register_field(operand->reg);
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
+        append_binary_opecode(0x58 + get_register_field(operand->reg), text_body);
     }
 }
 
@@ -174,8 +146,7 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *text
 
     if(operand->kind == OP_R64)
     {
-        uint8_t opecode = 0x50 + get_register_field(operand->reg);
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
+        append_binary_opecode(0x50 + get_register_field(operand->reg), text_body);
     }
 }
 
@@ -185,8 +156,7 @@ generate ret operation
 */
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_body)
 {
-    uint8_t opecode = 0xc3;
-    append_bytes((char *)&opecode, sizeof(opecode), text_body);
+    append_binary_opecode(0xc3, text_body);
 }
 
 
@@ -200,59 +170,27 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
     Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
     if((operand1->kind == OP_R32) && (operand2->kind == OP_R32))
     {
-        uint8_t opecode = 0x29;
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
-
-        uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_register_field(operand1->reg);
-        uint8_t src_index = get_register_field(operand2->reg);
-        uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
-        append_bytes((char *)&modrm, sizeof(modrm), text_body);
+        append_binary_opecode(0x29, text_body);
+        append_binary_modrm(0x03, get_register_field(operand1->reg), get_register_field(operand2->reg), text_body);
     }
     else if((operand1->kind == OP_R64) && (operand2->kind == OP_R64))
     {
-        uint8_t prefix = 0x48;
-        append_bytes((char *)&prefix, sizeof(prefix), text_body);
-
-        uint8_t opecode = 0x29;
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
-
-        uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_register_field(operand1->reg);
-        uint8_t src_index = get_register_field(operand2->reg);
-        uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
-        append_bytes((char *)&modrm, sizeof(modrm), text_body);
+        append_binary_prefix(0x48, text_body);
+        append_binary_opecode(0x29, text_body);
+        append_binary_modrm(0x03, get_register_field(operand1->reg), get_register_field(operand2->reg), text_body);
     }
     else if((operand1->kind == OP_R32) && (operand2->kind == OP_IMM32))
     {
-        uint8_t opecode = 0x81;
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
-
-        uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_register_field(operand1->reg);
-        uint8_t src_index = 0x05;
-        uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
-        append_bytes((char *)&modrm, sizeof(modrm), text_body);
-
-        uint32_t imm32 = operand2->immediate;
-        append_bytes((char *)&imm32, sizeof(imm32), text_body);
+        append_binary_opecode(0x81, text_body);
+        append_binary_modrm(0x03, get_register_field(operand1->reg), 0x05, text_body);
+        append_binary_imm32(operand2->immediate, text_body);
     }
     else if((operand1->kind == OP_R64) && (operand2->kind == OP_IMM32))
     {
-        uint8_t prefix = 0x48;
-        append_bytes((char *)&prefix, sizeof(prefix), text_body);
-
-        uint8_t opecode = 0x81;
-        append_bytes((char *)&opecode, sizeof(opecode), text_body);
-
-        uint8_t dst_encoding = 0x03;
-        uint8_t dst_index = get_register_field(operand1->reg);
-        uint8_t src_index = 0x05;
-        uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
-        append_bytes((char *)&modrm, sizeof(modrm), text_body);
-
-        uint32_t imm32 = operand2->immediate;
-        append_bytes((char *)&imm32, sizeof(imm32), text_body);
+        append_binary_prefix(0x48, text_body);
+        append_binary_opecode(0x81, text_body);
+        append_binary_modrm(0x03, get_register_field(operand1->reg), 0x05, text_body);
+        append_binary_imm32(operand2->immediate, text_body);
     }
 }
 
@@ -308,4 +246,41 @@ static uint8_t get_register_field(RegisterKind kind)
     default:
         return 0x00;
     }
+}
+
+
+/*
+append binary for prefix
+*/
+static void append_binary_prefix(uint8_t prefix, ByteBufferType *text_body)
+{
+    append_bytes((char *)&prefix, sizeof(prefix), text_body);
+}
+
+
+/*
+append binary for opecode
+*/
+static void append_binary_opecode(uint8_t opecode, ByteBufferType *text_body)
+{
+    append_bytes((char *)&opecode, sizeof(opecode), text_body);
+}
+
+
+/*
+append binary for ModR/M byte
+*/
+static void append_binary_modrm(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index, ByteBufferType *text_body)
+{
+    uint8_t modrm = get_modrm_byte(dst_encoding, dst_index, src_index);
+    append_bytes((char *)&modrm, sizeof(modrm), text_body);
+}
+
+
+/*
+append binary for 32-bit immediate
+*/
+static void append_binary_imm32(uint32_t imm32, ByteBufferType *text_body)
+{
+    append_bytes((char *)&imm32, sizeof(imm32), text_body);
 }
