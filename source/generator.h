@@ -6,7 +6,7 @@
 
 typedef struct LabelInfo LabelInfo;
 
-LabelInfo *new_label_info(const char *body, Elf_Addr address);
+LabelInfo *new_label_info(const char *body, Elf_Addr address, Elf_Sxword addend);
 void generate(const char *output_file, const Program *program);
 
 #endif /* !__GENERATOR_H__ */

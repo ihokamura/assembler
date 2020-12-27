@@ -117,8 +117,12 @@ test_external_text:
 
 # test access to external data section
 test_external_data:
-	mov rdi, qword ptr [rip+test_external_data_uint64_1]
+	mov rdi, qword ptr [rip+test_external_data_uint64]
 	mov rsi, 64
 	call assert_equal_uint64
+
+	mov qword ptr [rip+test_external_data_uint64], 63
+	mov rdi, 63
+	call assert_external_data_uint64
 
 	ret

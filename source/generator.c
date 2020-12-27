@@ -13,8 +13,9 @@ typedef struct SectionInfo SectionInfo;
 
 struct LabelInfo
 {
-    const char *body; // label body
-    Elf_Addr address; // address to be replaced
+    const char *body;  // label body
+    Elf_Addr address;  // address to be replaced
+    Elf_Sxword addend; // addend
 };
 
 struct RelocationInfo
@@ -124,11 +125,12 @@ static Elf_Ehdr elf_header;
 /*
 make a new label information
 */
-LabelInfo *new_label_info(const char *body, Elf_Addr address)
+LabelInfo *new_label_info(const char *body, Elf_Addr address, Elf_Sxword addend)
 {
     LabelInfo *label_info = calloc(1, sizeof(LabelInfo));
     label_info->body = body;
     label_info->address = address;
+    label_info->addend = addend;
     add_list_entry_tail(LabelInfo)(label_info_list, label_info);
 
     return label_info;
@@ -464,7 +466,7 @@ static void set_relocation_table_entries(size_t resolved_symbols)
         set_relocation_table(
             label->address,
             ELF_R_INFO(get_symtab_index(resolved_symbols, label), R_X86_64_PC32),
-            -sizeof(uint32_t)
+            label->addend
         );
     }
 }
