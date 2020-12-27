@@ -97,6 +97,10 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     {
         append_binary_opecode(0x8b, text_body);
         append_binary_modrm(0x00, get_register_field(operand2->reg), get_register_field(operand1->reg), text_body);
+        if(operand2->reg == REG_RIP)
+        {
+            append_binary_relocation(sizeof(uint32_t), operand2->label, text_body->size, -sizeof(uint32_t), text_body);
+        }
     }
     else if((operand1->kind == OP_R64) && (operand2->kind == OP_R64))
     {
@@ -123,6 +127,10 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     {
         append_binary_opecode(0xc7, text_body);
         append_binary_modrm(0x00, get_register_field(operand1->reg), 0x00, text_body);
+        if(operand1->reg == REG_RIP)
+        {
+            append_binary_relocation(sizeof(uint32_t), operand1->label, text_body->size, -(2 * sizeof(uint32_t)), text_body);
+        }
         append_binary_imm32(operand2->immediate, text_body);
     }
     else if((operand1->kind == OP_R64) && (operand2->kind == OP_IMM32))

@@ -125,4 +125,12 @@ test_external_data:
 	mov rdi, 63
 	call assert_external_data_uint64
 
+	mov edi, dword ptr [rip+test_external_data_uint32]
+	mov esi, 32
+	call assert_equal_uint32
+
+	mov qword ptr [rip+test_external_data_uint32], 31
+	mov edi, 31
+	call assert_external_data_uint32
+
 	ret
