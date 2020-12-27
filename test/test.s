@@ -40,6 +40,11 @@ test_mov:
 	mov rsi, 64
 	call assert_equal_uint64
 
+	mov qword ptr [rbp-8], 63
+	mov rdi, qword ptr [rbp-8]
+	mov rsi, 63
+	call assert_equal_uint64
+
 	mov rax, rbp
 	sub rax, 4
 	mov dword ptr [rax], 32

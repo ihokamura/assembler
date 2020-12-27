@@ -15,12 +15,15 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *text
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_body);
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
+static uint8_t get_mod_field(uint32_t immediate);
 static uint8_t get_register_field(RegisterKind kind);
 static void append_binary_prefix(uint8_t prefix, ByteBufferType *text_body);
 static void append_binary_opecode(uint8_t opecode, ByteBufferType *text_body);
 static void append_binary_modrm(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index, ByteBufferType *text_body);
+static void append_binary_imm(uint32_t imm, ByteBufferType *text_body);
 static void append_binary_imm32(uint32_t imm32, ByteBufferType *text_body);
 static void append_binary_relocation(size_t size, const char *label, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body);
+static size_t get_least_size(uint32_t value);
 
 const MnemonicInfo mnemonic_info_list[] = 
 {
@@ -112,11 +115,12 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     {
         append_binary_prefix(0x48, text_body);
         append_binary_opecode(0x8b, text_body);
-        append_binary_modrm(0x00, get_register_field(operand2->reg), get_register_field(operand1->reg), text_body);
+        append_binary_modrm(get_mod_field(operand2->immediate), get_register_field(operand2->reg), get_register_field(operand1->reg), text_body);
         if(operand2->reg == REG_RIP)
         {
             append_binary_relocation(sizeof(uint32_t), operand2->label, text_body->size, -sizeof(uint32_t), text_body);
         }
+        append_binary_imm(operand2->immediate, text_body);
     }
     else if((operand1->kind == OP_R32) && (operand2->kind == OP_IMM32))
     {
@@ -144,11 +148,12 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     {
         append_binary_prefix(0x48, text_body);
         append_binary_opecode(0xc7, text_body);
-        append_binary_modrm(0x00, get_register_field(operand1->reg), 0x00, text_body);
+        append_binary_modrm(get_mod_field(operand1->immediate), get_register_field(operand1->reg), 0x00, text_body);
         if(operand1->reg == REG_RIP)
         {
             append_binary_relocation(sizeof(uint32_t), operand1->label, text_body->size, -(2 * sizeof(uint32_t)), text_body);
         }
+        append_binary_imm(operand1->immediate, text_body);
         append_binary_imm32(operand2->immediate, text_body);
     }
 }
@@ -245,6 +250,26 @@ static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t s
 
 
 /*
+get value of Mod field
+*/
+static uint8_t get_mod_field(uint32_t immediate)
+{
+    switch(get_least_size(immediate))
+    {
+    case 0:
+        return 0;
+
+    case sizeof(uint8_t):
+        return 1;
+
+    case sizeof(uint32_t):
+    default:
+        return 2;
+    }
+}
+
+
+/*
 get value of register field
 */
 static uint8_t get_register_field(RegisterKind kind)
@@ -319,6 +344,19 @@ static void append_binary_modrm(uint8_t dst_encoding, uint8_t dst_index, uint8_t
 
 
 /*
+append binary for immediate with least size
+*/
+static void append_binary_imm(uint32_t imm, ByteBufferType *text_body)
+{
+    size_t size = get_least_size(imm);
+    if(size > 0)
+    {
+        append_bytes((char *)&imm, size, text_body);
+    }
+}
+
+
+/*
 append binary for 32-bit immediate
 */
 static void append_binary_imm32(uint32_t imm32, ByteBufferType *text_body)
@@ -339,5 +377,25 @@ static void append_binary_relocation(size_t size, const char *label, Elf_Addr ad
     default:
         append_binary_imm32(0, text_body); // imm32 is a temporal value to be replaced during resolving symbols or relocation
         break;
+    }
+}
+
+
+/*
+get the least number of bytes to represent an immediate value
+*/
+static size_t get_least_size(uint32_t value)
+{
+    if(value == 0)
+    {
+        return 0;
+    }
+    else if((value < UINT8_MAX) || (-value < UINT8_MAX))
+    {
+        return sizeof(uint8_t);
+    }
+    else
+    {
+        return sizeof(uint32_t);
     }
 }

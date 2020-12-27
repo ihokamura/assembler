@@ -25,7 +25,7 @@ static Directive *new_directive(const Symbol *symbol);
 static Symbol *new_symbol(SymbolKind kind, const char *body);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
 static Operand *new_operand(OperandKind kind);
-static Operand *new_operand_immediate(long immediate);
+static Operand *new_operand_immediate(uint32_t immediate);
 static Operand *new_operand_register(const Token *token);
 static Operand *new_operand_memory(OperandKind kind);
 static Operand *new_operand_symbol(const Token *token);
@@ -282,6 +282,7 @@ static Operand *new_operand(OperandKind kind)
 {
     Operand *operand = calloc(1, sizeof(Operand));
     operand->kind = kind;
+    operand->immediate = 0;
 
     return operand;
 }
@@ -290,7 +291,7 @@ static Operand *new_operand(OperandKind kind)
 /*
 make a new operand for immediate
 */
-static Operand *new_operand_immediate(long immediate)
+static Operand *new_operand_immediate(uint32_t immediate)
 {
     Operand *operand = new_operand(OP_IMM32);
     operand->immediate = immediate;
@@ -323,7 +324,18 @@ static Operand *new_operand_memory(OperandKind kind)
     operand->reg = get_register_info(token)->reg_kind;
     if(consume_reserved("+"))
     {
-        operand->label = make_symbol(expect_symbol());
+        if(consume_token(TK_SYMBOL, &token))
+        {
+            operand->label = make_symbol(token);
+        }
+        else
+        {
+            operand->immediate = expect_immediate()->value;
+        }
+    }
+    else if(consume_reserved("-"))
+    {
+        operand->immediate = -expect_immediate()->value;
     }
     expect_reserved("]");
 

@@ -75,12 +75,12 @@ struct MnemonicInfo
 // structure for operand
 struct Operand
 {
-    OperandKind kind;      // kind of operand
+    OperandKind kind;       // kind of operand
     struct
     {
-        long immediate;    // immediate value
-        RegisterKind reg;  // kind of register
-        const char *label; // label
+        uint32_t immediate; // immediate value
+        RegisterKind reg;   // kind of register
+        const char *label;  // label
     };
 };
 

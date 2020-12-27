@@ -31,10 +31,10 @@ static int is_reserved(const char *str);
 static int is_mnemonic(const char *str);
 static int is_symbol(const char *str);
 static int is_register(const char *str);
-static int is_immediate(const char *str, size_t *value);
+static int is_immediate(const char *str, uint32_t *value);
 static int is_octal_digit(int character);
 static int is_hexadeciaml_digit(int character);
-static long convert_integer_constant(const char *start, int base);
+static uint32_t convert_immediate(const char *start, int base);
 static void report_position(const char *loc);
 
 
@@ -44,6 +44,7 @@ static const char *punctuator_list[] = {
     "\n",
     "+",
     ",",
+    "-",
     ".",
     ":",
     "[",
@@ -329,7 +330,7 @@ void tokenize(char *str)
         }
 
         // parse an immediate
-        size_t value;
+        uint32_t value;
         len = is_immediate(str, &value);
         if(len > 0)
         {
@@ -577,7 +578,7 @@ static int is_register(const char *str)
 /*
 check if the following string is an immediate
 */
-static int is_immediate(const char *str, size_t *value)
+static int is_immediate(const char *str, uint32_t *value)
 {
     int len = 0;
     int base;
@@ -615,7 +616,7 @@ static int is_immediate(const char *str, size_t *value)
         len++;
     }
 
-    *value = convert_integer_constant(start, base);
+    *value = convert_immediate(start, base);
 
     return len;
 }
@@ -641,9 +642,9 @@ static int is_hexadeciaml_digit(int character)
 
 
 /*
-convert an integer-constant
+convert an immediate
 */
-static long convert_integer_constant(const char *start, int base)
+static uint32_t convert_immediate(const char *start, int base)
 {
     // note that the converted string always represents positive value
     unsigned long value = strtoul(start, NULL, base);
@@ -654,8 +655,8 @@ static long convert_integer_constant(const char *start, int base)
         report_warning(start, "immediate value is too large");
     }
 
-    // represent integer by long type
-    return (long)value;
+    // represent integer by uint32_t type
+    return (uint32_t)value;
 }
 
 

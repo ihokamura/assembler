@@ -22,7 +22,7 @@ struct Token
     TokenKind kind; // kind of token
     char *str;      // pointer to token string
     size_t len;     // length of token string
-    size_t value;   // value of token (only for TK_IMMEDIATE)
+    uint32_t value; // value of token (only for TK_IMMEDIATE)
 };
 
 bool peek_reserved(const char *str);
