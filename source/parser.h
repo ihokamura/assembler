@@ -41,5 +41,6 @@ struct Symbol
 };
 
 void construct(Program *prog);
+size_t get_least_size(uint32_t value);
 
 #endif /* !__PARSER_H__ */

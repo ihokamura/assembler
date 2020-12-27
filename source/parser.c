@@ -293,7 +293,20 @@ make a new operand for immediate
 */
 static Operand *new_operand_immediate(uint32_t immediate)
 {
-    Operand *operand = new_operand(OP_IMM32);
+    OperandKind kind;
+    switch(get_least_size(immediate))
+    {
+    case sizeof(uint8_t):
+        kind = OP_IMM8;
+        break;
+
+    case sizeof(uint32_t):
+    default:
+        kind = OP_IMM32;
+        break;
+    }
+
+    Operand *operand = new_operand(kind);
     operand->immediate = immediate;
 
     return operand;
@@ -352,6 +365,26 @@ static Operand *new_operand_symbol(const Token *token)
     operand->label = make_symbol(token);
 
     return operand;
+}
+
+
+/*
+get the least number of bytes to represent an immediate value
+*/
+size_t get_least_size(uint32_t value)
+{
+    if(value == 0)
+    {
+        return 0;
+    }
+    else if((value < UINT8_MAX) || (-value < UINT8_MAX))
+    {
+        return sizeof(uint8_t);
+    }
+    else
+    {
+        return sizeof(uint32_t);
+    }
 }
 
 

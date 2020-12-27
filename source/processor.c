@@ -14,6 +14,7 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_
 static void generate_op_push(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_body);
+static bool is_immediate(OperandKind kind);
 static uint8_t get_modrm_byte(uint8_t dst_encoding, uint8_t dst_index, uint8_t src_index);
 static uint8_t get_mod_field(uint32_t immediate);
 static uint8_t get_register_field(RegisterKind kind);
@@ -23,7 +24,6 @@ static void append_binary_modrm(uint8_t dst_encoding, uint8_t dst_index, uint8_t
 static void append_binary_imm(uint32_t imm, ByteBufferType *text_body);
 static void append_binary_imm32(uint32_t imm32, ByteBufferType *text_body);
 static void append_binary_relocation(size_t size, const char *label, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body);
-static size_t get_least_size(uint32_t value);
 
 const MnemonicInfo mnemonic_info_list[] = 
 {
@@ -122,12 +122,12 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         }
         append_binary_imm(operand2->immediate, text_body);
     }
-    else if((operand1->kind == OP_R32) && (operand2->kind == OP_IMM32))
+    else if((operand1->kind == OP_R32) && is_immediate(operand2->kind))
     {
         append_binary_opecode(0xb8 + get_register_field(operand1->reg), text_body);
         append_binary_imm32(operand2->immediate, text_body);
     }
-    else if((operand1->kind == OP_M32) && (operand2->kind == OP_IMM32))
+    else if((operand1->kind == OP_M32) && is_immediate(operand2->kind))
     {
         append_binary_opecode(0xc7, text_body);
         append_binary_modrm(0x00, get_register_field(operand1->reg), 0x00, text_body);
@@ -137,14 +137,14 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         }
         append_binary_imm32(operand2->immediate, text_body);
     }
-    else if((operand1->kind == OP_R64) && (operand2->kind == OP_IMM32))
+    else if((operand1->kind == OP_R64) && is_immediate(operand2->kind))
     {
         append_binary_prefix(0x48, text_body);
         append_binary_opecode(0xc7, text_body);
         append_binary_modrm(0x03, get_register_field(operand1->reg), 0x00, text_body);
         append_binary_imm32(operand2->immediate, text_body);
     }
-    else if((operand1->kind == OP_M64) && (operand2->kind == OP_IMM32))
+    else if((operand1->kind == OP_M64) && is_immediate(operand2->kind))
     {
         append_binary_prefix(0x48, text_body);
         append_binary_opecode(0xc7, text_body);
@@ -224,19 +224,28 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
         append_binary_opecode(0x29, text_body);
         append_binary_modrm(0x03, get_register_field(operand1->reg), get_register_field(operand2->reg), text_body);
     }
-    else if((operand1->kind == OP_R32) && (operand2->kind == OP_IMM32))
+    else if((operand1->kind == OP_R32) && is_immediate(operand2->kind))
     {
-        append_binary_opecode(0x81, text_body);
+        append_binary_opecode((operand2->kind == OP_IMM8) ? 0x83 : 0x81, text_body);
         append_binary_modrm(0x03, get_register_field(operand1->reg), 0x05, text_body);
-        append_binary_imm32(operand2->immediate, text_body);
+        append_binary_imm(operand2->immediate, text_body);
     }
-    else if((operand1->kind == OP_R64) && (operand2->kind == OP_IMM32))
+    else if((operand1->kind == OP_R64) && is_immediate(operand2->kind))
     {
         append_binary_prefix(0x48, text_body);
-        append_binary_opecode(0x81, text_body);
+        append_binary_opecode((operand2->kind == OP_IMM8) ? 0x83 : 0x81, text_body);
         append_binary_modrm(0x03, get_register_field(operand1->reg), 0x05, text_body);
-        append_binary_imm32(operand2->immediate, text_body);
+        append_binary_imm(operand2->immediate, text_body);
     }
+}
+
+
+/*
+check if operand is immediate
+*/
+static bool is_immediate(OperandKind kind)
+{
+    return (kind == OP_IMM8) || (kind == OP_IMM32);
 }
 
 
@@ -377,25 +386,5 @@ static void append_binary_relocation(size_t size, const char *label, Elf_Addr ad
     default:
         append_binary_imm32(0, text_body); // imm32 is a temporal value to be replaced during resolving symbols or relocation
         break;
-    }
-}
-
-
-/*
-get the least number of bytes to represent an immediate value
-*/
-static size_t get_least_size(uint32_t value)
-{
-    if(value == 0)
-    {
-        return 0;
-    }
-    else if((value < UINT8_MAX) || (-value < UINT8_MAX))
-    {
-        return sizeof(uint8_t);
-    }
-    else
-    {
-        return sizeof(uint32_t);
     }
 }

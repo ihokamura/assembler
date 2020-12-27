@@ -33,6 +33,7 @@ enum MnemonicKind
 // kind of operand
 enum OperandKind
 {
+    OP_IMM8,   // 8-bit immediate
     OP_IMM32,  // 32-bit immediate
     OP_R32,    // 32-bit register
     OP_R64,    // 64-bit register
