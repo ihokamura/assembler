@@ -60,6 +60,7 @@ enum RegisterKind
     REG_RBP, // rbp
     REG_RSI, // rsi
     REG_RDI, // rdi
+    REG_RIP, // rip
 };
 
 // structure for mapping from string to kind of mnemonic
@@ -75,7 +76,7 @@ struct MnemonicInfo
 struct Operand
 {
     OperandKind kind;      // kind of operand
-    union
+    struct
     {
         long immediate;    // immediate value
         RegisterKind reg;  // kind of register

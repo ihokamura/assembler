@@ -17,7 +17,7 @@ test()
     $asm $source -c -o $object
 
     # link the object file with the standard library
-    external='test_utility.c external_text.c'
+    external='test_utility.c external_text.c external_data.c'
     binary=test_bin
     gcc $object $external -o $binary
 

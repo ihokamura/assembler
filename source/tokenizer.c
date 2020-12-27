@@ -42,6 +42,7 @@ static void report_position(const char *loc);
 // list of punctuators
 static const char *punctuator_list[] = {
     "\n",
+    "+",
     ",",
     ".",
     ":",

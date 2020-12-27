@@ -51,6 +51,7 @@ const RegisterInfo register_info_list[] =
     {REG_RBP, "rbp", OP_R64},
     {REG_RSI, "rsi", OP_R64},
     {REG_RDI, "rdi", OP_R64},
+    {REG_RIP, "rip", OP_R64},
 };
 const size_t REGISTER_INFO_LIST_SIZE = sizeof(register_info_list) / sizeof(register_info_list[0]);
 
@@ -73,7 +74,6 @@ static void generate_op_call(const List(Operand) *operands, ByteBufferType *text
     if(operand->kind == OP_SYMBOL)
     {
         new_label_info(operand->label, text_body->size + 1);
-
         append_binary_opecode(0xe8, text_body);
         append_binary_imm32(0, text_body); // imm32 is a temporal value to be replaced during resolving symbols or relocation
     }
@@ -109,6 +109,11 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         append_binary_prefix(0x48, text_body);
         append_binary_opecode(0x8b, text_body);
         append_binary_modrm(0x00, get_register_field(operand2->reg), get_register_field(operand1->reg), text_body);
+        if(operand2->reg == REG_RIP)
+        {
+            new_label_info(operand2->label, text_body->size);
+            append_binary_imm32(0, text_body); // imm32 is a temporal value to be replaced during resolving symbols or relocation
+        }
     }
     else if((operand1->kind == OP_R32) && (operand2->kind == OP_IMM32))
     {
@@ -257,6 +262,7 @@ static uint8_t get_register_field(RegisterKind kind)
 
     case REG_EBP:
     case REG_RBP:
+    case REG_RIP:
         return 0x05;
 
     case REG_ESI:

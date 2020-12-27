@@ -9,6 +9,7 @@ main:
 	call test_sub
 
 	call test_external_text
+	call test_external_data
 
 	mov rax, 0
 	ret
@@ -110,5 +111,14 @@ test_sub:
 # test access to external text section
 test_external_text:
 	call test_external_function1
+
+	ret
+
+
+# test access to external data section
+test_external_data:
+	mov rdi, qword ptr [rip+test_external_data_uint64_1]
+	mov rsi, 64
+	call assert_equal_uint64
 
 	ret

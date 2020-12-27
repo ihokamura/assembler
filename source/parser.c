@@ -321,6 +321,10 @@ static Operand *new_operand_memory(OperandKind kind)
     expect_reserved("[");
     Token *token = expect_register();
     operand->reg = get_register_info(token)->reg_kind;
+    if(consume_reserved("+"))
+    {
+        operand->label = make_symbol(expect_symbol());
+    }
     expect_reserved("]");
 
     return operand;
