@@ -21,20 +21,34 @@ test_mov:
 	mov rbp, rsp
 	sub rsp, 8
 
-	mov rax, 64
-	mov rdi, rax
-	mov rsi, 64
-	call assert_equal_uint64
+	mov ax, 16
+	mov di, ax
+	mov si, 16
+	call assert_equal_uint16
 
 	mov eax, 32
 	mov edi, eax
 	mov esi, 32
 	call assert_equal_uint32
 
-	mov ax, 16
-	mov di, ax
-	mov si, 16
-	call assert_equal_uint16
+	mov rax, 64
+	mov rdi, rax
+	mov rsi, 64
+	call assert_equal_uint64
+
+	mov rax, rbp
+	sub rax, 4
+	mov dword ptr [rax], 32
+	mov rax, rbp
+	sub rax, 4
+	mov edi, dword ptr [rax]
+	mov esi, 32
+	call assert_equal_uint32
+
+	mov dword ptr [rbp-4], 31
+	mov edi, dword ptr [rbp-4]
+	mov esi, 31
+	call assert_equal_uint32
 
 	mov rax, rbp
 	sub rax, 8
@@ -50,15 +64,7 @@ test_mov:
 	mov rsi, 63
 	call assert_equal_uint64
 
-	mov rax, rbp
-	sub rax, 4
-	mov dword ptr [rax], 32
-	mov rax, rbp
-	sub rax, 4
-	mov edi, dword ptr [rax]
-	mov esi, 32
-	call assert_equal_uint32
-
+	mov rax, 0
 	pop rbp
 	ret
 
@@ -67,6 +73,7 @@ test_mov:
 test_nop:
 	nop
 
+	mov rax, 0
 	ret
 
 
@@ -85,24 +92,12 @@ test_push_pop:
 	mov rsi, 64
 	call assert_equal_uint64
 
+	mov rax, 0
 	ret
 
 
 # test sub
 test_sub:
-	mov rax, 64
-	mov rdx, 1
-	sub rax, rdx
-	mov rdi, rax
-	mov rsi, 63
-	call assert_equal_uint64
-
-	mov rax, 64
-	sub rax, 2
-	mov rdi, rax
-	mov rsi, 62
-	call assert_equal_uint64
-
 	mov eax, 64
 	mov edx, 1
 	sub eax, edx
@@ -116,6 +111,20 @@ test_sub:
 	mov esi, 62
 	call assert_equal_uint32
 
+	mov rax, 64
+	mov rdx, 1
+	sub rax, rdx
+	mov rdi, rax
+	mov rsi, 63
+	call assert_equal_uint64
+
+	mov rax, 64
+	sub rax, 2
+	mov rdi, rax
+	mov rsi, 62
+	call assert_equal_uint64
+
+	mov rax, 0
 	ret
 
 
@@ -123,6 +132,7 @@ test_sub:
 test_external_text:
 	call test_external_function1
 
+	mov rax, 0
 	ret
 
 
@@ -144,4 +154,5 @@ test_external_data:
 	mov edi, 31
 	call assert_external_data_uint32
 
+	mov rax, 0
 	ret
