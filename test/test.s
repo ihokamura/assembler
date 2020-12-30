@@ -169,6 +169,14 @@ test_sub:
 	mov di, 13
 	call assert_equal_uint16
 
+	mov rax, rbp
+	sub rax, 2
+	mov word ptr [rax], 0x1616
+	sub word ptr [rax], 0x1602
+	mov si, word ptr [rax]
+	mov di, 0x14
+	call assert_equal_uint16
+
 	mov eax, 32
 	mov edx, 1
 	sub eax, edx
@@ -200,7 +208,15 @@ test_sub:
 	sub dword ptr [rax], 3
 	mov esi, dword ptr [rax]
 	mov edi, 29
-	call assert_equal_uint64
+	call assert_equal_uint32
+
+	mov rax, rbp
+	sub rax, 4
+	mov dword ptr [rax], 0x32323232
+	sub dword ptr [rax], 0x32323202
+	mov esi, dword ptr [rax]
+	mov edi, 0x30
+	call assert_equal_uint32
 
 	mov rax, 64
 	mov rdx, 1
@@ -233,6 +249,14 @@ test_sub:
 	sub qword ptr [rax], 3
 	mov rsi, qword ptr [rax]
 	mov rdi, 61
+	call assert_equal_uint64
+
+	mov rax, rbp
+	sub rax, 8
+	mov qword ptr [rax], 0x64646464
+	sub qword ptr [rax], 0x64646402
+	mov rsi, qword ptr [rax]
+	mov rdi, 0x62
 	call assert_equal_uint64
 
 	mov rax, 0
