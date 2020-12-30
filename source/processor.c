@@ -157,9 +157,10 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
         append_binary_opecode(0xc7, text_body);
         append_binary_modrm(is_register(operand1->kind) ? MOD_REG : get_mod_field(operand1->immediate), get_register_field(operand1->reg), 0x00, text_body);
-        may_append_binary_relocation(operand1, text_body->size, -(2 * SIZEOF_32BIT), text_body);
+        size_t imm_size = min(get_operand_size(operand1->kind), SIZEOF_32BIT);
+        may_append_binary_relocation(operand1, text_body->size, -(SIZEOF_32BIT + imm_size), text_body);
         append_binary_imm_least(operand1->immediate, text_body);
-        append_binary_imm(operand2->immediate, min(get_operand_size(operand1->kind), SIZEOF_32BIT), text_body);
+        append_binary_imm(operand2->immediate, imm_size, text_body);
     }
 }
 

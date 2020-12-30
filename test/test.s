@@ -22,18 +22,18 @@ test_mov:
 	sub rsp, 8
 
 	mov ax, 16
-	mov di, ax
-	mov si, 16
+	mov si, ax
+	mov di, 16
 	call assert_equal_uint16
 
 	mov eax, 32
-	mov edi, eax
-	mov esi, 32
+	mov esi, eax
+	mov edi, 32
 	call assert_equal_uint32
 
 	mov rax, 64
-	mov rdi, rax
-	mov rsi, 64
+	mov rsi, rax
+	mov rdi, 64
 	call assert_equal_uint64
 
 	mov rax, rbp
@@ -41,13 +41,13 @@ test_mov:
 	mov word ptr [rax], 16
 	mov rax, rbp
 	sub rax, 2
-	mov di, word ptr [rax]
-	mov si, 16
+	mov si, word ptr [rax]
+	mov di, 16
 	call assert_equal_uint16
 
 	mov word ptr [rbp-2], 15
-	mov di, word ptr [rbp-2]
-	mov si, 15
+	mov si, word ptr [rbp-2]
+	mov di, 15
 	call assert_equal_uint16
 
 	mov rax, rbp
@@ -55,13 +55,13 @@ test_mov:
 	mov dword ptr [rax], 32
 	mov rax, rbp
 	sub rax, 4
-	mov edi, dword ptr [rax]
-	mov esi, 32
+	mov esi, dword ptr [rax]
+	mov edi, 32
 	call assert_equal_uint32
 
 	mov dword ptr [rbp-4], 31
-	mov edi, dword ptr [rbp-4]
-	mov esi, 31
+	mov esi, dword ptr [rbp-4]
+	mov edi, 31
 	call assert_equal_uint32
 
 	mov rax, rbp
@@ -69,13 +69,13 @@ test_mov:
 	mov qword ptr [rax], 64
 	mov rax, rbp
 	sub rax, 8
-	mov rdi, qword ptr [rax]
-	mov rsi, 64
+	mov rsi, qword ptr [rax]
+	mov rdi, 64
 	call assert_equal_uint64
 
 	mov qword ptr [rbp-8], 63
-	mov rdi, qword ptr [rbp-8]
-	mov rsi, 63
+	mov rsi, qword ptr [rbp-8]
+	mov rdi, 63
 	call assert_equal_uint64
 
 	mov rax, 0
@@ -97,13 +97,13 @@ test_push_pop:
 	push rax
 
 	mov rax, 65
-	mov rdi, rax
-	mov rsi, 65
+	mov rsi, rax
+	mov rdi, 65
 	call assert_equal_uint64
 
 	pop rax
-	mov rdi, rax
-	mov rsi, 64
+	mov rsi, rax
+	mov rdi, 64
 	call assert_equal_uint64
 
 	mov rax, 0
@@ -115,27 +115,27 @@ test_sub:
 	mov eax, 64
 	mov edx, 1
 	sub eax, edx
-	mov edi, eax
-	mov esi, 63
+	mov esi, eax
+	mov edi, 63
 	call assert_equal_uint32
 
 	mov eax, 64
 	sub eax, 2
-	mov edi, eax
-	mov esi, 62
+	mov esi, eax
+	mov edi, 62
 	call assert_equal_uint32
 
 	mov rax, 64
 	mov rdx, 1
 	sub rax, rdx
-	mov rdi, rax
-	mov rsi, 63
+	mov rsi, rax
+	mov rdi, 63
 	call assert_equal_uint64
 
 	mov rax, 64
 	sub rax, 2
-	mov rdi, rax
-	mov rsi, 62
+	mov rsi, rax
+	mov rdi, 62
 	call assert_equal_uint64
 
 	mov rax, 0
@@ -152,21 +152,29 @@ test_external_text:
 
 # test access to external data section
 test_external_data:
-	mov rdi, qword ptr [rip+test_external_data_uint64]
-	mov rsi, 64
+	mov si, word ptr [rip+test_external_data_uint16]
+	mov di, 16
+	call assert_equal_uint16
+
+	mov word ptr [rip+test_external_data_uint16], 15
+	mov di, 15
+	call assert_external_data_uint16
+
+	mov esi, dword ptr [rip+test_external_data_uint32]
+	mov edi, 32
+	call assert_equal_uint32
+
+	mov dword ptr [rip+test_external_data_uint32], 31
+	mov edi, 31
+	call assert_external_data_uint32
+
+	mov rsi, qword ptr [rip+test_external_data_uint64]
+	mov rdi, 64
 	call assert_equal_uint64
 
 	mov qword ptr [rip+test_external_data_uint64], 63
 	mov rdi, 63
 	call assert_external_data_uint64
-
-	mov edi, dword ptr [rip+test_external_data_uint32]
-	mov esi, 32
-	call assert_equal_uint32
-
-	mov qword ptr [rip+test_external_data_uint32], 31
-	mov edi, 31
-	call assert_external_data_uint32
 
 	mov rax, 0
 	ret
