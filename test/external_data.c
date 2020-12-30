@@ -1,9 +1,27 @@
 #include <stdint.h>
 #include <stdio.h>
 
+uint16_t test_external_data_uint8 = 8;
 uint16_t test_external_data_uint16 = 16;
 uint32_t test_external_data_uint32 = 32;
 uint64_t test_external_data_uint64 = 64;
+
+
+/*
+check the value of test_external_data_uint8
+*/
+uint32_t assert_external_data_uint8(uint8_t expected)
+{
+    if(expected == test_external_data_uint8)
+    {
+        return 0;
+    }
+    else
+    {
+        printf("0x%x expected, but got 0x%x.\n", expected, test_external_data_uint8);
+        return 1;
+    }
+}
 
 
 /*

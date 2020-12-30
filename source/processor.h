@@ -45,6 +45,7 @@ enum OperandKind
     OP_R16,    // 16-bit register
     OP_R32,    // 32-bit register
     OP_R64,    // 64-bit register
+    OP_M8,     // 8-bit memory
     OP_M16,    // 16-bit memory
     OP_M32,    // 32-bit memory
     OP_M64,    // 64-bit memory

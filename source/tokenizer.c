@@ -57,6 +57,7 @@ static const char *directive_list[] = {
 };
 // list of size specifiers
 static const char *size_specifier_list[] = {
+    "byte ptr",
     "word ptr",
     "dword ptr",
     "qword ptr",

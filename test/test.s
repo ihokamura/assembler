@@ -42,6 +42,20 @@ test_mov:
 	call assert_equal_uint64
 
 	mov rax, rbp
+	sub rax, 1
+	mov byte ptr [rax], 8
+	mov rax, rbp
+	sub rax, 1
+	mov sil, byte ptr [rax]
+	mov dil, 8
+	call assert_equal_uint8
+
+	mov byte ptr [rbp-1], 7
+	mov sil, byte ptr [rbp-1]
+	mov dil, 7
+	call assert_equal_uint8
+
+	mov rax, rbp
 	sub rax, 2
 	mov word ptr [rax], 16
 	mov rax, rbp
@@ -157,6 +171,14 @@ test_external_text:
 
 # test access to external data section
 test_external_data:
+	mov sil, byte ptr [rip+test_external_data_uint8]
+	mov dil, 8
+	call assert_equal_uint8
+
+	mov byte ptr [rip+test_external_data_uint8], 7
+	mov dil, 7
+	call assert_external_data_uint8
+
 	mov si, word ptr [rip+test_external_data_uint16]
 	mov di, 16
 	call assert_equal_uint16

@@ -418,14 +418,18 @@ static const RegisterInfo *get_register_info(const Token *token)
 /*
 consume a size specifier
 ```
-size-specifier ::= "qword ptr"
+size-specifier ::= "byte ptr" | "word ptr" | "dword ptr" | "qword ptr"
 ```
 */
 static bool consume_size_specifier(OperandKind *kind)
 {
     bool consumed = true;
 
-    if(consume_reserved("word ptr"))
+    if(consume_reserved("byte ptr"))
+    {
+        *kind = OP_M8;
+    }
+    else if(consume_reserved("word ptr"))
     {
         *kind = OP_M16;
     }
