@@ -136,6 +136,13 @@ test_sub:
 	mov rbp, rsp
 	sub rsp, 16
 
+	mov ax, 16
+	mov dx, 1
+	sub ax, dx
+	mov si, ax
+	mov di, 15
+	call assert_equal_uint16
+
 	mov eax, 32
 	mov edx, 1
 	sub eax, edx
