@@ -143,6 +143,24 @@ test_sub:
 	mov di, 15
 	call assert_equal_uint16
 
+	mov ax, 16
+	sub ax, 2
+	mov si, ax
+	mov di, 14
+	call assert_equal_uint16
+
+	mov ax, 0x1616
+	sub ax, 0x1600
+	mov si, ax
+	mov di, 0x16
+	call assert_equal_uint16
+
+	mov dx, 0x1616
+	sub dx, 0x1601
+	mov si, dx
+	mov di, 0x15
+	call assert_equal_uint16
+
 	mov eax, 32
 	mov edx, 1
 	sub eax, edx
