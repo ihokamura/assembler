@@ -85,13 +85,22 @@ const RegisterInfo register_info_list[] =
 };
 const size_t REGISTER_INFO_LIST_SIZE = sizeof(register_info_list) / sizeof(register_info_list[0]);
 
-const uint8_t PREFIX_OPERAND_SIZE_OVERRIDE = 0x66;
-const uint8_t PREFIX_REX = 0x40;
-const uint8_t PREFIX_REX_W = 0x48;
-const uint8_t MOD_MEM = 0;
-const uint8_t MOD_MEM_DISP8 = 1;
-const uint8_t MOD_MEM_DISP32 = 2;
-const uint8_t MOD_REG = 3;
+static const uint8_t PREFIX_OPERAND_SIZE_OVERRIDE = 0x66;
+static const uint8_t PREFIX_REX = 0x40;
+static const uint8_t PREFIX_REX_W = 0x48;
+static const uint8_t REGISTER_INDEX_EAX = 0x00;
+static const uint8_t REGISTER_INDEX_ECX = 0x01;
+static const uint8_t REGISTER_INDEX_EDX = 0x02;
+static const uint8_t REGISTER_INDEX_EBX = 0x03;
+static const uint8_t REGISTER_INDEX_ESP = 0x04;
+static const uint8_t REGISTER_INDEX_EBP = 0x05;
+static const uint8_t REGISTER_INDEX_ESI = 0x06;
+static const uint8_t REGISTER_INDEX_EDI = 0x07;
+static const uint8_t REGISTER_INDEX_INVALID = 0xff;
+static const uint8_t MOD_MEM = 0;
+static const uint8_t MOD_MEM_DISP8 = 1;
+static const uint8_t MOD_MEM_DISP32 = 2;
+static const uint8_t MOD_REG = 3;
 
 /*
 generate an operation
@@ -305,13 +314,24 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
         handle the following instructions
         * SUB r32, imm8
         * SUB r64, imm8
+        * SUB r32, imm32
+        * SUB r64, imm32
         */
         assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
-        may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
-        uint8_t opecode = (get_operand_size(operand2->kind) == SIZEOF_8BIT) ? 0x83 : 0x81;
-        append_binary_opecode(opecode, text_body);
-        append_binary_modrm(MOD_REG, get_register_field(operand1->reg), 0x05, text_body);
-        append_binary_imm(operand2->immediate, get_operand_size(operand2->kind), text_body);
+        if((get_register_field(operand1->reg) == REGISTER_INDEX_EAX) && (get_operand_size(operand2->kind) == SIZEOF_32BIT))
+        {
+            may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
+            append_binary_opecode(0x2d, text_body);
+            append_binary_imm32(operand2->immediate, text_body);
+        }
+        else
+        {
+            may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
+            uint8_t opecode = (get_operand_size(operand2->kind) == SIZEOF_8BIT) ? 0x83 : 0x81;
+            append_binary_opecode(opecode, text_body);
+            append_binary_modrm(MOD_REG, get_register_field(operand1->reg), 0x05, text_body);
+            append_binary_imm(operand2->immediate, get_operand_size(operand2->kind), text_body);
+        }
     }
     else if(is_memory(operand1->kind) && is_immediate(operand2->kind))
     {
@@ -319,6 +339,8 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
         handle the following instructions
         * SUB m32, imm8
         * SUB m64, imm8
+        * SUB m32, imm32
+        * SUB m64, imm32
         */
         assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
         may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
@@ -429,53 +451,53 @@ static uint8_t get_register_field(RegisterKind kind)
     case REG_AX:
     case REG_EAX:
     case REG_RAX:
-        return 0x00;
+        return REGISTER_INDEX_EAX;
 
     case REG_CL:
     case REG_CX:
     case REG_ECX:
     case REG_RCX:
-        return 0x01;
+        return REGISTER_INDEX_ECX;
 
     case REG_DL:
     case REG_DX:
     case REG_EDX:
     case REG_RDX:
-        return 0x02;
+        return REGISTER_INDEX_EDX;
 
     case REG_BL:
     case REG_BX:
     case REG_EBX:
     case REG_RBX:
-        return 0x03;
+        return REGISTER_INDEX_EBX;
 
     case REG_SPL:
     case REG_SP:
     case REG_ESP:
     case REG_RSP:
-        return 0x04;
+        return REGISTER_INDEX_ESP;
 
     case REG_BPL:
     case REG_BP:
     case REG_EBP:
     case REG_RBP:
     case REG_RIP:
-        return 0x05;
+        return REGISTER_INDEX_EBP;
 
     case REG_SIL:
     case REG_SI:
     case REG_ESI:
     case REG_RSI:
-        return 0x06;
+        return REGISTER_INDEX_ESI;
 
     case REG_DIL:
     case REG_DI:
     case REG_EDI:
     case REG_RDI:
-        return 0x07;
+        return REGISTER_INDEX_EDI;
 
     default:
-        return 0x00;
+        return REGISTER_INDEX_INVALID;
     }
 }
 
