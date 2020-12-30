@@ -110,6 +110,10 @@ static void generate_op_call(const List(Operand) *operands, ByteBufferType *text
     Operand *operand = get_first_element(Operand)(operands);
     if(operand->kind == OP_SYMBOL)
     {
+        /*
+        handle the following instructions
+        * CALL rel32
+        */
         append_binary_opecode(0xe8, text_body);
         append_binary_relocation(SIZEOF_32BIT, operand->label, text_body->size, -SIZEOF_32BIT, text_body);
     }
@@ -126,6 +130,13 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
     if(is_register(operand1->kind) && is_register(operand2->kind))
     {
+        /*
+        handle the following instructions
+        * MOV r8,r8
+        * MOV r16,r16
+        * MOV r32,r32
+        * MOV r64,r64
+        */
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
         may_append_binary_rex_prefix(operand1, PREFIX_REX, text_body);
@@ -136,6 +147,13 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     }
     else if(is_register(operand1->kind) && is_memory(operand2->kind))
     {
+        /*
+        handle the following instructions
+        * MOV r8,m8
+        * MOV r16,m16
+        * MOV r32,m32
+        * MOV r64,m64
+        */
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
         may_append_binary_rex_prefix(operand1, PREFIX_REX, text_body);
@@ -150,6 +168,10 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     {
         if((get_operand_size(operand1->kind) == SIZEOF_64BIT) && (get_operand_size(operand2->kind) < SIZEOF_64BIT))
         {
+            /*
+            handle the following instructions
+            * MOV r64, imm32
+            */
             may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
             append_binary_opecode(0xc7, text_body);
             append_binary_modrm(is_register(operand1->kind) ? MOD_REG : get_mod_field(operand1->immediate), get_register_field(operand1->reg), 0x00, text_body);
@@ -157,6 +179,12 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         }
         else
         {
+            /*
+            handle the following instructions
+            * MOV r8, imm8
+            * MOV r16, imm16
+            * MOV r32, imm32
+            */
             assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
             may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
             may_append_binary_rex_prefix(operand1, PREFIX_REX, text_body);
@@ -167,6 +195,13 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     }
     else if(is_memory(operand1->kind) && is_immediate(operand2->kind))
     {
+        /*
+        handle the following instructions
+        * MOV m8, imm8
+        * MOV m16, imm16
+        * MOV m32, imm32
+        * MOV m64, imm32
+        */
         assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
         may_append_binary_rex_prefix(operand1, PREFIX_REX, text_body);
@@ -187,6 +222,10 @@ generate nop operation
 */
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_body)
 {
+    /*
+    handle the following instructions
+    * NOP
+    */
     append_binary_opecode(0x90, text_body);
 }
 
@@ -200,6 +239,10 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_
 
     if(operand->kind == OP_R64)
     {
+        /*
+        handle the following instructions
+        * POP r64
+        */
         append_binary_opecode(0x58 + get_register_field(operand->reg), text_body);
     }
 }
@@ -214,6 +257,10 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *text
 
     if(operand->kind == OP_R64)
     {
+        /*
+        handle the following instructions
+        * PUSH r64
+        */
         append_binary_opecode(0x50 + get_register_field(operand->reg), text_body);
     }
 }
@@ -224,6 +271,10 @@ generate ret operation
 */
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_body)
 {
+    /*
+    handle the following instructions
+    * RET
+    */
     append_binary_opecode(0xc3, text_body);
 }
 
@@ -238,6 +289,11 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
     Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
     if(is_register(operand1->kind) && is_register(operand2->kind))
     {
+        /*
+        handle the following instructions
+        * SUB r32, r32
+        * SUB r64, r64
+        */
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
         append_binary_opecode(0x29, text_body);
@@ -245,9 +301,17 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
     }
     else if(is_register(operand1->kind) && is_immediate(operand2->kind))
     {
+        /*
+        handle the following instructions
+        * SUB r32, imm8
+        * SUB r64, imm8
+        * SUB r32, imm32
+        * SUB r64, imm32
+        */
         assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
         may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
-        append_binary_opecode((operand2->kind == OP_IMM8) ? 0x83 : 0x81, text_body);
+        uint8_t opecode = (get_operand_size(operand2->kind) == SIZEOF_8BIT) ? 0x83 : 0x81;
+        append_binary_opecode(opecode, text_body);
         append_binary_modrm(MOD_REG, get_register_field(operand1->reg), 0x05, text_body);
         append_binary_imm(operand2->immediate, get_operand_size(operand2->kind), text_body);
     }
