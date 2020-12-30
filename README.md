@@ -23,7 +23,8 @@ mnemonic ::= "call"
            | "sub"
 operands ::= operand ("," operand)?
 operand ::= immediate | register | memory | symbol
-register ::= "eax" | "edx" | "ecx" | "ebx" | "esp" | "ebp" | "esi" | "edi"
+register ::= "ax" | "dx" | "cx" | "bx" | "sp" | "bp" | "si" | "di"
+           | "eax" | "edx" | "ecx" | "ebx" | "esp" | "ebp" | "esi" | "edi"
            | "rax" | "rdx" | "rcx" | "rbx" | "rsp" | "rbp" | "rsi" | "rdi" | "rip"
 memory ::= size-specifier "[" register (("+" | "-") immediate | "+" symbol)? "]"
 size-specifier ::= "dword ptr" | "qword ptr"

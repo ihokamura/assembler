@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -296,11 +297,15 @@ static Operand *new_operand_immediate(uint32_t immediate)
     OperandKind kind;
     switch(get_least_size(immediate))
     {
-    case sizeof(uint8_t):
+    case SIZEOF_8BIT:
         kind = OP_IMM8;
         break;
 
-    case sizeof(uint32_t):
+    case SIZEOF_16BIT:
+        kind = OP_IMM8;
+        break;
+
+    case SIZEOF_32BIT:
     default:
         kind = OP_IMM32;
         break;
@@ -379,11 +384,15 @@ size_t get_least_size(uint32_t value)
     }
     else if((value < UINT8_MAX) || (-value < UINT8_MAX))
     {
-        return sizeof(uint8_t);
+        return SIZEOF_8BIT;
+    }
+    else if((value < UINT16_MAX) || (-value < UINT16_MAX))
+    {
+        return SIZEOF_16BIT;
     }
     else
     {
-        return sizeof(uint32_t);
+        return SIZEOF_32BIT;
     }
 }
 

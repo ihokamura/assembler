@@ -6,6 +6,11 @@
 #include "buffer.h"
 #include "elf_wrap.h"
 
+#define SIZEOF_8BIT     sizeof(uint8_t)
+#define SIZEOF_16BIT    sizeof(uint16_t)
+#define SIZEOF_32BIT    sizeof(uint32_t)
+#define SIZEOF_64BIT    sizeof(uint64_t)
+
 typedef enum OperandKind OperandKind;
 typedef enum MnemonicKind MnemonicKind;
 typedef enum RegisterKind RegisterKind;

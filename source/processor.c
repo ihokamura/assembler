@@ -8,11 +8,6 @@
 #include "parser.h"
 #include "processor.h"
 
-#define SIZEOF_8BIT     sizeof(uint8_t)
-#define SIZEOF_16BIT    sizeof(uint16_t)
-#define SIZEOF_32BIT    sizeof(uint32_t)
-#define SIZEOF_64BIT    sizeof(uint64_t)
-
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_body);
@@ -135,26 +130,32 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         may_append_binary_relocation(operand2, text_body->size, -SIZEOF_32BIT, text_body);
         append_binary_imm_least(operand2->immediate, text_body);
     }
-    else if(is_register(operand1->kind) && is_immediate(operand2->kind) &&
-            !((get_operand_size(operand1->kind) == SIZEOF_64BIT) && (get_operand_size(operand2->kind) < SIZEOF_64BIT)))
+    else if(is_register(operand1->kind) && is_immediate(operand2->kind))
     {
-        assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
-        may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
-        may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
-        append_binary_opecode(0xb8 + get_register_field(operand1->reg), text_body);
-        append_binary_imm(operand2->immediate, get_operand_size(operand1->kind), text_body);
+        if((get_operand_size(operand1->kind) == SIZEOF_64BIT) && (get_operand_size(operand2->kind) < SIZEOF_64BIT))
+        {
+            may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
+            append_binary_opecode(0xc7, text_body);
+            append_binary_modrm(is_register(operand1->kind) ? MOD_REG : get_mod_field(operand1->immediate), get_register_field(operand1->reg), 0x00, text_body);
+            append_binary_imm32(operand2->immediate, text_body);
+        }
+        else
+        {
+            assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
+            may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
+            may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
+            append_binary_opecode(0xb8 + get_register_field(operand1->reg), text_body);
+            append_binary_imm(operand2->immediate, get_operand_size(operand1->kind), text_body);
+        }
     }
-    else if((is_register(operand1->kind) || is_memory(operand1->kind)) && is_immediate(operand2->kind))
+    else if(is_memory(operand1->kind) && is_immediate(operand2->kind))
     {
         assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
         may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
         append_binary_opecode(0xc7, text_body);
         append_binary_modrm(is_register(operand1->kind) ? MOD_REG : get_mod_field(operand1->immediate), get_register_field(operand1->reg), 0x00, text_body);
-        if(is_memory(operand1->kind))
-        {
-            may_append_binary_relocation(operand1, text_body->size, -(2 * SIZEOF_32BIT), text_body);
-            append_binary_imm_least(operand1->immediate, text_body);
-        }
+        may_append_binary_relocation(operand1, text_body->size, -(2 * SIZEOF_32BIT), text_body);
+        append_binary_imm_least(operand1->immediate, text_body);
         append_binary_imm32(operand2->immediate, text_body);
     }
 }
@@ -458,7 +459,7 @@ static void may_append_binary_instruction_prefix(OperandKind kind, uint8_t prefi
 
 
 /*
-append binary for prefix if the size of operand is 64-bit
+append binary for REX prefix if necessary
 */
 static void may_append_binary_rex_prefix(OperandKind kind, uint8_t prefix, ByteBufferType *text_body)
 {
@@ -477,5 +478,5 @@ static void may_append_binary_relocation(const Operand *operand, Elf_Addr addres
     if(operand->reg == REG_RIP)
     {
         append_binary_relocation(SIZEOF_32BIT, operand->label, address, addend, text_body);
-    }    
+    }
 }
