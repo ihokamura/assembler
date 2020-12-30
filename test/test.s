@@ -37,6 +37,20 @@ test_mov:
 	call assert_equal_uint64
 
 	mov rax, rbp
+	sub rax, 2
+	mov word ptr [rax], 16
+	mov rax, rbp
+	sub rax, 2
+	mov di, word ptr [rax]
+	mov si, 16
+	call assert_equal_uint16
+
+	mov word ptr [rbp-2], 15
+	mov di, word ptr [rbp-2]
+	mov si, 15
+	call assert_equal_uint16
+
+	mov rax, rbp
 	sub rax, 4
 	mov dword ptr [rax], 32
 	mov rax, rbp

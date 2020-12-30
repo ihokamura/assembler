@@ -39,10 +39,12 @@ enum MnemonicKind
 enum OperandKind
 {
     OP_IMM8,   // 8-bit immediate
+    OP_IMM16,  // 16-bit immediate
     OP_IMM32,  // 32-bit immediate
     OP_R16,    // 16-bit register
     OP_R32,    // 32-bit register
     OP_R64,    // 64-bit register
+    OP_M16,    // 16-bit memory
     OP_M32,    // 32-bit memory
     OP_M64,    // 64-bit memory
     OP_SYMBOL, // symbol

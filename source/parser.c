@@ -302,7 +302,7 @@ static Operand *new_operand_immediate(uint32_t immediate)
         break;
 
     case SIZEOF_16BIT:
-        kind = OP_IMM8;
+        kind = OP_IMM16;
         break;
 
     case SIZEOF_32BIT:
@@ -425,7 +425,11 @@ static bool consume_size_specifier(OperandKind *kind)
 {
     bool consumed = true;
 
-    if(consume_reserved("dword ptr"))
+    if(consume_reserved("word ptr"))
+    {
+        *kind = OP_M16;
+    }
+    else if(consume_reserved("dword ptr"))
     {
         *kind = OP_M32;
     }
