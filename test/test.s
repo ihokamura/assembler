@@ -21,13 +21,13 @@ test_mov:
 	mov rbp, rsp
 	sub rsp, 8
 
-	mov rdx, 64
-	mov rdi, rdx
+	mov rax, 64
+	mov rdi, rax
 	mov rsi, 64
 	call assert_equal_uint64
 
-	mov edx, 32
-	mov edi, edx
+	mov eax, 32
+	mov edi, eax
 	mov esi, 32
 	call assert_equal_uint32
 
@@ -67,15 +67,16 @@ test_nop:
 
 # test push and pop
 test_push_pop:
-	mov rdx, 64
-	push rdx
+	mov rax, 64
+	push rax
 
-	mov rdx, 65
-	mov rdi, rdx
+	mov rax, 65
+	mov rdi, rax
 	mov rsi, 65
 	call assert_equal_uint64
 
-	pop rdi
+	pop rax
+	mov rdi, rax
 	mov rsi, 64
 	call assert_equal_uint64
 
@@ -84,29 +85,29 @@ test_push_pop:
 
 # test sub
 test_sub:
-	mov rdx, 64
-	mov rax, 1
-	sub rdx, rax
-	mov rdi, rdx
+	mov rax, 64
+	mov rdx, 1
+	sub rax, rdx
+	mov rdi, rax
 	mov rsi, 63
 	call assert_equal_uint64
 
-	mov rdx, 64
-	sub rdx, 2
-	mov rdi, rdx
+	mov rax, 64
+	sub rax, 2
+	mov rdi, rax
 	mov rsi, 62
 	call assert_equal_uint64
 
-	mov edx, 64
-	mov eax, 1
-	sub edx, eax
-	mov edi, edx
+	mov eax, 64
+	mov edx, 1
+	sub eax, edx
+	mov edi, eax
 	mov esi, 63
 	call assert_equal_uint32
 
-	mov edx, 64
-	sub edx, 2
-	mov edi, edx
+	mov eax, 64
+	sub eax, 2
+	mov edi, eax
 	mov esi, 62
 	call assert_equal_uint32
 
