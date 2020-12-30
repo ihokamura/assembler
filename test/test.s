@@ -31,6 +31,11 @@ test_mov:
 	mov esi, 32
 	call assert_equal_uint32
 
+	mov ax, 16
+	mov di, ax
+	mov si, 16
+	call assert_equal_uint16
+
 	mov rax, rbp
 	sub rax, 8
 	mov qword ptr [rax], 64
