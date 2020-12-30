@@ -168,6 +168,14 @@ test_sub:
 	mov dil, 3
 	call assert_equal_uint8
 
+	mov rax, rbp
+	sub rax, 1
+	mov byte ptr [rax], 8
+	sub byte ptr [rax], 6
+	mov sil, byte ptr [rax]
+	mov dil, 2
+	call assert_equal_uint16
+
 	mov ax, 16
 	mov dx, 1
 	sub ax, dx
