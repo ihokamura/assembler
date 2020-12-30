@@ -136,6 +136,20 @@ test_sub:
 	mov rbp, rsp
 	sub rsp, 16
 
+	mov al, 8
+	mov dl, 1
+	sub al, dl
+	mov sil, al
+	mov dil, 7
+	call assert_equal_uint8
+
+	mov dil, 8
+	mov dl, 2
+	sub dil, dl
+	mov sil, dil
+	mov dil, 6
+	call assert_equal_uint8
+
 	mov ax, 16
 	mov dx, 1
 	sub ax, dx

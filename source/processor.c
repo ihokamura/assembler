@@ -300,14 +300,17 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
     {
         /*
         handle the following instructions
+        * SUB r8, r8
         * SUB r16, r16
         * SUB r32, r32
         * SUB r64, r64
         */
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
+        may_append_binary_rex_prefix(operand1, PREFIX_REX, text_body);
         may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
-        append_binary_opecode(0x29, text_body);
+        uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x28 : 0x29;
+        append_binary_opecode(opecode, text_body);
         append_binary_modrm(MOD_REG, get_register_field(operand1->reg), get_register_field(operand2->reg), text_body);
     }
     else if(is_register(operand1->kind) && is_immediate(operand2->kind))
