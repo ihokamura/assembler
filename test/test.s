@@ -161,6 +161,14 @@ test_sub:
 	mov di, 0x15
 	call assert_equal_uint16
 
+	mov rax, rbp
+	sub rax, 2
+	mov word ptr [rax], 16
+	sub word ptr [rax], 3
+	mov si, word ptr [rax]
+	mov di, 13
+	call assert_equal_uint16
+
 	mov eax, 32
 	mov edx, 1
 	sub eax, edx

@@ -353,12 +353,15 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
     {
         /*
         handle the following instructions
+        * SUB m16, imm8
         * SUB m32, imm8
         * SUB m64, imm8
+        * SUB m16, imm32
         * SUB m32, imm32
         * SUB m64, imm32
         */
         assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
+        may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
         may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
         uint8_t opecode = (get_operand_size(operand2->kind) == SIZEOF_8BIT) ? 0x83 : 0x81;
         append_binary_opecode(opecode, text_body);
