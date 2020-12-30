@@ -405,7 +405,7 @@ static const RegisterInfo *get_register_info(const Token *token)
     for(size_t i = 0; i < REGISTER_INFO_LIST_SIZE; i++)
     {
         const RegisterInfo *info = &register_info_list[i];
-        if(strncmp(token->str, info->name, token->len) == 0)
+        if((token->len == strlen(info->name)) && (strncmp(token->str, info->name, token->len) == 0))
         {
             return info;
         }
