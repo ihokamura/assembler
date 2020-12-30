@@ -19,7 +19,7 @@ main:
 test_mov:
 	push rbp
 	mov rbp, rsp
-	sub rsp, 8
+	sub rsp, 16
 
 	mov al, 8
 	mov sil, al
@@ -98,6 +98,7 @@ test_mov:
 	call assert_equal_uint64
 
 	mov rax, 0
+	mov rsp, rbp
 	pop rbp
 	ret
 
@@ -131,18 +132,30 @@ test_push_pop:
 
 # test sub
 test_sub:
-	mov eax, 64
+	push rbp
+	mov rbp, rsp
+	sub rsp, 16
+
+	mov eax, 32
 	mov edx, 1
 	sub eax, edx
 	mov esi, eax
-	mov edi, 63
+	mov edi, 31
 	call assert_equal_uint32
 
-	mov eax, 64
+	mov eax, 32
 	sub eax, 2
 	mov esi, eax
-	mov edi, 62
+	mov edi, 30
 	call assert_equal_uint32
+
+	mov rax, rbp
+	sub rax, 4
+	mov dword ptr [rax], 32
+	sub dword ptr [rax], 3
+	mov esi, dword ptr [rax]
+	mov edi, 29
+	call assert_equal_uint64
 
 	mov rax, 64
 	mov rdx, 1
@@ -157,7 +170,17 @@ test_sub:
 	mov rdi, 62
 	call assert_equal_uint64
 
+	mov rax, rbp
+	sub rax, 8
+	mov qword ptr [rax], 64
+	sub qword ptr [rax], 3
+	mov rsi, qword ptr [rax]
+	mov rdi, 61
+	call assert_equal_uint64
+
 	mov rax, 0
+	mov rsp, rbp
+	pop rbp
 	ret
 
 
