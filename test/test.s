@@ -150,6 +150,24 @@ test_sub:
 	mov dil, 6
 	call assert_equal_uint8
 
+	mov al, 8
+	sub al, 3
+	mov sil, al
+	mov dil, 5
+	call assert_equal_uint8
+
+	mov dl, 8
+	sub dl, 4
+	mov sil, dl
+	mov dil, 4
+	call assert_equal_uint8
+
+	mov dil, 8
+	sub dil, 5
+	mov sil, dil
+	mov dil, 3
+	call assert_equal_uint8
+
 	mov ax, 16
 	mov dx, 1
 	sub ax, dx
