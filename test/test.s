@@ -21,6 +21,11 @@ test_mov:
 	mov rbp, rsp
 	sub rsp, 8
 
+	mov al, 8
+	mov sil, al
+	mov dil, 8
+	call assert_equal_uint8
+
 	mov ax, 16
 	mov si, ax
 	mov di, 16

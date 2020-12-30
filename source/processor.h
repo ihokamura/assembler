@@ -41,6 +41,7 @@ enum OperandKind
     OP_IMM8,   // 8-bit immediate
     OP_IMM16,  // 16-bit immediate
     OP_IMM32,  // 32-bit immediate
+    OP_R8,     // 8-bit register
     OP_R16,    // 16-bit register
     OP_R32,    // 32-bit register
     OP_R64,    // 64-bit register
@@ -53,6 +54,14 @@ enum OperandKind
 // kind of register
 enum RegisterKind
 {
+    REG_AL,  // al
+    REG_CL,  // cl
+    REG_DL,  // dl
+    REG_BL,  // bl
+    REG_SPL, // spl
+    REG_BPL, // bpl
+    REG_SIL, // sil
+    REG_DIL, // dil
     REG_AX,  // ax
     REG_CX,  // cx
     REG_DX,  // dx

@@ -32,7 +32,7 @@ static void append_binary_imm_least(uint32_t imm, ByteBufferType *text_body);
 static void append_binary_imm32(uint32_t imm32, ByteBufferType *text_body);
 static void append_binary_relocation(size_t size, const char *label, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body);
 static void may_append_binary_instruction_prefix(OperandKind kind, uint8_t prefix, ByteBufferType *text_body);
-static void may_append_binary_rex_prefix(OperandKind kind, uint8_t prefix, ByteBufferType *text_body);
+static void may_append_binary_rex_prefix(const Operand *operand, uint8_t prefix, ByteBufferType *text_body);
 static void may_append_binary_relocation(const Operand *operand, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body);
 
 const MnemonicInfo mnemonic_info_list[] = 
@@ -49,6 +49,10 @@ const size_t MNEMONIC_INFO_LIST_SIZE = sizeof(mnemonic_info_list) / sizeof(mnemo
 
 const RegisterInfo register_info_list[] = 
 {
+    {REG_AL,  "al",  OP_R8},
+    {REG_CL,  "cl",  OP_R8},
+    {REG_DL,  "dl",  OP_R8},
+    {REG_BL,  "bl",  OP_R8},
     {REG_AX,  "ax",  OP_R16},
     {REG_CX,  "cx",  OP_R16},
     {REG_DX,  "dx",  OP_R16},
@@ -57,6 +61,10 @@ const RegisterInfo register_info_list[] =
     {REG_BP,  "bp",  OP_R16},
     {REG_SI,  "si",  OP_R16},
     {REG_DI,  "di",  OP_R16},
+    {REG_SPL, "spl", OP_R8},
+    {REG_BPL, "bpl", OP_R8},
+    {REG_SIL, "sil", OP_R8},
+    {REG_DIL, "dil", OP_R8},
     {REG_EAX, "eax", OP_R32},
     {REG_ECX, "ecx", OP_R32},
     {REG_EDX, "edx", OP_R32},
@@ -78,6 +86,7 @@ const RegisterInfo register_info_list[] =
 const size_t REGISTER_INFO_LIST_SIZE = sizeof(register_info_list) / sizeof(register_info_list[0]);
 
 const uint8_t PREFIX_OPERAND_SIZE_OVERRIDE = 0x66;
+const uint8_t PREFIX_REX = 0x40;
 const uint8_t PREFIX_REX_W = 0x48;
 const uint8_t MOD_MEM = 0;
 const uint8_t MOD_MEM_DISP8 = 1;
@@ -118,16 +127,18 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     if(is_register(operand1->kind) && is_register(operand2->kind))
     {
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
+        uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x88 : 0x89;
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
-        may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
-        append_binary_opecode(0x89, text_body);
+        may_append_binary_rex_prefix(operand1, PREFIX_REX, text_body);
+        may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
+        append_binary_opecode(opecode, text_body);
         append_binary_modrm(MOD_REG, get_register_field(operand1->reg), get_register_field(operand2->reg), text_body);
     }
     else if(is_register(operand1->kind) && is_memory(operand2->kind))
     {
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
-        may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
+        may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
         append_binary_opecode(0x8b, text_body);
         append_binary_modrm(get_mod_field(operand2->immediate), get_register_field(operand2->reg), get_register_field(operand1->reg), text_body);
         may_append_binary_relocation(operand2, text_body->size, -SIZEOF_32BIT, text_body);
@@ -137,7 +148,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     {
         if((get_operand_size(operand1->kind) == SIZEOF_64BIT) && (get_operand_size(operand2->kind) < SIZEOF_64BIT))
         {
-            may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
+            may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
             append_binary_opecode(0xc7, text_body);
             append_binary_modrm(is_register(operand1->kind) ? MOD_REG : get_mod_field(operand1->immediate), get_register_field(operand1->reg), 0x00, text_body);
             append_binary_imm32(operand2->immediate, text_body);
@@ -145,8 +156,10 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         else
         {
             assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
+            size_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0xb0 : 0xb8;
             may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
-            append_binary_opecode(0xb8 + get_register_field(operand1->reg), text_body);
+            may_append_binary_rex_prefix(operand1, PREFIX_REX, text_body);
+            append_binary_opecode(opecode + get_register_field(operand1->reg), text_body);
             append_binary_imm(operand2->immediate, get_operand_size(operand1->kind), text_body);
         }
     }
@@ -154,7 +167,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
     {
         assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
-        may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
+        may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
         append_binary_opecode(0xc7, text_body);
         append_binary_modrm(is_register(operand1->kind) ? MOD_REG : get_mod_field(operand1->immediate), get_register_field(operand1->reg), 0x00, text_body);
         size_t imm_size = min(get_operand_size(operand1->kind), SIZEOF_32BIT);
@@ -222,14 +235,14 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
     if(is_register(operand1->kind) && is_register(operand2->kind))
     {
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
-        may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
+        may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
         append_binary_opecode(0x29, text_body);
         append_binary_modrm(MOD_REG, get_register_field(operand1->reg), get_register_field(operand2->reg), text_body);
     }
     else if(is_register(operand1->kind) && is_immediate(operand2->kind))
     {
         assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
-        may_append_binary_rex_prefix(operand1->kind, PREFIX_REX_W, text_body);
+        may_append_binary_rex_prefix(operand1, PREFIX_REX_W, text_body);
         append_binary_opecode((operand2->kind == OP_IMM8) ? 0x83 : 0x81, text_body);
         append_binary_modrm(MOD_REG, get_register_field(operand1->reg), 0x05, text_body);
         append_binary_imm(operand2->immediate, get_operand_size(operand2->kind), text_body);
@@ -251,7 +264,7 @@ check if operand is register
 */
 static bool is_register(OperandKind kind)
 {
-    return (kind == OP_R16) || (kind == OP_R32) || (kind == OP_R64);
+    return (kind == OP_R8) || (kind == OP_R16) || (kind == OP_R32) || (kind == OP_R64);
 }
 
 
@@ -272,6 +285,7 @@ static size_t get_operand_size(OperandKind kind)
     switch(kind)
     {
     case OP_IMM8:
+    case OP_R8:
         return SIZEOF_8BIT;
 
     case OP_IMM16:
@@ -330,42 +344,50 @@ static uint8_t get_register_field(RegisterKind kind)
 {
     switch(kind)
     {
+    case REG_AL:
     case REG_AX:
     case REG_EAX:
     case REG_RAX:
         return 0x00;
 
+    case REG_CL:
     case REG_CX:
     case REG_ECX:
     case REG_RCX:
         return 0x01;
 
+    case REG_DL:
     case REG_DX:
     case REG_EDX:
     case REG_RDX:
         return 0x02;
 
+    case REG_BL:
     case REG_BX:
     case REG_EBX:
     case REG_RBX:
         return 0x03;
 
+    case REG_SPL:
     case REG_SP:
     case REG_ESP:
     case REG_RSP:
         return 0x04;
 
+    case REG_BPL:
     case REG_BP:
     case REG_EBP:
     case REG_RBP:
     case REG_RIP:
         return 0x05;
 
+    case REG_SIL:
     case REG_SI:
     case REG_ESI:
     case REG_RSI:
         return 0x06;
 
+    case REG_DIL:
     case REG_DI:
     case REG_EDI:
     case REG_RDI:
@@ -467,9 +489,35 @@ static void may_append_binary_instruction_prefix(OperandKind kind, uint8_t prefi
 /*
 append binary for REX prefix if necessary
 */
-static void may_append_binary_rex_prefix(OperandKind kind, uint8_t prefix, ByteBufferType *text_body)
+static void may_append_binary_rex_prefix(const Operand *operand, uint8_t prefix, ByteBufferType *text_body)
 {
-    if(get_operand_size(kind) == SIZEOF_64BIT)
+    bool append = false;
+    switch(get_operand_size(operand->kind))
+    {
+    case SIZEOF_8BIT:
+        switch(operand->reg)
+        {
+        case REG_SPL:
+        case REG_BPL:
+        case REG_SIL:
+        case REG_DIL:
+            append = (prefix == PREFIX_REX);
+            break;
+
+        default:
+            break;
+        }
+        break;
+    
+    case SIZEOF_64BIT:
+        append = (prefix == PREFIX_REX_W);
+        break;
+
+    default:
+        break;
+    }
+
+    if(append)
     {
         append_binary_prefix(prefix, text_body);
     }
