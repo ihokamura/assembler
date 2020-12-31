@@ -26,6 +26,11 @@ test_mov:
 	mov dil, 8
 	call assert_equal_uint8
 
+	mov r8b, 8
+	mov sil, r8b
+	mov dil, 8
+	call assert_equal_uint8
+
 	mov ax, 16
 	mov si, ax
 	mov di, 16
