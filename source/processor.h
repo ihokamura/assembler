@@ -55,47 +55,55 @@ enum OperandKind
 // kind of register
 enum RegisterKind
 {
-    REG_AL,  // al
-    REG_CL,  // cl
-    REG_DL,  // dl
-    REG_BL,  // bl
-    REG_SPL, // spl
-    REG_BPL, // bpl
-    REG_SIL, // sil
-    REG_DIL, // dil
-    REG_AX,  // ax
-    REG_CX,  // cx
-    REG_DX,  // dx
-    REG_BX,  // bx
-    REG_SP,  // sp
-    REG_BP,  // bp
-    REG_SI,  // si
-    REG_DI,  // di
-    REG_EAX, // eax
-    REG_ECX, // ecx
-    REG_EDX, // edx
-    REG_EBX, // ebx
-    REG_ESP, // esp
-    REG_EBP, // ebp
-    REG_ESI, // esi
-    REG_EDI, // edi
-    REG_RAX, // rax
-    REG_RCX, // rcx
-    REG_RDX, // rdx
-    REG_RBX, // rbx
-    REG_RSP, // rsp
-    REG_RBP, // rbp
-    REG_RSI, // rsi
-    REG_RDI, // rdi
-    REG_R8,  // r8
-    REG_R9,  // r9
-    REG_R10, // r10
-    REG_R11, // r11
-    REG_R12, // r12
-    REG_R13, // r13
-    REG_R14, // r14
-    REG_R15, // r15
-    REG_RIP, // rip
+    REG_AL,
+    REG_CL,
+    REG_DL,
+    REG_BL,
+    REG_SPL,
+    REG_BPL,
+    REG_SIL,
+    REG_DIL,
+    REG_AX,
+    REG_CX,
+    REG_DX,
+    REG_BX,
+    REG_SP,
+    REG_BP,
+    REG_SI,
+    REG_DI,
+    REG_EAX,
+    REG_ECX,
+    REG_EDX,
+    REG_EBX,
+    REG_ESP,
+    REG_EBP,
+    REG_ESI,
+    REG_EDI,
+    REG_R8D,
+    REG_R9D,
+    REG_R10D,
+    REG_R11D,
+    REG_R12D,
+    REG_R13D,
+    REG_R14D,
+    REG_R15D,
+    REG_RAX,
+    REG_RCX,
+    REG_RDX,
+    REG_RBX,
+    REG_RSP,
+    REG_RBP,
+    REG_RSI,
+    REG_RDI,
+    REG_R8,
+    REG_R9,
+    REG_R10,
+    REG_R11,
+    REG_R12,
+    REG_R13,
+    REG_R14,
+    REG_R15,
+    REG_RIP,
 };
 
 // structure for mapping from string to kind of mnemonic

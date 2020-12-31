@@ -23,7 +23,6 @@ static bool is_memory(OperandKind kind);
 static size_t get_operand_size(OperandKind kind);
 static uint8_t get_register_index(RegisterKind kind);
 static uint8_t get_rex_prefix(const Operand *operand, size_t prefix_position);
-static uint8_t get_rex_prefix_bit(RegisterKind kind);
 static uint8_t get_modrm_byte(uint8_t mod, uint8_t reg, uint8_t rm);
 static uint8_t get_mod_field(uint32_t immediate);
 static uint8_t get_reg_field(RegisterKind kind);
@@ -54,47 +53,55 @@ const size_t MNEMONIC_INFO_LIST_SIZE = sizeof(mnemonic_info_list) / sizeof(mnemo
 
 const RegisterInfo register_info_list[] = 
 {
-    {REG_AL,  "al",  OP_R8},
-    {REG_CL,  "cl",  OP_R8},
-    {REG_DL,  "dl",  OP_R8},
-    {REG_BL,  "bl",  OP_R8},
-    {REG_SPL, "spl", OP_R8},
-    {REG_BPL, "bpl", OP_R8},
-    {REG_SIL, "sil", OP_R8},
-    {REG_DIL, "dil", OP_R8},
-    {REG_AX,  "ax",  OP_R16},
-    {REG_CX,  "cx",  OP_R16},
-    {REG_DX,  "dx",  OP_R16},
-    {REG_BX,  "bx",  OP_R16},
-    {REG_SP,  "sp",  OP_R16},
-    {REG_BP,  "bp",  OP_R16},
-    {REG_SI,  "si",  OP_R16},
-    {REG_DI,  "di",  OP_R16},
-    {REG_EAX, "eax", OP_R32},
-    {REG_ECX, "ecx", OP_R32},
-    {REG_EDX, "edx", OP_R32},
-    {REG_EBX, "ebx", OP_R32},
-    {REG_ESP, "esp", OP_R32},
-    {REG_EBP, "ebp", OP_R32},
-    {REG_ESI, "esi", OP_R32},
-    {REG_EDI, "edi", OP_R32},
-    {REG_RAX, "rax", OP_R64},
-    {REG_RCX, "rcx", OP_R64},
-    {REG_RDX, "rdx", OP_R64},
-    {REG_RBX, "rbx", OP_R64},
-    {REG_RSP, "rsp", OP_R64},
-    {REG_RBP, "rbp", OP_R64},
-    {REG_RSI, "rsi", OP_R64},
-    {REG_RDI, "rdi", OP_R64},
-    {REG_R8,  "r8",  OP_R64},
-    {REG_R9,  "r9",  OP_R64},
-    {REG_R10, "r10", OP_R64},
-    {REG_R11, "r11", OP_R64},
-    {REG_R12, "r12", OP_R64},
-    {REG_R13, "r13", OP_R64},
-    {REG_R14, "r14", OP_R64},
-    {REG_R15, "r15", OP_R64},
-    {REG_RIP, "rip", OP_R64},
+    {REG_AL,   "al",   OP_R8},
+    {REG_CL,   "cl",   OP_R8},
+    {REG_DL,   "dl",   OP_R8},
+    {REG_BL,   "bl",   OP_R8},
+    {REG_SPL,  "spl",  OP_R8},
+    {REG_BPL,  "bpl",  OP_R8},
+    {REG_SIL,  "sil",  OP_R8},
+    {REG_DIL,  "dil",  OP_R8},
+    {REG_AX,   "ax",   OP_R16},
+    {REG_CX,   "cx",   OP_R16},
+    {REG_DX,   "dx",   OP_R16},
+    {REG_BX,   "bx",   OP_R16},
+    {REG_SP,   "sp",   OP_R16},
+    {REG_BP,   "bp",   OP_R16},
+    {REG_SI,   "si",   OP_R16},
+    {REG_DI,   "di",   OP_R16},
+    {REG_EAX,  "eax",  OP_R32},
+    {REG_ECX,  "ecx",  OP_R32},
+    {REG_EDX,  "edx",  OP_R32},
+    {REG_EBX,  "ebx",  OP_R32},
+    {REG_ESP,  "esp",  OP_R32},
+    {REG_EBP,  "ebp",  OP_R32},
+    {REG_ESI,  "esi",  OP_R32},
+    {REG_EDI,  "edi",  OP_R32},
+    {REG_R8D,  "r8d",  OP_R32},
+    {REG_R9D,  "r9d",  OP_R32},
+    {REG_R10D, "r10d", OP_R32},
+    {REG_R11D, "r11d", OP_R32},
+    {REG_R12D, "r12d", OP_R32},
+    {REG_R13D, "r13d", OP_R32},
+    {REG_R14D, "r14d", OP_R32},
+    {REG_R15D, "r15d", OP_R32},
+    {REG_RAX,  "rax",  OP_R64},
+    {REG_RCX,  "rcx",  OP_R64},
+    {REG_RDX,  "rdx",  OP_R64},
+    {REG_RBX,  "rbx",  OP_R64},
+    {REG_RSP,  "rsp",  OP_R64},
+    {REG_RBP,  "rbp",  OP_R64},
+    {REG_RSI,  "rsi",  OP_R64},
+    {REG_RDI,  "rdi",  OP_R64},
+    {REG_R8,   "r8",   OP_R64},
+    {REG_R9,   "r9",   OP_R64},
+    {REG_R10,  "r10",  OP_R64},
+    {REG_R11,  "r11",  OP_R64},
+    {REG_R12,  "r12",  OP_R64},
+    {REG_R13,  "r13",  OP_R64},
+    {REG_R14,  "r14",  OP_R64},
+    {REG_R15,  "r15",  OP_R64},
+    {REG_RIP,  "rip",  OP_R64},
 };
 const size_t REGISTER_INFO_LIST_SIZE = sizeof(register_info_list) / sizeof(register_info_list[0]);
 
@@ -504,27 +511,35 @@ static uint8_t get_register_index(RegisterKind kind)
     case REG_RDI:
         return 0x07;
 
+    case REG_R8D:
     case REG_R8:
         return 0x08;
 
+    case REG_R9D:
     case REG_R9:
         return 0x09;
 
+    case REG_R10D:
     case REG_R10:
         return 0x0a;
 
+    case REG_R11D:
     case REG_R11:
         return 0x0b;
 
+    case REG_R12D:
     case REG_R12:
         return 0x0c;
 
+    case REG_R13D:
     case REG_R13:
         return 0x0d;
 
+    case REG_R14D:
     case REG_R14:
         return 0x0e;
 
+    case REG_R15D:
     case REG_R15:
         return 0x0f;
 
@@ -562,18 +577,12 @@ static uint8_t get_rex_prefix(const Operand *operand, size_t prefix_position)
         prefix |= (PREFIX_REX | (1 << PREFIX_POSITION_REX_W));
     }
 
-    prefix |= (get_rex_prefix_bit(operand->reg) << prefix_position);
+    if((get_register_index(operand->reg) & ~REG_FIELD_MASK) != 0x00)
+    {
+        prefix |= (PREFIX_REX | (1 << prefix_position));
+    }
 
     return prefix;
-}
-
-
-/*
-get REX prefix bit of register
-*/
-static uint8_t get_rex_prefix_bit(RegisterKind kind)
-{
-    return (get_register_index(kind) & ~REG_FIELD_MASK) ? 1 : 0;
 }
 
 

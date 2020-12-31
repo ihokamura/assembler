@@ -36,6 +36,11 @@ test_mov:
 	mov edi, 32
 	call assert_equal_uint32
 
+	mov r8d, 32
+	mov esi, r8d
+	mov edi, 32
+	call assert_equal_uint32
+
 	mov rax, 64
 	mov rsi, rax
 	mov rdi, 64
