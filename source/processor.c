@@ -69,6 +69,14 @@ const RegisterInfo register_info_list[] =
     {REG_BP,   "bp",   OP_R16},
     {REG_SI,   "si",   OP_R16},
     {REG_DI,   "di",   OP_R16},
+    {REG_R8W,  "r8w",  OP_R16},
+    {REG_R9W,  "r9w",  OP_R16},
+    {REG_R10W, "r10w", OP_R16},
+    {REG_R11W, "r11w", OP_R16},
+    {REG_R12W, "r12w", OP_R16},
+    {REG_R13W, "r13w", OP_R16},
+    {REG_R14W, "r14w", OP_R16},
+    {REG_R15W, "r15w", OP_R16},
     {REG_EAX,  "eax",  OP_R32},
     {REG_ECX,  "ecx",  OP_R32},
     {REG_EDX,  "edx",  OP_R32},
@@ -511,34 +519,42 @@ static uint8_t get_register_index(RegisterKind kind)
     case REG_RDI:
         return 0x07;
 
+    case REG_R8W:
     case REG_R8D:
     case REG_R8:
         return 0x08;
 
+    case REG_R9W:
     case REG_R9D:
     case REG_R9:
         return 0x09;
 
+    case REG_R10W:
     case REG_R10D:
     case REG_R10:
         return 0x0a;
 
+    case REG_R11W:
     case REG_R11D:
     case REG_R11:
         return 0x0b;
 
+    case REG_R12W:
     case REG_R12D:
     case REG_R12:
         return 0x0c;
 
+    case REG_R13W:
     case REG_R13D:
     case REG_R13:
         return 0x0d;
 
+    case REG_R14W:
     case REG_R14D:
     case REG_R14:
         return 0x0e;
 
+    case REG_R15W:
     case REG_R15D:
     case REG_R15:
         return 0x0f;

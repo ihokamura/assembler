@@ -31,6 +31,11 @@ test_mov:
 	mov di, 16
 	call assert_equal_uint16
 
+	mov r8w, 16
+	mov si, r8w
+	mov di, 16
+	call assert_equal_uint16
+
 	mov eax, 32
 	mov esi, eax
 	mov edi, 32
