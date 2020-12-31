@@ -86,6 +86,14 @@ const RegisterInfo register_info_list[] =
     {REG_RBP, "rbp", OP_R64},
     {REG_RSI, "rsi", OP_R64},
     {REG_RDI, "rdi", OP_R64},
+    {REG_R8,  "r8",  OP_R64},
+    {REG_R9,  "r9",  OP_R64},
+    {REG_R10, "r10", OP_R64},
+    {REG_R11, "r11", OP_R64},
+    {REG_R12, "r12", OP_R64},
+    {REG_R13, "r13", OP_R64},
+    {REG_R14, "r14", OP_R64},
+    {REG_R15, "r15", OP_R64},
     {REG_RIP, "rip", OP_R64},
 };
 const size_t REGISTER_INFO_LIST_SIZE = sizeof(register_info_list) / sizeof(register_info_list[0]);
@@ -495,6 +503,30 @@ static uint8_t get_register_index(RegisterKind kind)
     case REG_EDI:
     case REG_RDI:
         return 0x07;
+
+    case REG_R8:
+        return 0x08;
+
+    case REG_R9:
+        return 0x09;
+
+    case REG_R10:
+        return 0x0a;
+
+    case REG_R11:
+        return 0x0b;
+
+    case REG_R12:
+        return 0x0c;
+
+    case REG_R13:
+        return 0x0d;
+
+    case REG_R14:
+        return 0x0e;
+
+    case REG_R15:
+        return 0x0f;
 
     default:
         return REGISTER_INDEX_INVALID;

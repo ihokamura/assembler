@@ -41,6 +41,11 @@ test_mov:
 	mov rdi, 64
 	call assert_equal_uint64
 
+	mov r8, 64
+	mov rsi, r8
+	mov rdi, 64
+	call assert_equal_uint64
+
 	mov rax, rbp
 	sub rax, 1
 	mov byte ptr [rax], 8

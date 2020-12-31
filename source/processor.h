@@ -87,6 +87,14 @@ enum RegisterKind
     REG_RBP, // rbp
     REG_RSI, // rsi
     REG_RDI, // rdi
+    REG_R8,  // r8
+    REG_R9,  // r9
+    REG_R10, // r10
+    REG_R11, // r11
+    REG_R12, // r12
+    REG_R13, // r13
+    REG_R14, // r14
+    REG_R15, // r15
     REG_RIP, // rip
 };
 
