@@ -133,12 +133,25 @@ test_nop:
 
 # test push and pop
 test_push_pop:
+	mov ax, 16
+	push ax
+
+	mov ax, 15
+	mov si, ax
+	mov di, 15
+	call assert_equal_uint16
+
+	pop ax
+	mov si, ax
+	mov di, 16
+	call assert_equal_uint16
+
 	mov rax, 64
 	push rax
 
-	mov rax, 65
+	mov rax, 63
 	mov rsi, rax
-	mov rdi, 65
+	mov rdi, 63
 	call assert_equal_uint64
 
 	pop rax

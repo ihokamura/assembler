@@ -280,12 +280,14 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_
 {
     const Operand *operand = get_first_element(Operand)(operands);
 
-    if(operand->kind == OP_R64)
+    if(is_register(operand->kind))
     {
         /*
         handle the following instructions
+        * POP r16
         * POP r64
         */
+        may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
         append_binary_opecode(0x58 + get_reg_field(operand->reg), text_body);
     }
 }
@@ -298,12 +300,14 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *text
 {
     const Operand *operand = get_first_element(Operand)(operands);
 
-    if(operand->kind == OP_R64)
+    if(is_register(operand->kind))
     {
         /*
         handle the following instructions
+        * PUSH r16
         * PUSH r64
         */
+        may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
         append_binary_opecode(0x50 + get_reg_field(operand->reg), text_body);
     }
 }
