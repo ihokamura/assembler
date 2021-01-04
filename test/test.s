@@ -70,7 +70,8 @@ test_mov:
 	mov dil, 8
 	call assert_equal_uint8
 
-	mov byte ptr [rbp-1], 7
+	mov al, 7
+	mov byte ptr [rbp-1], al
 	mov sil, byte ptr [rbp-1]
 	mov dil, 7
 	call assert_equal_uint8
@@ -84,7 +85,8 @@ test_mov:
 	mov di, 16
 	call assert_equal_uint16
 
-	mov word ptr [rbp-2], 15
+	mov ax, 15
+	mov word ptr [rbp-2], ax
 	mov si, word ptr [rbp-2]
 	mov di, 15
 	call assert_equal_uint16
@@ -98,7 +100,8 @@ test_mov:
 	mov edi, 32
 	call assert_equal_uint32
 
-	mov dword ptr [rbp-4], 31
+	mov eax, 31
+	mov dword ptr [rbp-4], eax
 	mov esi, dword ptr [rbp-4]
 	mov edi, 31
 	call assert_equal_uint32
@@ -112,7 +115,8 @@ test_mov:
 	mov rdi, 64
 	call assert_equal_uint64
 
-	mov qword ptr [rbp-8], 63
+	mov rax, 63
+	mov qword ptr [rbp-8], rax
 	mov rsi, qword ptr [rbp-8]
 	mov rdi, 63
 	call assert_equal_uint64
