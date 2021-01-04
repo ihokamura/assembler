@@ -1,5 +1,8 @@
 #!/bin/bash
 
+ASM=$1
+POSTFIX=$2
+
 # save the current directory
 pushd ./test > /dev/null
 
@@ -12,13 +15,12 @@ test()
     expected=$2
 
     # assemble the source code
-    asm=../asm
-    object=${source%.*}.o
-    $asm $source -c -o $object
+    object=${source%.*}_${POSTFIX}.o
+    $ASM $source -c -o $object
 
     # link the object file with the standard library
     external='test_utility.c external_text.c external_data.c'
-    binary=test_bin
+    binary=${source%.*}_${POSTFIX}_bin
     gcc $object $external -o $binary
 
     # run the binary and check the return value

@@ -10,10 +10,10 @@ asm: $(OBJS)
 $(OBJS): $(HDRS)
 
 test: asm
-	bash ./test/test.sh
+	bash ./test/test.sh ../asm asm
 
 clean:
-	rm -f ./asm ./source/*.o ./test/test_bin test/*.o
+	rm -f ./asm ./source/*.o ./test/*bin* test/*.o
 
 
 .PHONY: asm test clean
