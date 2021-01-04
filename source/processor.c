@@ -32,6 +32,7 @@ static uint8_t get_rm_field(RegisterKind kind);
 static void append_binary_prefix(uint8_t prefix, ByteBufferType *text_body);
 static void append_binary_opecode(uint8_t opecode, ByteBufferType *text_body);
 static void append_binary_modrm(uint8_t mod, uint8_t reg, uint8_t rm, ByteBufferType *text_body);
+static void append_binary_disp(const Operand *operand, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body);
 static void append_binary_imm(uint32_t imm, size_t size, ByteBufferType *text_body);
 static void append_binary_imm_least(uint32_t imm, ByteBufferType *text_body);
 static void append_binary_imm32(uint32_t imm32, ByteBufferType *text_body);
@@ -39,7 +40,6 @@ static void append_binary_relocation(size_t size, const char *label, Elf_Addr ad
 static void may_append_binary_instruction_prefix(OperandKind kind, uint8_t prefix, ByteBufferType *text_body);
 static void may_append_binary_rex_prefix_reg_rm(const Operand *operand_reg, const Operand *operand_rm, bool specify_size, ByteBufferType *text_body);
 static void may_append_binary_rex_prefix_reg(const Operand *operand, bool specify_size, ByteBufferType *text_body);
-static void may_append_binary_relocation(const Operand *operand, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body);
 
 const MnemonicInfo mnemonic_info_list[] = 
 {
@@ -196,8 +196,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         append_binary_modrm(get_mod_field(operand1), get_reg_field(operand2->reg), get_rm_field(operand1->reg), text_body);
         if(is_memory(operand1->kind))
         {
-            may_append_binary_relocation(operand1, text_body->size, -SIZEOF_32BIT, text_body);
-            append_binary_imm_least(operand1->immediate, text_body);
+            append_binary_disp(operand1, text_body->size, -SIZEOF_32BIT, text_body);
         }
     }
     else if(is_register(operand1->kind) && is_memory(operand2->kind))
@@ -215,8 +214,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x8a : 0x8b;
         append_binary_opecode(opecode, text_body);
         append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), text_body);
-        may_append_binary_relocation(operand2, text_body->size, -SIZEOF_32BIT, text_body);
-        append_binary_imm_least(operand2->immediate, text_body);
+        append_binary_disp(operand2, text_body->size, -SIZEOF_32BIT, text_body);
     }
     else if(is_register(operand1->kind) && is_immediate(operand2->kind))
     {
@@ -263,8 +261,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
         append_binary_opecode(opecode, text_body);
         append_binary_modrm(get_mod_field(operand1), 0x00, get_rm_field(operand1->reg), text_body);
         size_t imm_size = min(get_operand_size(operand1->kind), SIZEOF_32BIT);
-        may_append_binary_relocation(operand1, text_body->size, -(SIZEOF_32BIT + imm_size), text_body);
-        append_binary_imm_least(operand1->immediate, text_body);
+        append_binary_disp(operand1, text_body->size, -(SIZEOF_32BIT + imm_size), text_body);
         append_binary_imm(operand2->immediate, imm_size, text_body);
     }
 }
@@ -312,8 +309,7 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_
         may_append_binary_rex_prefix_reg(operand, false, text_body);
         append_binary_opecode(0x8f, text_body);
         append_binary_modrm(get_mod_field(operand), 0x00, get_rm_field(operand->reg), text_body);
-        may_append_binary_relocation(operand, text_body->size, -SIZEOF_32BIT, text_body);
-        append_binary_imm_least(operand->immediate, text_body);
+        append_binary_disp(operand, text_body->size, -SIZEOF_32BIT, text_body);
     }
 }
 
@@ -347,8 +343,7 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *text
         may_append_binary_rex_prefix_reg(operand, false, text_body);
         append_binary_opecode(0xff, text_body);
         append_binary_modrm(get_mod_field(operand), 0x06, get_rm_field(operand->reg), text_body);
-        may_append_binary_relocation(operand, text_body->size, -SIZEOF_32BIT, text_body);
-        append_binary_imm_least(operand->immediate, text_body);
+        append_binary_disp(operand, text_body->size, -SIZEOF_32BIT, text_body);
     }
     else if(is_immediate(operand->kind))
     {
@@ -790,6 +785,22 @@ static void append_binary_modrm(uint8_t mod, uint8_t reg, uint8_t rm, ByteBuffer
 
 
 /*
+append binary for displacement
+*/
+static void append_binary_disp(const Operand *operand, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body)
+{
+    if(operand->reg == REG_RIP)
+    {
+        append_binary_relocation(SIZEOF_32BIT, operand->label, address, addend, text_body);
+    }
+    else
+    {
+        append_binary_imm_least(operand->immediate, text_body);
+    }
+}
+
+
+/*
 append binary for immediate with a given size
 */
 static void append_binary_imm(uint32_t imm, size_t size, ByteBufferType *text_body)
@@ -881,17 +892,5 @@ static void may_append_binary_rex_prefix_reg(const Operand *operand, bool specif
     if(prefix != 0x00)
     {
         append_binary_prefix(prefix, text_body);
-    }
-}
-
-
-/*
-append binary for relocation value if the operand is rip-relative memory
-*/
-static void may_append_binary_relocation(const Operand *operand, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body)
-{
-    if(operand->reg == REG_RIP)
-    {
-        append_binary_relocation(SIZEOF_32BIT, operand->label, address, addend, text_body);
     }
 }
