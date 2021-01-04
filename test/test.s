@@ -146,6 +146,19 @@ test_push_pop:
 	mov di, 16
 	call assert_equal_uint16
 
+	mov r8w, 16
+	push r8w
+
+	mov r8w, 15
+	mov si, r8w
+	mov di, 15
+	call assert_equal_uint16
+
+	pop r8w
+	mov si, r8w
+	mov di, 16
+	call assert_equal_uint16
+
 	mov rax, 64
 	push rax
 
@@ -156,6 +169,19 @@ test_push_pop:
 
 	pop rax
 	mov rsi, rax
+	mov rdi, 64
+	call assert_equal_uint64
+
+	mov r8, 64
+	push r8
+
+	mov r8, 63
+	mov rsi, r8
+	mov rdi, 63
+	call assert_equal_uint64
+
+	pop r8
+	mov rsi, r8
 	mov rdi, 64
 	call assert_equal_uint64
 
