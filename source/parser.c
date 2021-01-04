@@ -382,11 +382,11 @@ size_t get_least_size(uint32_t value)
     {
         return 0;
     }
-    else if((value < UINT8_MAX) || (-value < UINT8_MAX))
+    else if((value <= UINT8_MAX) || (-value <= UINT8_MAX))
     {
         return SIZEOF_8BIT;
     }
-    else if((value < UINT16_MAX) || (-value < UINT16_MAX))
+    else if((value <= UINT16_MAX) || (-value <= UINT16_MAX))
     {
         return SIZEOF_16BIT;
     }
