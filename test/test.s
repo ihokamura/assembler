@@ -137,6 +137,21 @@ test_push_pop:
 	mov rbp, rsp
 	sub rsp, 8
 
+	push 0x08
+	pop rsi
+	mov rdi, 0x08
+	call assert_equal_uint8
+
+	push 0x1616
+	pop rsi
+	mov rdi, 0x1616
+	call assert_equal_uint16
+
+	push 0x32323232
+	pop rsi
+	mov rdi, 0x32323232
+	call assert_equal_uint64
+
 	mov ax, 16
 	push ax
 

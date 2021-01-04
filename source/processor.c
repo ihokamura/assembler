@@ -343,6 +343,25 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *text
         may_append_binary_relocation(operand, text_body->size, -SIZEOF_32BIT, text_body);
         append_binary_imm_least(operand->immediate, text_body);
     }
+    else if(is_immediate(operand->kind))
+    {
+        /*
+        handle the following instructions
+        * PUSH imm8
+        * PUSH imm16
+        * PUSH imm32
+        */
+        if(get_operand_size(operand->kind) == SIZEOF_8BIT)
+        {
+            append_binary_opecode(0x6a, text_body);
+            append_binary_imm(operand->immediate, SIZEOF_8BIT, text_body);
+        }
+        else
+        {
+            append_binary_opecode(0x68, text_body);
+            append_binary_imm32(operand->immediate, text_body);
+        }
+    }
 }
 
 
