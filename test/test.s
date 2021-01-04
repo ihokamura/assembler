@@ -133,6 +133,10 @@ test_nop:
 
 # test push and pop
 test_push_pop:
+	push rbp
+	mov rbp, rsp
+	sub rsp, 8
+
 	mov ax, 16
 	push ax
 
@@ -156,6 +160,21 @@ test_push_pop:
 
 	pop r8w
 	mov si, r8w
+	mov di, 16
+	call assert_equal_uint16
+
+	mov rax, rbp
+	sub rax, 2
+	mov word ptr [rax], 16
+	push word ptr [rax]
+
+	mov word ptr [rax], 15
+	mov si, word ptr [rax]
+	mov di, 15
+	call assert_equal_uint16
+
+	pop word ptr [rbp-2]
+	mov si, word ptr [rbp-2]
 	mov di, 16
 	call assert_equal_uint16
 
@@ -185,7 +204,24 @@ test_push_pop:
 	mov rdi, 64
 	call assert_equal_uint64
 
+	mov rax, rbp
+	sub rax, 8
+	mov qword ptr [rax], 64
+	push qword ptr [rax]
+
+	mov qword ptr [rax], 63
+	mov rsi, qword ptr [rax]
+	mov rdi, 63
+	call assert_equal_uint64
+
+	pop qword ptr [rbp-8]
+	mov rsi, qword ptr [rbp-8]
+	mov rdi, 64
+	call assert_equal_uint64
+
 	mov rax, 0
+	mov rsp, rbp
+	pop rbp
 	ret
 
 

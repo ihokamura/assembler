@@ -294,6 +294,20 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_
         may_append_binary_rex_prefix_reg(operand, false, text_body);
         append_binary_opecode(0x58 + get_reg_field(operand->reg), text_body);
     }
+    else if(is_memory(operand->kind))
+    {
+        /*
+        handle the following instructions
+        * POP m16
+        * POP m64
+        */
+        may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
+        may_append_binary_rex_prefix_reg(operand, false, text_body);
+        append_binary_opecode(0x8f, text_body);
+        append_binary_modrm(get_mod_field(operand->immediate), 0x00, get_rm_field(operand->reg), text_body);
+        may_append_binary_relocation(operand, text_body->size, -SIZEOF_32BIT, text_body);
+        append_binary_imm_least(operand->immediate, text_body);
+    }
 }
 
 
@@ -314,6 +328,20 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *text
         may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
         may_append_binary_rex_prefix_reg(operand, false, text_body);
         append_binary_opecode(0x50 + get_reg_field(operand->reg), text_body);
+    }
+    else if(is_memory(operand->kind))
+    {
+        /*
+        handle the following instructions
+        * PUSH m16
+        * PUSH m64
+        */
+        may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
+        may_append_binary_rex_prefix_reg(operand, false, text_body);
+        append_binary_opecode(0xff, text_body);
+        append_binary_modrm(get_mod_field(operand->immediate), 0x06, get_rm_field(operand->reg), text_body);
+        may_append_binary_relocation(operand, text_body->size, -SIZEOF_32BIT, text_body);
+        append_binary_imm_least(operand->immediate, text_body);
     }
 }
 
