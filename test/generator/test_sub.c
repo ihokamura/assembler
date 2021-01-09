@@ -20,7 +20,7 @@ static void generate_test_case_sub_reg_imm(FILE *fp, const RegisterInfo *reg_inf
     put_line_with_tab(fp, "%s %s, 0x%llx    # test target", mnemonic, reg, val2);
     put_line_with_tab(fp, "mov %s, %s", arg2, reg);
     put_line_with_tab(fp, "mov %s, 0x%llx", arg1, result);
-    generate_restore_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]), work_reg);
+    generate_restore_register(fp, work_reg);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
 
@@ -42,7 +42,7 @@ static void generate_test_case_sub_reg_reg(FILE *fp, const RegisterInfo *reg1_in
     put_line_with_tab(fp, "%s %s, %s    # test target", mnemonic, reg1, reg2);
     put_line_with_tab(fp, "mov %s, %s", arg2, reg1);
     put_line_with_tab(fp, "mov %s, 0x%llx", arg1, result);
-    generate_restore_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]), work_reg);
+    generate_restore_register(fp, work_reg);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
 
@@ -64,7 +64,7 @@ static void generate_test_case_sub_reg_mem(FILE *fp, const RegisterInfo *reg_inf
     put_line_with_tab(fp, "%s %s, %s [%s-%lu]    # test target", mnemonic, reg, size_spec, work_reg, offset);
     put_line_with_tab(fp, "mov %s, %s", arg2, reg);
     put_line_with_tab(fp, "mov %s, 0x%llx", arg1, result);
-    generate_restore_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]), work_reg);
+    generate_restore_register(fp, work_reg);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
 
@@ -101,7 +101,7 @@ static void generate_test_case_sub_mem_reg(FILE *fp, const RegisterInfo *reg_inf
     put_line_with_tab(fp, "%s %s [%s-%lu], %s    # test target", mnemonic, size_spec, work_reg, offset, reg);
     put_line_with_tab(fp, "mov %s, %s [%s-%lu]", arg2, size_spec, work_reg, offset);
     put_line_with_tab(fp, "mov %s, 0x%llx", arg1, result);
-    generate_restore_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]), work_reg);
+    generate_restore_register(fp, work_reg);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
 

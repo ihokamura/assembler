@@ -36,7 +36,7 @@ const char *get_1st_argument_register(size_t size);
 const char *get_2nd_argument_register(size_t size);
 const char *get_working_register(const size_t *index_list, size_t list_size);
 const char *generate_save_register(FILE *fp, const size_t *index_list, size_t list_size);
-void generate_restore_register(FILE *fp, const size_t *index_list, size_t list_size, const char *work_reg);
+void generate_restore_register(FILE *fp, const char *work_reg);
 void generate_test(const char *filename, size_t stack_size, void (*generate_all_test_case)(FILE *));
 
 #endif /* !__TEST_COMMON_H__ */

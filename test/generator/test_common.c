@@ -220,7 +220,7 @@ const char *generate_save_register(FILE *fp, const size_t *index_list, size_t li
 }
 
 
-void generate_restore_register(FILE *fp, const size_t *index_list, size_t list_size, const char *work_reg)
+void generate_restore_register(FILE *fp, const char *work_reg)
 {
     // restore rsp and rbp
     put_line_with_tab(fp, "mov rsp, qword ptr [%s-8]", work_reg);
