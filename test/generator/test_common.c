@@ -243,6 +243,7 @@ static void generate_prologue(FILE *fp, size_t stack_size)
 
 static void generate_epilogue(FILE *fp)
 {
+    put_line_with_tab(fp, "mov rax, 0");
     put_line_with_tab(fp, "mov rsp, rbp");
     put_line_with_tab(fp, "pop rbp");
     put_line_with_tab(fp, "ret");

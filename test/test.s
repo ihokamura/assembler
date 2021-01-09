@@ -3,20 +3,11 @@
 # main function
 	.globl main
 main:
-	call test_nop
 	call test_push_pop
 	call test_sub
 
 	call test_external_text
 	call test_external_data
-
-	mov rax, 0
-	ret
-
-
-# test nop
-test_nop:
-	nop
 
 	mov rax, 0
 	ret

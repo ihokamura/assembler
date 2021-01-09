@@ -24,6 +24,7 @@ test()
     gcc $object $external -o $binary
 
     # run the binary and check the return value
+    echo $binary...
     ./$binary
     actual=$?
     if [ $expected == $actual ]; then
@@ -37,6 +38,7 @@ test()
 # execute tests
 test test.s 0
 test test_mov.s 0
+test test_nop.s 0
 
 
 # restore the directory
