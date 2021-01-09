@@ -3,5 +3,6 @@
 
 void generate_test_mov(void);
 void generate_test_nop(void);
+void generate_test_sub(void);
 
 #endif /* __TEST_GENERATOR_H__ */

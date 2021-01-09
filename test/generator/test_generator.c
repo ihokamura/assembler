@@ -6,6 +6,7 @@ static void (* const generate_test[])(void) =
 {
     generate_test_mov,
     generate_test_nop,
+    generate_test_sub,
 };
 static const size_t GENERATE_TEST_SIZE = sizeof(generate_test) / sizeof(generate_test[0]);
 
