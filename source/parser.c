@@ -297,6 +297,7 @@ static Operand *new_operand_immediate(uint32_t immediate)
     OperandKind kind;
     switch(get_least_size(immediate))
     {
+    case 0:
     case SIZEOF_8BIT:
         kind = OP_IMM8;
         break;
