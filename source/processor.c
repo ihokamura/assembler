@@ -388,21 +388,42 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
     ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
     Operand *operand1 = get_element(Operand)(entry);
     Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
-    if(is_register(operand1->kind) && is_register(operand2->kind))
+    if((is_register(operand1->kind) || is_memory(operand1->kind)) && is_register(operand2->kind))
     {
         /*
         handle the following instructions
-        * SUB r8, r8
-        * SUB r16, r16
-        * SUB r32, r32
-        * SUB r64, r64
+        * SUB r/m8, r8
+        * SUB r/m16, r16
+        * SUB r/m32, r32
+        * SUB r/m64, r64
         */
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, text_body);
         uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x28 : 0x29;
         append_binary_opecode(opecode, text_body);
-        append_binary_modrm(MOD_REG, get_reg_field(operand2->reg), get_rm_field(operand1->reg), text_body);
+        append_binary_modrm(get_mod_field(operand1), get_reg_field(operand2->reg), get_rm_field(operand1->reg), text_body);
+        if(is_memory(operand1->kind))
+        {
+            append_binary_disp(operand1, text_body->size, -SIZEOF_32BIT, text_body);
+        }
+    }
+    else if(is_register(operand1->kind) && is_memory(operand2->kind))
+    {
+        /*
+        handle the following instructions
+        * SUB r8, m8
+        * SUB r16, m16
+        * SUB r32, m32
+        * SUB r64, m64
+        */
+        assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
+        may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
+        may_append_binary_rex_prefix_reg_rm(operand1, operand2, true, text_body);
+        uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x2a : 0x2b;
+        append_binary_opecode(opecode, text_body);
+        append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), text_body);
+        append_binary_disp(operand2, text_body->size, -SIZEOF_32BIT, text_body);
     }
     else if(is_register(operand1->kind) && is_immediate(operand2->kind))
     {
@@ -464,7 +485,8 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, text_body);
         uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x80 : ((get_operand_size(operand2->kind) == SIZEOF_8BIT) ? 0x83 : 0x81);
         append_binary_opecode(opecode, text_body);
-        append_binary_modrm(MOD_MEM, 0x05, get_reg_field(operand1->reg), text_body);
+        append_binary_modrm(get_mod_field(operand1), 0x05, get_reg_field(operand1->reg), text_body);
+        append_binary_disp(operand1, text_body->size, -SIZEOF_32BIT, text_body);
         append_binary_imm(operand2->immediate, get_operand_size(operand2->kind), text_body);
     }
 }
