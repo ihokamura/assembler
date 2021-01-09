@@ -36,6 +36,7 @@ test()
 
 # execute tests
 test test.s 0
+test test_mov.s 0
 
 
 # restore the directory

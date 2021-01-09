@@ -1,19 +1,35 @@
+CC=gcc
 CFLAGS=-std=c11 -g -Wall
-SRCS=$(wildcard ./source/*.c)
-HDRS=$(wildcard ./source/*.h)
-OBJS=$(SRCS:.c=.o)
 
+ASM_SRCS=$(wildcard source/*.c)
+ASM_HDRS=$(wildcard source/*.h)
+ASM_OBJS=$(ASM_SRCS:.c=.o)
+ASM_BIN=asm
 
-asm: $(OBJS)
-	$(CC) -o asm $(OBJS) $(LDFLAGS)
+TEST_GENERATOR_SRCS=$(wildcard test/generator/*.c)
+TEST_GENERATOR_HDRS=$(wildcard test/generator/*.h)
+TEST_GENERATOR_OBJS=$(TEST_GENERATOR_SRCS:.c=.o)
+TEST_GENERATOR_BIN=test/test_generator
 
-$(OBJS): $(HDRS)
+TEST_SH=test/test.sh
 
-test: asm
-	bash ./test/test.sh ../asm asm
+asm: $(ASM_OBJS)
+	$(CC) $(ASM_OBJS) -o $(ASM_BIN) $(CFLAGS)
+
+$(ASM_OBJS): $(ASM_HDRS)
+
+test_generator: $(TEST_GENERATOR_OBJS)
+	$(CC) $(TEST_GENERATOR_OBJS) -o $(TEST_GENERATOR_BIN) $(CFLAGS)
+	$(TEST_GENERATOR_BIN)
+
+$(TEST_GENERATOR_OBJS): $(TEST_GENERATOR_HDRS)
+
+test: asm test_generator
+	bash $(TEST_SH) ../$(ASM_BIN) $(ASM_BIN)
 
 clean:
-	rm -f ./asm ./source/*.o ./test/*bin* test/*.o
+	rm -f $(ASM_BIN) source/*.o
+	rm -f test/test_generator test/generator/*.o test/test_mov.s test/*.o test/*bin*
 
 
-.PHONY: asm test clean
+.PHONY: asm test test_generator clean

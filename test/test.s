@@ -3,7 +3,6 @@
 # main function
 	.globl main
 main:
-	call test_mov
 	call test_nop
 	call test_push_pop
 	call test_sub
@@ -12,118 +11,6 @@ main:
 	call test_external_data
 
 	mov rax, 0
-	ret
-
-
-# test mov
-test_mov:
-	push rbp
-	mov rbp, rsp
-	sub rsp, 16
-
-	mov al, 8
-	mov sil, al
-	mov dil, 8
-	call assert_equal_uint8
-
-	mov r8b, 8
-	mov sil, r8b
-	mov dil, 8
-	call assert_equal_uint8
-
-	mov ax, 16
-	mov si, ax
-	mov di, 16
-	call assert_equal_uint16
-
-	mov r8w, 16
-	mov si, r8w
-	mov di, 16
-	call assert_equal_uint16
-
-	mov eax, 32
-	mov esi, eax
-	mov edi, 32
-	call assert_equal_uint32
-
-	mov r8d, 32
-	mov esi, r8d
-	mov edi, 32
-	call assert_equal_uint32
-
-	mov rax, 64
-	mov rsi, rax
-	mov rdi, 64
-	call assert_equal_uint64
-
-	mov r8, 64
-	mov rsi, r8
-	mov rdi, 64
-	call assert_equal_uint64
-
-	mov rax, rbp
-	sub rax, 1
-	mov byte ptr [rax], 8
-	mov rax, rbp
-	sub rax, 1
-	mov sil, byte ptr [rax]
-	mov dil, 8
-	call assert_equal_uint8
-
-	mov al, 7
-	mov byte ptr [rbp-1], al
-	mov sil, byte ptr [rbp-1]
-	mov dil, 7
-	call assert_equal_uint8
-
-	mov rax, rbp
-	sub rax, 2
-	mov word ptr [rax], 16
-	mov rax, rbp
-	sub rax, 2
-	mov si, word ptr [rax]
-	mov di, 16
-	call assert_equal_uint16
-
-	mov ax, 15
-	mov word ptr [rbp-2], ax
-	mov si, word ptr [rbp-2]
-	mov di, 15
-	call assert_equal_uint16
-
-	mov rax, rbp
-	sub rax, 4
-	mov dword ptr [rax], 32
-	mov rax, rbp
-	sub rax, 4
-	mov esi, dword ptr [rax]
-	mov edi, 32
-	call assert_equal_uint32
-
-	mov eax, 31
-	mov dword ptr [rbp-4], eax
-	mov esi, dword ptr [rbp-4]
-	mov edi, 31
-	call assert_equal_uint32
-
-	mov rax, rbp
-	sub rax, 8
-	mov qword ptr [rax], 64
-	mov rax, rbp
-	sub rax, 8
-	mov rsi, qword ptr [rax]
-	mov rdi, 64
-	call assert_equal_uint64
-
-	mov rax, 63
-	mov qword ptr [rbp-8], rax
-	mov rsi, qword ptr [rbp-8]
-	mov rdi, 63
-	call assert_equal_uint64
-
-	mov rax, 0
-	mov rsp, rbp
-	pop rbp
 	ret
 
 
