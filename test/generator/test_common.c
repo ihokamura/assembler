@@ -140,12 +140,12 @@ size_t convert_size_to_bit(size_t size)
 }
 
 
-uintmax_t convert_size_to_sint_max_value(size_t size)
+intmax_t convert_size_to_sint_max_value(size_t size)
 {
     // use INT32_MAX for 64-bit registers
-    static const uintmax_t max_values[] = {INT8_MAX, INT16_MAX, INT32_MAX, INT32_MAX};
+    static const intmax_t sint_max_values[] = {INT8_MAX, INT16_MAX, INT32_MAX, INT32_MAX};
 
-    return max_values[convert_size_to_index(size)];
+    return sint_max_values[convert_size_to_index(size)];
 }
 
 

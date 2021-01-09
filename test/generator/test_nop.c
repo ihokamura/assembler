@@ -21,6 +21,6 @@ static void generate_all_test_case_nop(FILE *fp)
 void generate_test_nop(void)
 {
     const char *filename = "test/test_nop.s";
-    static const size_t STACK_SIZE = 0;
-    generate_test(filename, STACK_SIZE, generate_all_test_case_nop);
+    const size_t stack_size = 0;
+    generate_test(filename, stack_size, generate_all_test_case_nop);
 }

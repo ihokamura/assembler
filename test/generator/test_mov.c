@@ -6,7 +6,7 @@
 #include "test_common.h"
 
 
-static void generate_test_case_mov_reg_imm(FILE *fp, const RegisterInfo *reg_info, uint32_t value)
+static void generate_test_case_mov_reg_imm(FILE *fp, const RegisterInfo *reg_info, intmax_t value)
 {
     size_t size = reg_info->size;
     size_t index_list[] = {reg_info->index};
@@ -15,15 +15,15 @@ static void generate_test_case_mov_reg_imm(FILE *fp, const RegisterInfo *reg_inf
     const char *arg2 = get_2nd_argument_register(size);
 
     const char *work_reg = generate_save_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]));
-    put_line_with_tab(fp, "mov %s, 0x%lx    # test target", reg, value);
+    put_line_with_tab(fp, "mov %s, 0x%llx    # test target", reg, value);
     put_line_with_tab(fp, "mov %s, %s", arg2, reg);
-    put_line_with_tab(fp, "mov %s, 0x%lx", arg1, value);
+    put_line_with_tab(fp, "mov %s, 0x%llx", arg1, value);
     generate_restore_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]), work_reg);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
 
 
-static void generate_test_case_mov_reg_reg(FILE *fp, const RegisterInfo *reg1_info, const RegisterInfo *reg2_info, uint32_t value)
+static void generate_test_case_mov_reg_reg(FILE *fp, const RegisterInfo *reg1_info, const RegisterInfo *reg2_info, intmax_t value)
 {
     assert(reg1_info->size == reg2_info->size);
     size_t size = reg1_info->size;
@@ -34,16 +34,16 @@ static void generate_test_case_mov_reg_reg(FILE *fp, const RegisterInfo *reg1_in
     const char *arg2 = get_2nd_argument_register(size);
 
     const char *work_reg = generate_save_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]));
-    put_line_with_tab(fp, "mov %s, 0x%lx", reg2, value);
+    put_line_with_tab(fp, "mov %s, 0x%llx", reg2, value);
     put_line_with_tab(fp, "mov %s, %s    # test target", reg1, reg2);
     put_line_with_tab(fp, "mov %s, %s", arg2, reg1);
-    put_line_with_tab(fp, "mov %s, 0x%lx", arg1, value);
+    put_line_with_tab(fp, "mov %s, 0x%llx", arg1, value);
     generate_restore_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]), work_reg);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
 
 
-static void generate_test_case_mov_reg_mem(FILE *fp, const RegisterInfo *reg_info, uint32_t value)
+static void generate_test_case_mov_reg_mem(FILE *fp, const RegisterInfo *reg_info, intmax_t value)
 {
     size_t size = reg_info->size;
     size_t index_list[] = {reg_info->index};
@@ -54,29 +54,29 @@ static void generate_test_case_mov_reg_mem(FILE *fp, const RegisterInfo *reg_inf
     size_t offset = 16;
 
     const char *work_reg = generate_save_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]));
-    put_line_with_tab(fp, "mov %s [%s-%lu], 0x%lx", size_spec, work_reg, offset, value);
+    put_line_with_tab(fp, "mov %s [%s-%lu], 0x%llx", size_spec, work_reg, offset, value);
     put_line_with_tab(fp, "mov %s, %s [%s-%lu]    # test target", reg, size_spec, work_reg, offset);
     put_line_with_tab(fp, "mov %s, %s", arg2, reg);
-    put_line_with_tab(fp, "mov %s, 0x%lx", arg1, value);
+    put_line_with_tab(fp, "mov %s, 0x%llx", arg1, value);
     generate_restore_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]), work_reg);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
 
 
-static void generate_test_case_mov_mem_imm(FILE *fp, size_t size, uint32_t value)
+static void generate_test_case_mov_mem_imm(FILE *fp, size_t size, intmax_t value)
 {
     const char *arg1 = get_1st_argument_register(size);
     const char *arg2 = get_2nd_argument_register(size);
     const char *size_spec = get_size_specifier(size);
 
-    put_line_with_tab(fp, "mov %s [rbp-8], 0x%lx    # test target", size_spec, value);
+    put_line_with_tab(fp, "mov %s [rbp-8], 0x%llx    # test target", size_spec, value);
     put_line_with_tab(fp, "mov %s, %s [rbp-8]", arg2, size_spec);
-    put_line_with_tab(fp, "mov %s, 0x%lx", arg1, value);
+    put_line_with_tab(fp, "mov %s, 0x%llx", arg1, value);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
 
 
-static void generate_test_case_mov_mem_reg(FILE *fp, const RegisterInfo *reg_info, uint32_t value)
+static void generate_test_case_mov_mem_reg(FILE *fp, const RegisterInfo *reg_info, intmax_t value)
 {
     size_t size = reg_info->size;
     size_t index_list[] = {reg_info->index};
@@ -87,10 +87,10 @@ static void generate_test_case_mov_mem_reg(FILE *fp, const RegisterInfo *reg_inf
     size_t offset = 16;
 
     const char *work_reg = generate_save_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]));
-    put_line_with_tab(fp, "mov %s, 0x%lx", reg, value);
+    put_line_with_tab(fp, "mov %s, 0x%llx", reg, value);
     put_line_with_tab(fp, "mov %s [%s-%lu], %s    # test target", size_spec, work_reg, offset, reg);
     put_line_with_tab(fp, "mov %s, %s [%s-%lu]", arg2, size_spec, work_reg, offset);
-    put_line_with_tab(fp, "mov %s, 0x%lx", arg1, value);
+    put_line_with_tab(fp, "mov %s, 0x%llx", arg1, value);
     generate_restore_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]), work_reg);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
@@ -157,6 +157,6 @@ static void generate_all_test_case_mov(FILE *fp)
 void generate_test_mov(void)
 {
     const char *filename = "test/test_mov.s";
-    static const size_t STACK_SIZE = 16;
-    generate_test(filename, STACK_SIZE, generate_all_test_case_mov);
+    const size_t stack_size = 16;
+    generate_test(filename, stack_size, generate_all_test_case_mov);
 }
