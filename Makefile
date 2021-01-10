@@ -29,7 +29,7 @@ test: asm test_generator
 
 clean:
 	rm -f $(ASM_BIN) source/*.o
-	rm -f test/test_generator test/generator/*.o test/test_mov.s test/*.o test/*bin*
+	rm -f test/test_generator test/generator/*.o test/test_*.s test/*.o test/*bin*
 
 
 .PHONY: asm test test_generator clean
