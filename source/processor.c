@@ -147,8 +147,6 @@ const RegisterInfo register_info_list[] =
 };
 const size_t REGISTER_INFO_LIST_SIZE = sizeof(register_info_list) / sizeof(register_info_list[0]);
 
-static const uint8_t REGISTER_INDEX_ESP = 0x04;
-
 static const uint8_t PREFIX_OPERAND_SIZE_OVERRIDE = 0x66;
 
 static const uint8_t PREFIX_NONE = 0x00;
@@ -162,6 +160,23 @@ static const uint8_t MOD_MEM_DISP8 = 1;
 static const uint8_t MOD_MEM_DISP32 = 2;
 static const uint8_t MOD_REG = 3;
 static const uint8_t MOD_INVALID = 0xff;
+
+static const uint8_t REGISTER_INDEX_EAX = 0;
+static const uint8_t REGISTER_INDEX_ECX = 1;
+static const uint8_t REGISTER_INDEX_EDX = 2;
+static const uint8_t REGISTER_INDEX_EBX = 3;
+static const uint8_t REGISTER_INDEX_ESP = 4;
+static const uint8_t REGISTER_INDEX_EBP = 5;
+static const uint8_t REGISTER_INDEX_ESI = 6;
+static const uint8_t REGISTER_INDEX_EDI = 7;
+static const uint8_t REGISTER_INDEX_R8D = 8;
+static const uint8_t REGISTER_INDEX_R9D = 9;
+static const uint8_t REGISTER_INDEX_R10D = 10;
+static const uint8_t REGISTER_INDEX_R11D = 11;
+static const uint8_t REGISTER_INDEX_R12D = 12;
+static const uint8_t REGISTER_INDEX_R13D = 13;
+static const uint8_t REGISTER_INDEX_R14D = 14;
+static const uint8_t REGISTER_INDEX_R15D = 15;
 static const uint8_t REGISTER_INDEX_INVALID = 0xff;
 static const uint8_t REG_FIELD_MASK = 0x07;
 
@@ -628,25 +643,25 @@ static uint8_t get_register_index(RegisterKind kind)
     case REG_AX:
     case REG_EAX:
     case REG_RAX:
-        return 0x00;
+        return REGISTER_INDEX_EAX;
 
     case REG_CL:
     case REG_CX:
     case REG_ECX:
     case REG_RCX:
-        return 0x01;
+        return REGISTER_INDEX_ECX;
 
     case REG_DL:
     case REG_DX:
     case REG_EDX:
     case REG_RDX:
-        return 0x02;
+        return REGISTER_INDEX_EDX;
 
     case REG_BL:
     case REG_BX:
     case REG_EBX:
     case REG_RBX:
-        return 0x03;
+        return REGISTER_INDEX_EBX;
 
     case REG_SPL:
     case REG_SP:
@@ -659,67 +674,67 @@ static uint8_t get_register_index(RegisterKind kind)
     case REG_EBP:
     case REG_RBP:
     case REG_RIP:
-        return 0x05;
+        return REGISTER_INDEX_EBP;
 
     case REG_SIL:
     case REG_SI:
     case REG_ESI:
     case REG_RSI:
-        return 0x06;
+        return REGISTER_INDEX_ESI;
 
     case REG_DIL:
     case REG_DI:
     case REG_EDI:
     case REG_RDI:
-        return 0x07;
+        return REGISTER_INDEX_EDI;
 
     case REG_R8B:
     case REG_R8W:
     case REG_R8D:
     case REG_R8:
-        return 0x08;
+        return REGISTER_INDEX_R8D;
 
     case REG_R9B:
     case REG_R9W:
     case REG_R9D:
     case REG_R9:
-        return 0x09;
+        return REGISTER_INDEX_R9D;
 
     case REG_R10B:
     case REG_R10W:
     case REG_R10D:
     case REG_R10:
-        return 0x0a;
+        return REGISTER_INDEX_R10D;
 
     case REG_R11B:
     case REG_R11W:
     case REG_R11D:
     case REG_R11:
-        return 0x0b;
+        return REGISTER_INDEX_R11D;
 
     case REG_R12B:
     case REG_R12W:
     case REG_R12D:
     case REG_R12:
-        return 0x0c;
+        return REGISTER_INDEX_R12D;
 
     case REG_R13B:
     case REG_R13W:
     case REG_R13D:
     case REG_R13:
-        return 0x0d;
+        return REGISTER_INDEX_R13D;
 
     case REG_R14B:
     case REG_R14W:
     case REG_R14D:
     case REG_R14:
-        return 0x0e;
+        return REGISTER_INDEX_R14D;
 
     case REG_R15B:
     case REG_R15W:
     case REG_R15D:
     case REG_R15:
-        return 0x0f;
+        return REGISTER_INDEX_R15D;
 
     default:
         return REGISTER_INDEX_INVALID;
