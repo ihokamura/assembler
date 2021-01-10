@@ -37,6 +37,7 @@ test()
 
 # execute tests
 test test.s 0
+test test_add.s 0
 test test_mov.s 0
 test test_nop.s 0
 test test_sub.s 0

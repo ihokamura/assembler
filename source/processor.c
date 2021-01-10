@@ -14,17 +14,19 @@ typedef struct BinaryOperationOpecode BinaryOperationOpecode;
 
 struct BinaryOperationOpecode
 {
-    uint8_t i_byte;  // encoding of type I for 8-bit operands
-    uint8_t i;       // encoding of type I
-    uint8_t mi_byte; // encoding of type MI for 8-bit operands
-    uint8_t mi;      // encoding of type MI
-    uint8_t mi_imm8; // encoding of type MI for 8-bit immediate operand
-    uint8_t mr_byte; // encoding of type MR for 8-bit operands
-    uint8_t mr;      // encoding of type MR
-    uint8_t rm_byte; // encoding of type RM for 8-bit operands
-    uint8_t rm;      // encoding of type RM
+    uint8_t i_byte;       // encoding of type I for 8-bit operands
+    uint8_t i;            // encoding of type I
+    uint8_t reg_field_mi; // reg field for encoding of type MI
+    uint8_t mi_byte;      // encoding of type MI for 8-bit operands
+    uint8_t mi;           // encoding of type MI
+    uint8_t mi_imm8;      // encoding of type MI for 8-bit immediate operand
+    uint8_t mr_byte;      // encoding of type MR for 8-bit operands
+    uint8_t mr;           // encoding of type MR
+    uint8_t rm_byte;      // encoding of type RM for 8-bit operands
+    uint8_t rm;           // encoding of type RM
 };
 
+static void generate_op_add(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_body);
@@ -62,6 +64,7 @@ static void may_append_binary_rex_prefix_reg(const Operand *operand, bool specif
 
 const MnemonicInfo mnemonic_info_list[] = 
 {
+    {MN_ADD,  "add",  true,  generate_op_add},
     {MN_CALL, "call", true,  generate_op_call},
     {MN_MOV,  "mov",  true,  generate_op_mov},
     {MN_NOP,  "nop",  false, generate_op_nop},
@@ -162,12 +165,27 @@ static const size_t MODRM_POSITION_MOD = 6;
 static const size_t MODRM_POSITION_REG = 3;
 static const size_t MODRM_POSITION_RM = 0;
 
+
 /*
 generate an operation
 */
 void generate_operation(const Operation *operation, ByteBufferType *text_body)
 {
     mnemonic_info_list[operation->kind].generate_function(operation->operands, text_body);
+}
+
+
+/*
+generate add operation
+*/
+static void generate_op_add(const List(Operand) *operands, ByteBufferType *text_body)
+{
+    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
+    Operand *operand1 = get_element(Operand)(entry);
+    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
+
+    const BinaryOperationOpecode opecode = {0x04, 0x05, 0x00, 0x80, 0x81, 0x83, 0x00, 0x01, 0x02, 0x03};
+    generate_binary_arithmetic_operation(&opecode, operand1, operand2, text_body);
 }
 
 
@@ -408,7 +426,7 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_
     Operand *operand1 = get_element(Operand)(entry);
     Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
 
-    const BinaryOperationOpecode opecode = {0x2c, 0x2d, 0x80, 0x81, 0x83, 0x28, 0x29, 0x2a, 0x2b};
+    const BinaryOperationOpecode opecode = {0x2c, 0x2d, 0x05, 0x80, 0x81, 0x83, 0x28, 0x29, 0x2a, 0x2b};
     generate_binary_arithmetic_operation(&opecode, operand1, operand2, text_body);
 }
 
@@ -450,7 +468,7 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, text_body);
         uint8_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->mi_byte : ((get_operand_size(operand2->kind) == SIZEOF_8BIT) ? opecode->mi_imm8 : opecode->mi);
         append_binary_opecode(op, text_body);
-        append_binary_modrm(get_mod_field(operand1), 0x05, get_reg_field(operand1->reg), text_body);
+        append_binary_modrm(get_mod_field(operand1), opecode->reg_field_mi, get_reg_field(operand1->reg), text_body);
         if(is_memory(operand1->kind))
         {
             append_binary_disp(operand1, text_body->size, -SIZEOF_32BIT, text_body);

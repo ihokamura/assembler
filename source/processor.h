@@ -26,13 +26,14 @@ define_list(Operation)
 // kind of mnemonic
 enum MnemonicKind
 {
-    MN_CALL, // call
-    MN_MOV,  // mov
-    MN_NOP,  // nop
-    MN_POP,  // pop
-    MN_PUSH, // push
-    MN_RET,  // ret
-    MN_SUB,  // sub
+    MN_ADD,
+    MN_CALL,
+    MN_MOV,
+    MN_NOP,
+    MN_POP,
+    MN_PUSH,
+    MN_RET,
+    MN_SUB,
 };
 
 // kind of operand
