@@ -47,12 +47,14 @@ static uint8_t get_rex_prefix(const Operand *operand, size_t prefix_position, bo
 static uint8_t get_rex_prefix_for_size(const Operand *operand);
 static uint8_t get_rex_prefix_from_position(size_t prefix_position);
 static uint8_t get_modrm_byte(uint8_t mod, uint8_t reg, uint8_t rm);
+static uint8_t get_sib_byte(uint8_t ss, uint8_t index, uint8_t base);
 static uint8_t get_mod_field(const Operand *operand);
 static uint8_t get_reg_field(RegisterKind kind);
 static uint8_t get_rm_field(RegisterKind kind);
 static void append_binary_prefix(uint8_t prefix, ByteBufferType *text_body);
 static void append_binary_opecode(uint8_t opecode, ByteBufferType *text_body);
 static void append_binary_modrm(uint8_t mod, uint8_t reg, uint8_t rm, ByteBufferType *text_body);
+static void append_binary_sib(uint8_t ss, uint8_t index, uint8_t base, ByteBufferType *text_body);
 static void append_binary_disp(const Operand *operand, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body);
 static void append_binary_imm(uint32_t imm, size_t size, ByteBufferType *text_body);
 static void append_binary_imm_least(uint32_t imm, ByteBufferType *text_body);
@@ -145,6 +147,8 @@ const RegisterInfo register_info_list[] =
 };
 const size_t REGISTER_INFO_LIST_SIZE = sizeof(register_info_list) / sizeof(register_info_list[0]);
 
+static const uint8_t REGISTER_INDEX_ESP = 0x04;
+
 static const uint8_t PREFIX_OPERAND_SIZE_OVERRIDE = 0x66;
 
 static const uint8_t PREFIX_NONE = 0x00;
@@ -164,6 +168,10 @@ static const uint8_t REG_FIELD_MASK = 0x07;
 static const size_t MODRM_POSITION_MOD = 6;
 static const size_t MODRM_POSITION_REG = 3;
 static const size_t MODRM_POSITION_RM = 0;
+
+static const size_t SIB_POSITION_SS = 6;
+static const size_t SIB_POSITION_INDEX = 3;
+static const size_t SIB_POSITION_BASE = 0;
 
 
 /*
@@ -644,7 +652,7 @@ static uint8_t get_register_index(RegisterKind kind)
     case REG_SP:
     case REG_ESP:
     case REG_RSP:
-        return 0x04;
+        return REGISTER_INDEX_ESP;
 
     case REG_BPL:
     case REG_BP:
@@ -790,6 +798,15 @@ static uint8_t get_modrm_byte(uint8_t mod, uint8_t reg, uint8_t rm)
 
 
 /*
+get value of SIB byte
+*/
+static uint8_t get_sib_byte(uint8_t ss, uint8_t index, uint8_t base)
+{
+    return (ss << SIB_POSITION_SS) + (index << SIB_POSITION_INDEX) + (base << SIB_POSITION_BASE);
+}
+
+
+/*
 get value of mod field
 */
 static uint8_t get_mod_field(const Operand *operand)
@@ -861,6 +878,21 @@ static void append_binary_modrm(uint8_t mod, uint8_t reg, uint8_t rm, ByteBuffer
 {
     uint8_t modrm = get_modrm_byte(mod, reg, rm);
     append_bytes((char *)&modrm, sizeof(modrm), text_body);
+
+    if((mod != MOD_REG) && (rm == REGISTER_INDEX_ESP))
+    {
+        append_binary_sib(0x00, REGISTER_INDEX_ESP, REGISTER_INDEX_ESP, text_body);
+    }
+}
+
+
+/*
+append binary for SIB byte
+*/
+static void append_binary_sib(uint8_t ss, uint8_t index, uint8_t base, ByteBufferType *text_body)
+{
+    uint8_t sib = get_sib_byte(ss, index, base);
+    append_bytes((char *)&sib, sizeof(sib), text_body);
 }
 
 
