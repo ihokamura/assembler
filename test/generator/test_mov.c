@@ -156,7 +156,5 @@ static void generate_all_test_case_mov(FILE *fp)
 
 void generate_test_mov(void)
 {
-    const char *filename = "test/test_mov.s";
-    const size_t stack_size = 16;
-    generate_test(filename, stack_size, generate_all_test_case_mov);
+    generate_test("test/test_mov.s", STACK_ALIGNMENT, generate_all_test_case_mov);
 }

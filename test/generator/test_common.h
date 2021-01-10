@@ -5,6 +5,25 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#define REGISTER_INDEX_EAX     0
+#define REGISTER_INDEX_ECX     1
+#define REGISTER_INDEX_EDX     2
+#define REGISTER_INDEX_EBX     3
+#define REGISTER_INDEX_ESP     4
+#define REGISTER_INDEX_EBP     5
+#define REGISTER_INDEX_ESI     6
+#define REGISTER_INDEX_EDI     7
+#define REGISTER_INDEX_R8D     8
+#define REGISTER_INDEX_R9D     9
+#define REGISTER_INDEX_R10D    10
+#define REGISTER_INDEX_R11D    11
+#define REGISTER_INDEX_R12D    12
+#define REGISTER_INDEX_R13D    13
+#define REGISTER_INDEX_R14D    14
+#define REGISTER_INDEX_R15D    15
+
+#define STACK_ALIGNMENT    16
+
 typedef struct ImmediateInfo ImmediateInfo;
 typedef struct RegisterInfo RegisterInfo;
 

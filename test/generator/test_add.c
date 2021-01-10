@@ -63,7 +63,5 @@ static void generate_all_test_case_add(FILE *fp)
 
 void generate_test_add(void)
 {
-    const char *filename = "test/test_add.s";
-    const size_t stack_size = 16;
-    generate_test(filename, stack_size, generate_all_test_case_add);
+    generate_test("test/test_add.s", STACK_ALIGNMENT, generate_all_test_case_add);
 }

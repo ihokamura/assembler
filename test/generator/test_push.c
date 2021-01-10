@@ -32,7 +32,7 @@ static void generate_test_case_push_reg(FILE *fp, const RegisterInfo *reg_info, 
 
     const char *work_reg = generate_save_register(fp, index_list, sizeof(index_list) / sizeof(index_list[0]));
     // avoid to overwrite esp
-    if(reg_info->index != 4)
+    if(reg_info->index != REGISTER_INDEX_ESP)
     {
         put_line_with_tab(fp, "mov %s, 0x%llx", reg, value);
     }
@@ -98,7 +98,5 @@ static void generate_all_test_case_push(FILE *fp)
 
 void generate_test_push(void)
 {
-    const char *filename = "test/test_push.s";
-    const size_t stack_size = 16;
-    generate_test(filename, stack_size, generate_all_test_case_push);
+    generate_test("test/test_push.s", STACK_ALIGNMENT, generate_all_test_case_push);
 }
