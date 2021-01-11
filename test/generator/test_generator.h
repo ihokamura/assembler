@@ -8,5 +8,6 @@ void generate_test_nop(void);
 void generate_test_pop(void);
 void generate_test_push(void);
 void generate_test_sub(void);
+void generate_test_xor(void);
 
 #endif /* __TEST_GENERATOR_H__ */

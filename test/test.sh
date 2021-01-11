@@ -44,6 +44,7 @@ test test_nop.s 0
 test test_pop.s 0
 test test_push.s 0
 test test_sub.s 0
+test test_xor.s 0
 
 
 # restore the directory

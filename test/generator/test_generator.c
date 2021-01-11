@@ -11,6 +11,7 @@ static void (* const generate_test[])(void) =
     generate_test_pop,
     generate_test_push,
     generate_test_sub,
+    generate_test_xor,
 };
 static const size_t GENERATE_TEST_SIZE = sizeof(generate_test) / sizeof(generate_test[0]);
 

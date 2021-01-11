@@ -35,6 +35,7 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_
 static void generate_op_push(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_body);
+static void generate_op_xor(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *text_body);
 static bool is_immediate(OperandKind kind);
 static bool is_register(OperandKind kind);
@@ -76,6 +77,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_PUSH, "push", true,  generate_op_push},
     {MN_RET,  "ret",  false, generate_op_ret},
     {MN_SUB,  "sub",  true,  generate_op_sub},
+    {MN_XOR,  "xor",  true,  generate_op_xor},
 };
 const size_t MNEMONIC_INFO_LIST_SIZE = sizeof(mnemonic_info_list) / sizeof(mnemonic_info_list[0]);
 
@@ -455,6 +457,16 @@ generate sub operation
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_body)
 {
     const BinaryOperationOpecode opecode = {0x2c, 0x2d, 0x05, 0x80, 0x81, 0x83, 0x28, 0x29, 0x2a, 0x2b};
+    generate_binary_arithmetic_operation(&opecode, operands, text_body);
+}
+
+
+/*
+generate xor operation
+*/
+static void generate_op_xor(const List(Operand) *operands, ByteBufferType *text_body)
+{
+    const BinaryOperationOpecode opecode = {0x34, 0x35, 0x06, 0x80, 0x81, 0x83, 0x30, 0x31, 0x32, 0x33};
     generate_binary_arithmetic_operation(&opecode, operands, text_body);
 }
 
