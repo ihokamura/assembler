@@ -35,7 +35,7 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_
 static void generate_op_push(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_body);
-static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const Operand *operand1, const Operand *operand2, ByteBufferType *text_body);
+static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *text_body);
 static bool is_immediate(OperandKind kind);
 static bool is_register(OperandKind kind);
 static bool is_memory(OperandKind kind);
@@ -205,12 +205,8 @@ generate add operation
 */
 static void generate_op_add(const List(Operand) *operands, ByteBufferType *text_body)
 {
-    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
-    Operand *operand1 = get_element(Operand)(entry);
-    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
-
     const BinaryOperationOpecode opecode = {0x04, 0x05, 0x00, 0x80, 0x81, 0x83, 0x00, 0x01, 0x02, 0x03};
-    generate_binary_arithmetic_operation(&opecode, operand1, operand2, text_body);
+    generate_binary_arithmetic_operation(&opecode, operands, text_body);
 }
 
 
@@ -219,12 +215,8 @@ generate and operation
 */
 static void generate_op_and(const List(Operand) *operands, ByteBufferType *text_body)
 {
-    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
-    Operand *operand1 = get_element(Operand)(entry);
-    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
-
     const BinaryOperationOpecode opecode = {0x24, 0x25, 0x04, 0x80, 0x81, 0x83, 0x20, 0x21, 0x22, 0x23};
-    generate_binary_arithmetic_operation(&opecode, operand1, operand2, text_body);
+    generate_binary_arithmetic_operation(&opecode, operands, text_body);
 }
 
 
@@ -462,20 +454,20 @@ generate sub operation
 */
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *text_body)
 {
-    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
-    Operand *operand1 = get_element(Operand)(entry);
-    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
-
     const BinaryOperationOpecode opecode = {0x2c, 0x2d, 0x05, 0x80, 0x81, 0x83, 0x28, 0x29, 0x2a, 0x2b};
-    generate_binary_arithmetic_operation(&opecode, operand1, operand2, text_body);
+    generate_binary_arithmetic_operation(&opecode, operands, text_body);
 }
 
 
 /*
 generate binary arithmetic operation
 */
-static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const Operand *operand1, const Operand *operand2, ByteBufferType *text_body)
+static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *text_body)
 {
+    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
+    Operand *operand1 = get_element(Operand)(entry);
+    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
+
     if(is_type_i_encoding(operand1, operand2))
     {
         /*
