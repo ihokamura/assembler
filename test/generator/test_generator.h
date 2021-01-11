@@ -5,6 +5,7 @@ void generate_test_add(void);
 void generate_test_and(void);
 void generate_test_mov(void);
 void generate_test_nop(void);
+void generate_test_or(void);
 void generate_test_pop(void);
 void generate_test_push(void);
 void generate_test_sub(void);

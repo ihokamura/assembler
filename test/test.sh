@@ -41,6 +41,7 @@ test test_add.s 0
 test test_and.s 0
 test test_mov.s 0
 test test_nop.s 0
+test test_or.s 0
 test test_pop.s 0
 test test_push.s 0
 test test_sub.s 0

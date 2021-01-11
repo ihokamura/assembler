@@ -31,6 +31,7 @@ enum MnemonicKind
     MN_CALL,
     MN_MOV,
     MN_NOP,
+    MN_OR,
     MN_POP,
     MN_PUSH,
     MN_RET,

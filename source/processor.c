@@ -31,6 +31,7 @@ static void generate_op_and(const List(Operand) *operands, ByteBufferType *text_
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_body);
+static void generate_op_or(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_pop(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_push(const List(Operand) *operands, ByteBufferType *text_body);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *text_body);
@@ -73,6 +74,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_CALL, "call", true,  generate_op_call},
     {MN_MOV,  "mov",  true,  generate_op_mov},
     {MN_NOP,  "nop",  false, generate_op_nop},
+    {MN_OR,   "or",   true,  generate_op_or},
     {MN_POP,  "pop",  true,  generate_op_pop},
     {MN_PUSH, "push", true,  generate_op_push},
     {MN_RET,  "ret",  false, generate_op_ret},
@@ -348,6 +350,16 @@ static void generate_op_nop(const List(Operand) *operands, ByteBufferType *text_
     * NOP
     */
     append_binary_opecode(0x90, text_body);
+}
+
+
+/*
+generate or operation
+*/
+static void generate_op_or(const List(Operand) *operands, ByteBufferType *text_body)
+{
+    const BinaryOperationOpecode opecode = {0x0c, 0x0d, 0x01, 0x80, 0x81, 0x83, 0x08, 0x09, 0x0a, 0x0b};
+    generate_binary_arithmetic_operation(&opecode, operands, text_body);
 }
 
 

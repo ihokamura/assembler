@@ -8,6 +8,7 @@ static void (* const generate_test[])(void) =
     generate_test_and,
     generate_test_mov,
     generate_test_nop,
+    generate_test_or,
     generate_test_pop,
     generate_test_push,
     generate_test_sub,
