@@ -27,6 +27,7 @@ define_list(Operation)
 enum MnemonicKind
 {
     MN_ADD,
+    MN_AND,
     MN_CALL,
     MN_MOV,
     MN_NOP,
