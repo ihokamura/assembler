@@ -1,5 +1,6 @@
 #include <ctype.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -31,10 +32,10 @@ static int is_reserved(const char *str);
 static int is_mnemonic(const char *str);
 static int is_symbol(const char *str);
 static int is_register(const char *str);
-static int is_immediate(const char *str, uint32_t *value);
+static int is_immediate(const char *str, uintmax_t *value);
 static int is_octal_digit(int character);
 static int is_hexadeciaml_digit(int character);
-static uint32_t convert_immediate(const char *start, int base);
+static uintmax_t convert_immediate(const char *start, int base);
 static void report_position(const char *loc);
 
 
@@ -332,7 +333,7 @@ void tokenize(char *str)
         }
 
         // parse an immediate
-        uint32_t value;
+        uintmax_t value;
         len = is_immediate(str, &value);
         if(len > 0)
         {
@@ -580,7 +581,7 @@ static int is_register(const char *str)
 /*
 check if the following string is an immediate
 */
-static int is_immediate(const char *str, uint32_t *value)
+static int is_immediate(const char *str, uintmax_t *value)
 {
     int len = 0;
     int base;
@@ -646,10 +647,10 @@ static int is_hexadeciaml_digit(int character)
 /*
 convert an immediate
 */
-static uint32_t convert_immediate(const char *start, int base)
+static uintmax_t convert_immediate(const char *start, int base)
 {
     // note that the converted string always represents positive value
-    unsigned long value = strtoul(start, NULL, base);
+    uintmax_t value = strtoumax(start, NULL, base);
 
     // handle invalid case
     if(errno == ERANGE)
@@ -657,8 +658,7 @@ static uint32_t convert_immediate(const char *start, int base)
         report_warning(start, "immediate value is too large");
     }
 
-    // represent integer by uint32_t type
-    return (uint32_t)value;
+    return value;
 }
 
 

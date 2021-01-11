@@ -31,13 +31,14 @@ static void generate_test_case_pop_mem(FILE *fp, size_t size, intmax_t value)
     const char *arg1 = get_1st_argument_register(size);
     const char *arg2 = get_2nd_argument_register(size);
     const char *size_spec = get_size_specifier(size);
+    size_t offset = 16;
 
     const char *work_reg = generate_save_register(fp, NULL, 0);
-    put_line_with_tab(fp, "sub rsp, %lu", size);
-    put_line_with_tab(fp, "mov %s [rsp], 0x%llx", size_spec, value);
-    put_line_with_tab(fp, "pop %s [rbp-8]    # test target", size_spec, value);
-    put_line_with_tab(fp, "mov %s, %s [rbp-8]", arg2, size_spec);
     put_line_with_tab(fp, "mov %s, 0x%llx", arg1, value);
+    put_line_with_tab(fp, "sub rsp, %lu", size);
+    put_line_with_tab(fp, "mov %s [rsp], %s", size_spec, arg1);
+    put_line_with_tab(fp, "pop %s [rbp-%lu]    # test target", size_spec, offset);
+    put_line_with_tab(fp, "mov %s, %s [rbp-%lu]", arg2, size_spec, offset);
     generate_restore_register(fp, work_reg);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }

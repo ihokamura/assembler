@@ -26,7 +26,7 @@ static Directive *new_directive(const Symbol *symbol);
 static Symbol *new_symbol(SymbolKind kind, const char *body);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
 static Operand *new_operand(OperandKind kind);
-static Operand *new_operand_immediate(uint32_t immediate);
+static Operand *new_operand_immediate(uintmax_t immediate);
 static Operand *new_operand_register(const Token *token);
 static Operand *new_operand_memory(OperandKind kind);
 static Operand *new_operand_symbol(const Token *token);
@@ -292,7 +292,7 @@ static Operand *new_operand(OperandKind kind)
 /*
 make a new operand for immediate
 */
-static Operand *new_operand_immediate(uint32_t immediate)
+static Operand *new_operand_immediate(uintmax_t immediate)
 {
     OperandKind kind;
     switch(get_least_size(immediate))
@@ -307,8 +307,12 @@ static Operand *new_operand_immediate(uint32_t immediate)
         break;
 
     case SIZEOF_32BIT:
-    default:
         kind = OP_IMM32;
+        break;
+
+    case SIZEOF_64BIT:
+    default:
+        kind = OP_IMM64;
         break;
     }
 
@@ -377,7 +381,7 @@ static Operand *new_operand_symbol(const Token *token)
 /*
 get the least number of bytes to represent an immediate value
 */
-size_t get_least_size(uint32_t value)
+size_t get_least_size(uintmax_t value)
 {
     if(value == 0)
     {
@@ -391,9 +395,13 @@ size_t get_least_size(uint32_t value)
     {
         return SIZEOF_16BIT;
     }
-    else
+    else if((value <= UINT32_MAX) || (-value <= UINT32_MAX))
     {
         return SIZEOF_32BIT;
+    }
+    else
+    {
+        return SIZEOF_64BIT;
     }
 }
 

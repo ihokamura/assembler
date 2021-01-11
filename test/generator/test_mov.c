@@ -140,8 +140,12 @@ static void generate_all_test_case_mov(FILE *fp)
     for(size_t j = 0; j < IMM_LIST_SIZE; j++)
     {
         const ImmediateInfo *imm_info = &imm_list[j];
-        generate_test_case_mov_mem_imm(fp, imm_info->size, imm_info->sint_max_value);
-        put_line(fp, "");
+        size_t size = imm_info->size;
+        if(size <= sizeof(uint32_t))
+        {
+            generate_test_case_mov_mem_imm(fp, size, imm_info->sint_max_value);
+            put_line(fp, "");
+        }
     }
 
     // MOV mem, reg

@@ -42,6 +42,7 @@ enum OperandKind
     OP_IMM8,   // 8-bit immediate
     OP_IMM16,  // 16-bit immediate
     OP_IMM32,  // 32-bit immediate
+    OP_IMM64,  // 64-bit immediate
     OP_R8,     // 8-bit register
     OP_R16,    // 16-bit register
     OP_R32,    // 32-bit register
@@ -138,9 +139,9 @@ struct Operand
     OperandKind kind;       // kind of operand
     struct
     {
-        uint32_t immediate; // immediate value
-        RegisterKind reg;   // kind of register
-        const char *label;  // label
+        uintmax_t immediate; // immediate value
+        RegisterKind reg;    // kind of register
+        const char *label;   // label
     };
 };
 

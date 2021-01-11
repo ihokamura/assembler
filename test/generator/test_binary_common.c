@@ -111,7 +111,7 @@ void generate_all_test_case_binary(FILE *fp, const BinaryOperationTestDataMaker 
         for(size_t j = 0; j < IMM_LIST_SIZE; j++)
         {
             const ImmediateInfo *imm_info = &imm_list[j];
-            if(reg_info->size >= imm_info->size)
+            if((reg_info->size >= imm_info->size) && (imm_info->size <= sizeof(uint32_t)))
             {
                 BinaryOperationInfo op_info = make_test_data->reg_imm(imm_info);
                 generate_test_case_binary_reg_imm(fp, &op_info, reg_info);
@@ -149,9 +149,13 @@ void generate_all_test_case_binary(FILE *fp, const BinaryOperationTestDataMaker 
     for(size_t j = 0; j < IMM_LIST_SIZE; j++)
     {
         const ImmediateInfo *imm_info = &imm_list[j];
-        BinaryOperationInfo op_info = make_test_data->mem_imm(imm_info);
-        generate_test_case_binary_mem_imm(fp, &op_info, imm_info->size);
-        put_line(fp, "");
+        size_t size = imm_info->size;
+        if(size <= sizeof(uint32_t))
+        {
+            BinaryOperationInfo op_info = make_test_data->mem_imm(imm_info);
+            generate_test_case_binary_mem_imm(fp, &op_info, size);
+            put_line(fp, "");
+        }
     }
 
     // <mnemonic> mem, reg

@@ -93,6 +93,7 @@ const ImmediateInfo imm_list[] =
     {sizeof(uint8_t), INT8_MAX},
     {sizeof(uint16_t), INT16_MAX},
     {sizeof(uint32_t), INT32_MAX},
+    {sizeof(uint64_t), INT64_MAX},
 };
 const size_t IMM_LIST_SIZE = sizeof(imm_list) / sizeof(imm_list[0]);
 

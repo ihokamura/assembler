@@ -1,6 +1,9 @@
 #ifndef __PARSER_H__
 #define __PARSER_H__
 
+#include <stdint.h>
+#include <stddef.h>
+
 #include "elf_wrap.h"
 #include "processor.h"
 
@@ -41,6 +44,6 @@ struct Symbol
 };
 
 void construct(Program *prog);
-size_t get_least_size(uint32_t value);
+size_t get_least_size(uintmax_t value);
 
 #endif /* !__PARSER_H__ */

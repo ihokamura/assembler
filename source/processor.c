@@ -56,8 +56,8 @@ static void append_binary_opecode(uint8_t opecode, ByteBufferType *text_body);
 static void append_binary_modrm(uint8_t mod, uint8_t reg, uint8_t rm, ByteBufferType *text_body);
 static void append_binary_sib(uint8_t ss, uint8_t index, uint8_t base, ByteBufferType *text_body);
 static void append_binary_disp(const Operand *operand, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body);
-static void append_binary_imm(uint32_t imm, size_t size, ByteBufferType *text_body);
-static void append_binary_imm_least(uint32_t imm, ByteBufferType *text_body);
+static void append_binary_imm(uintmax_t imm, size_t size, ByteBufferType *text_body);
+static void append_binary_imm_least(uintmax_t imm, ByteBufferType *text_body);
 static void append_binary_imm32(uint32_t imm32, ByteBufferType *text_body);
 static void append_binary_relocation(size_t size, const char *label, Elf_Addr address, Elf_Sxword addend, ByteBufferType *text_body);
 static void may_append_binary_instruction_prefix(OperandKind kind, uint8_t prefix, ByteBufferType *text_body);
@@ -296,6 +296,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *text_
             * MOV r8, imm8
             * MOV r16, imm16
             * MOV r32, imm32
+            * MOV r64, imm64
             */
             assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
             may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, text_body);
@@ -543,7 +544,7 @@ check if operand is immediate
 */
 static bool is_immediate(OperandKind kind)
 {
-    return (kind == OP_IMM8) || (kind == OP_IMM16) || (kind == OP_IMM32);
+    return (kind == OP_IMM8) || (kind == OP_IMM16) || (kind == OP_IMM32) || (kind == OP_IMM64);
 }
 
 
@@ -622,6 +623,7 @@ static size_t get_operand_size(OperandKind kind)
     case OP_M32:
         return SIZEOF_32BIT;
 
+    case OP_IMM64:
     case OP_R64:
     case OP_M64:
         return SIZEOF_64BIT;
@@ -930,7 +932,7 @@ static void append_binary_disp(const Operand *operand, Elf_Addr address, Elf_Sxw
 /*
 append binary for immediate with a given size
 */
-static void append_binary_imm(uint32_t imm, size_t size, ByteBufferType *text_body)
+static void append_binary_imm(uintmax_t imm, size_t size, ByteBufferType *text_body)
 {
     append_bytes((char *)&imm, size, text_body);
 }
@@ -939,7 +941,7 @@ static void append_binary_imm(uint32_t imm, size_t size, ByteBufferType *text_bo
 /*
 append binary for immediate with least size
 */
-static void append_binary_imm_least(uint32_t imm, ByteBufferType *text_body)
+static void append_binary_imm_least(uintmax_t imm, ByteBufferType *text_body)
 {
     size_t size = get_least_size(imm);
     if(size > 0)
