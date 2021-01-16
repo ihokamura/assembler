@@ -51,6 +51,13 @@ static const char *punctuator_list[] = {
     "[",
     "]",
 };
+// list of size specifiers
+static const char *size_specifier_list[] = {
+    "byte ptr",
+    "word ptr",
+    "dword ptr",
+    "qword ptr",
+};
 // list of directives
 static const char *directive_list[] = {
     "intel_syntax noprefix",
@@ -61,13 +68,6 @@ static const char *directive_list[] = {
     "quad",
     "text",
     "word",
-};
-// list of size specifiers
-static const char *size_specifier_list[] = {
-    "byte ptr",
-    "word ptr",
-    "dword ptr",
-    "qword ptr",
 };
 // information on reserved words
 static const ReservedWordInfo reserved_word_info[] = 

@@ -24,6 +24,7 @@ static const MnemonicInfo *mnemonic(const Token *token);
 static List(Operand) *operands(void);
 static Operand *operand(void);
 static Directive *new_directive(const Symbol *symbol);
+static Directive *new_directive_data(size_t size, Symbol *symbol);
 static Symbol *new_symbol(SymbolKind kind, const char *body);
 static Data *new_data(size_t size, uintmax_t value);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
@@ -40,7 +41,7 @@ static List(Operation) *operation_list = NULL; // list of operations
 static List(Data) *data_list = NULL; // list of data
 static List(Symbol) *symbol_list = NULL; // list of symbols
 
-static SectionKind current_section = SC_TEXT;
+static SectionKind current_section = SC_UND;
 
 
 /*
@@ -140,23 +141,19 @@ static Directive *directive(Symbol *sym)
     }
     else if(consume_reserved("byte"))
     {
-        sym->data = new_data(SIZEOF_8BIT, expect_immediate()->value);
-        return new_directive(NULL);
+        return new_directive_data(SIZEOF_8BIT, sym);
     }
     else if(consume_reserved("word"))
     {
-        sym->data = new_data(SIZEOF_16BIT, expect_immediate()->value);
-        return new_directive(NULL);
+        return new_directive_data(SIZEOF_16BIT, sym);
     }
     else if(consume_reserved("long"))
     {
-        sym->data = new_data(SIZEOF_32BIT, expect_immediate()->value);
-        return new_directive(NULL);
+        return new_directive_data(SIZEOF_32BIT, sym);
     }
     else if(consume_reserved("quad"))
     {
-        sym->data = new_data(SIZEOF_64BIT, expect_immediate()->value);
-        return new_directive(NULL);
+        return new_directive_data(SIZEOF_64BIT, sym);
     }
     else
     {
@@ -282,6 +279,16 @@ static Directive *new_directive(const Symbol *symbol)
     directive->symbol = symbol;
 
     return directive;
+}
+
+
+/*
+make a new directive for data
+*/
+static Directive *new_directive_data(size_t size, Symbol *symbol)
+{
+    symbol->data = new_data(size, expect_immediate()->value);
+    return new_directive(NULL);
 }
 
 

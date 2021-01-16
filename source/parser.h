@@ -19,6 +19,7 @@ define_list(Symbol)
 // kind of section
 enum SectionKind
 {
+    SC_UND,  // undefined section
     SC_TEXT, // text section
     SC_DATA, // data section
 };
