@@ -55,6 +55,7 @@ static const char *punctuator_list[] = {
 static const char *directive_list[] = {
     "intel_syntax noprefix",
     "globl",
+    "byte",
     "data",
     "long",
     "quad",

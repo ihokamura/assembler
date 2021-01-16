@@ -1,12 +1,16 @@
 	.intel_syntax noprefix
 
 	.data
+test_internal_data_uint8:
+	.byte 0xff
 test_internal_data_uint16:
 	.word 0xffff
 test_internal_data_uint32:
 	.long 0xffffffff
 test_internal_data_uint64:
 	.quad 0xffffffffffffffff
+test_internal_data_uint8_2:
+	.byte 0x81
 test_internal_data_uint16_2:
 	.word 0xfeef
 test_internal_data_uint32_2:
@@ -36,6 +40,14 @@ test_external_text:
 
 # test access to internal data section
 test_internal_data:
+	mov sil, byte ptr [rip+test_internal_data_uint8]
+	mov dil, 0xff
+	call assert_equal_uint8
+
+	mov sil, byte ptr [rip+test_internal_data_uint8_2]
+	mov dil, 0x81
+	call assert_equal_uint8
+
 	mov si, word ptr [rip+test_internal_data_uint16]
 	mov di, 0xffff
 	call assert_equal_uint16

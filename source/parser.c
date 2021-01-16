@@ -109,9 +109,11 @@ parse a directive
 ```
 directive ::= ".intel_syntax noprefix"
             | ".globl" symbol
+            | ".byte"
             | ".data"
-            | ".long"
+            | ".quad"
             | ".text"
+            | ".word"
 ```
 */
 static Directive *directive(Symbol *sym)
@@ -134,6 +136,11 @@ static Directive *directive(Symbol *sym)
     else if(consume_reserved("text"))
     {
         current_section = SC_TEXT;
+        return new_directive(NULL);
+    }
+    else if(consume_reserved("byte"))
+    {
+        sym->data = new_data(SIZEOF_8BIT, expect_immediate()->value);
         return new_directive(NULL);
     }
     else if(consume_reserved("word"))

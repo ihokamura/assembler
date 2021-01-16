@@ -13,6 +13,7 @@ program ::= statement*
 statement ::= (symbol ":")? directive | operation
 directive ::= ".intel_syntax noprefix"
             | ".globl" symbol
+            | ".byte"
             | ".data"
             | ".long"
             | ".quad"
