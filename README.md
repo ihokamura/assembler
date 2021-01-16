@@ -13,14 +13,19 @@ program ::= statement*
 statement ::= (symbol ":")? directive | operation
 directive ::= ".intel_syntax noprefix"
             | ".globl" symbol
+            | ".text"
 operation ::= mnemonic operands?
-mnemonic ::= "call"
+mnemonic ::= "add"
+           | "and"
+           | "call"
            | "mov"
            | "nop"
+           | "or"
            | "pop"
            | "push"
            | "ret"
            | "sub"
+           | "xor"
 operands ::= operand ("," operand)?
 operand ::= immediate | register | memory | symbol
 register ::= "al" | "dl" | "cl" | "bl" | "spl" | "bpl" | "sil" | "dil"

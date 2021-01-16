@@ -55,6 +55,7 @@ static const char *punctuator_list[] = {
 static const char *directive_list[] = {
     "intel_syntax noprefix",
     "globl",
+    "text",
 };
 // list of size specifiers
 static const char *size_specifier_list[] = {

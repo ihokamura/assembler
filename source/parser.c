@@ -102,6 +102,7 @@ parse a directive
 ```
 directive ::= ".intel_syntax noprefix"
             | ".globl" symbol
+            | ".text"
 ```
 */
 static Directive *directive(void)
@@ -115,6 +116,10 @@ static Directive *directive(void)
         Symbol *sym = symbol(expect_symbol());
         sym->kind = SY_GLOBAL; // overwrite the kind
         return new_directive(sym);
+    }
+    else if(consume_reserved("text"))
+    {
+        return NULL;
     }
     else
     {

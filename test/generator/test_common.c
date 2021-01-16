@@ -234,6 +234,7 @@ static void generate_prologue(FILE *fp, size_t stack_size)
 {
     put_line_with_tab(fp, ".intel_syntax noprefix");
     put_line(fp, "");
+    put_line_with_tab(fp, ".text");
     put_line_with_tab(fp, ".globl main");
     put_line(fp, "main:");
     put_line_with_tab(fp, "push rbp");

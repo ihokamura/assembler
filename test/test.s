@@ -1,5 +1,6 @@
 	.intel_syntax noprefix
 
+	.text
 # main function
 	.globl main
 main:
