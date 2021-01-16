@@ -9,14 +9,6 @@ test_internal_data_uint32:
 	.long 0xffffffff
 test_internal_data_uint64:
 	.quad 0xffffffffffffffff
-test_internal_data_uint8_2:
-	.byte 0x81
-test_internal_data_uint16_2:
-	.word 0xfeef
-test_internal_data_uint32_2:
-	.long 0xfeeeeeef
-test_internal_data_uint64_2:
-	.quad 0xfeeeeeeeeeeeeeef
 
 	.text
 # main function
@@ -53,7 +45,7 @@ test_internal_data:
 	call assert_equal_uint16
 
 	mov si, word ptr [rip+test_internal_data_uint16_2]
-	mov di, 0xfeef
+	mov di, 0x8001
 	call assert_equal_uint16
 
 	mov esi, dword ptr [rip+test_internal_data_uint32]
@@ -61,7 +53,7 @@ test_internal_data:
 	call assert_equal_uint32
 
 	mov esi, dword ptr [rip+test_internal_data_uint32_2]
-	mov edi, 0xfeeeeeef
+	mov edi, 0x80000001
 	call assert_equal_uint32
 
 	mov rsi, qword ptr [rip+test_internal_data_uint64]
@@ -69,7 +61,7 @@ test_internal_data:
 	call assert_equal_uint64
 
 	mov rsi, qword ptr [rip+test_internal_data_uint64_2]
-	mov rdi, 0xfeeeeeeeeeeeeeef
+	mov rdi, 0x8000000000000001
 	call assert_equal_uint64
 
 	mov rax, 0
@@ -112,3 +104,13 @@ test_external_data:
 
 	mov rax, 0
 	ret
+
+.data
+test_internal_data_uint8_2:
+	.byte 0x81
+test_internal_data_uint16_2:
+	.word 0x8001
+test_internal_data_uint32_2:
+	.long 0x80000001
+test_internal_data_uint64_2:
+	.quad 0x8000000000000001
