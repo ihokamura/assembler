@@ -14,6 +14,7 @@
 typedef enum OperandKind OperandKind;
 typedef enum MnemonicKind MnemonicKind;
 typedef enum RegisterKind RegisterKind;
+typedef struct Bss Bss;
 typedef struct Data Data;
 typedef struct MnemonicInfo MnemonicInfo;
 typedef struct Operand Operand;
@@ -21,6 +22,7 @@ typedef struct Operation Operation;
 typedef struct RegisterInfo RegisterInfo;
 
 #include "list.h"
+define_list(Bss)
 define_list(Data)
 define_list(Operand)
 define_list(Operation)
@@ -127,6 +129,13 @@ enum RegisterKind
     REG_R14,
     REG_R15,
     REG_RIP,
+};
+
+// structure for bss
+struct Bss
+{
+    size_t size;      // size of data
+    Elf_Addr address; // address of data
 };
 
 // structure for data

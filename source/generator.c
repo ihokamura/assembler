@@ -88,6 +88,7 @@ static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo 
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_operations(const List(Operation) *operations);
 static void generate_data_list(const List(Data) *data_list);
+static void generate_bss_list(const List(Bss) *bss_list);
 static void resolve_symbols(const List(Symbol) *symbols);
 static void classify_symbols(const List(Symbol) *symbols);
 static void fill_paddings(size_t pad_size, FILE *fp);
@@ -109,6 +110,7 @@ static const Elf_Section SHNDX_STRTAB = 6;
 
 static const size_t RESERVED_SYMTAB_ENTRIES = 4; // number of reserved symbol table entries (undefined, .text, .data, .bss)
 static const Elf_Xword SYMTAB_INDEX_DATA = 2; // index of symbol table entry for .data section
+static const Elf_Xword SYMTAB_INDEX_BSS = 3;  // index of symbol table entry for .bss section
 
 static Elf_Off e_shoff = 0;     // offset of section header table
 static Elf_Half e_shnum = 0;    // number of section header table entries
@@ -127,6 +129,8 @@ static ByteBufferType rela_text_body = {NULL, 0, 0}; // buffer for section ".rel
 static ByteBufferType symtab_body = {NULL, 0, 0};    // buffer for section ".symtab"
 static ByteBufferType strtab_body = {NULL, 0, 0};    // buffer for string containing names of symbols
 static ByteBufferType shstrtab_body = {NULL, 0, 0};  // buffer for string containing names of sections
+
+static size_t bss_size = 0; // size of section ".bss"
 
 static Elf_Word sh_name = 0; // index of string where a section name starts
 
@@ -473,6 +477,9 @@ static Elf_Addr get_symbol_address(const Symbol *symbol)
     case SC_DATA:
         return symbol->data->address;
 
+    case SC_BSS:
+        return symbol->bss->address;
+
     default:
         assert(0);
         return 0;
@@ -493,6 +500,9 @@ static Elf_Section get_section_index(SectionKind kind)
     case SC_DATA:
         return SHNDX_DATA;
 
+    case SC_BSS:
+        return SHNDX_BSS;
+
     default:
         assert(0);
         return 0;
@@ -508,6 +518,10 @@ static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo 
     if(reloc_info->section == SC_DATA)
     {
         return SYMTAB_INDEX_DATA;
+    }
+    else if(reloc_info->section == SC_BSS)
+    {
+        return SYMTAB_INDEX_BSS;
     }
     else
     {
@@ -569,8 +583,22 @@ static void generate_data_list(const List(Data) *data_list)
         Data *data = get_element(Data)(cursor);
         data->address = data_body.size;
 
-        //generate_data(data, &data_body);
         generate_data(data, &data_body);
+    }
+}
+
+
+/*
+generate bss list
+*/
+static void generate_bss_list(const List(Bss) *bss_list)
+{
+    bss_size = 0;
+    for_each_entry(Bss, cursor, bss_list)
+    {
+        Bss *bss = get_element(Bss)(cursor);
+        bss->address = bss_size;
+        bss_size += bss->size;
     }
 }
 
@@ -598,6 +626,10 @@ static void resolve_symbols(const List(Symbol) *symbols)
 
                 case SC_DATA:
                     new_relocation_info(SC_DATA, NULL, label->address, label->addend + symbol->data->address);
+                    break;
+
+                case SC_BSS:
+                    new_relocation_info(SC_BSS, NULL, label->address, label->addend + symbol->bss->address);
                     break;
 
                 default:
@@ -658,6 +690,7 @@ static void generate_sections(const Program *program)
 {
     generate_operations(program->operations);
     generate_data_list(program->data_list);
+    generate_bss_list(program->bss_list);
     resolve_symbols(program->symbols);
     set_relocation_table_entries(get_length(Symbol)(program->symbols));
     classify_symbols(program->symbols);
@@ -737,7 +770,7 @@ static void generate_section_header_table_entries(void)
         SHT_NOBITS,
         SHF_WRITE | SHF_ALLOC,
         0,
-        0,
+        bss_size,
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
@@ -838,7 +871,7 @@ void generate(const char *output_file, const Program *program)
     {
         SectionInfo *section_info = get_element(SectionInfo)(cursor);
         size_t size = section_info->shdr.sh_size;
-        if(size > 0)
+        if((section_info->body != NULL) && (size > 0))
         {
             size_t pad_size = section_info->shdr.sh_offset - end_pos;
             fill_paddings(pad_size, fp);

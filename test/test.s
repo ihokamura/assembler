@@ -10,6 +10,16 @@ test_internal_data_uint32:
 test_internal_data_uint64:
 	.quad 0xffffffffffffffff
 
+	.bss
+test_bss_uint8:
+	.zero 1
+test_bss_uint16:
+	.zero 2
+test_bss_uint32:
+	.zero 4
+test_bss_uint64:
+	.zero 8
+
 	.text
 # main function
 	.globl main
@@ -17,6 +27,7 @@ main:
 	call test_external_text
 	call test_internal_data
 	call test_external_data
+	call test_internal_bss
 
 	mov rax, 0
 	ret
@@ -101,6 +112,27 @@ test_external_data:
 	mov qword ptr [rip+test_external_data_uint64], 63
 	mov rdi, 63
 	call assert_external_data_uint64
+
+	mov rax, 0
+	ret
+
+# test access to internal bss section
+test_internal_bss:
+	mov sil, byte ptr [rip+test_bss_uint8]
+	mov dil, 0
+	call assert_equal_uint8
+
+	mov si, word ptr [rip+test_bss_uint16]
+	mov di, 0
+	call assert_equal_uint16
+
+	mov esi, dword ptr [rip+test_bss_uint32]
+	mov edi, 0
+	call assert_equal_uint32
+
+	mov rsi, qword ptr [rip+test_bss_uint64]
+	mov rdi, 0
+	call assert_equal_uint64
 
 	mov rax, 0
 	ret

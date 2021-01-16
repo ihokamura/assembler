@@ -19,6 +19,7 @@ directive ::= ".intel_syntax noprefix"
             | ".quad"
             | ".text"
             | ".word"
+            | ".bss"
 operation ::= mnemonic operands?
 mnemonic ::= "add"
            | "and"

@@ -22,6 +22,7 @@ enum SectionKind
     SC_UND,  // undefined section
     SC_TEXT, // text section
     SC_DATA, // data section
+    SC_BSS,  // bss section
 };
 
 // kind of symbol
@@ -42,6 +43,7 @@ struct Program
 {
     List(Operation) *operations; // list of operations
     List(Data) *data_list;       // list of data
+    List(Bss) *bss_list;         // list of bss
     List(Symbol) *symbols;       // list of symbols
 };
 
@@ -53,6 +55,7 @@ struct Symbol
     const char *body;           // contents of symbol
     const Operation *operation; // operation labeled by symbol
     const Data *data;           // data labeled by symbol
+    const Bss *bss;             // bss labeled by symbol
 };
 
 void construct(Program *prog);

@@ -9,6 +9,7 @@
 #include "tokenizer.h"
 
 #include "list.h"
+define_list_operations(Bss)
 define_list_operations(Data)
 define_list_operations(Operand)
 define_list_operations(Operation)
@@ -25,7 +26,9 @@ static List(Operand) *operands(void);
 static Operand *operand(void);
 static Directive *new_directive(const Symbol *symbol);
 static Directive *new_directive_data(size_t size, Symbol *symbol);
+static Directive *new_directive_zero(Symbol *symbol);
 static Symbol *new_symbol(SymbolKind kind, const char *body);
+static Bss *new_bss(size_t size);
 static Data *new_data(size_t size, uintmax_t value);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
 static Operand *new_operand(OperandKind kind);
@@ -39,6 +42,7 @@ static bool consume_size_specifier(OperandKind *kind);
 // global variable
 static List(Operation) *operation_list = NULL; // list of operations
 static List(Data) *data_list = NULL; // list of data
+static List(Bss) *bss_list = NULL; // list of bss
 static List(Symbol) *symbol_list = NULL; // list of symbols
 
 static SectionKind current_section = SC_UND;
@@ -51,11 +55,13 @@ void construct(Program *prog)
 {
     operation_list = new_list(Operation)();
     data_list = new_list(Data)();
+    bss_list = new_list(Bss)();
     symbol_list = new_list(Symbol)();
 
     program();
     prog->operations = operation_list;
     prog->data_list = data_list;
+    prog->bss_list = bss_list;
     prog->symbols = symbol_list;
 }
 
@@ -115,6 +121,8 @@ directive ::= ".intel_syntax noprefix"
             | ".quad"
             | ".text"
             | ".word"
+            | ".word"
+            | ".bss"
 ```
 */
 static Directive *directive(Symbol *sym)
@@ -129,14 +137,19 @@ static Directive *directive(Symbol *sym)
         globl_symbol->kind = SY_GLOBAL; // overwrite the kind
         return new_directive(globl_symbol);
     }
+    else if(consume_reserved("text"))
+    {
+        current_section = SC_TEXT;
+        return new_directive(NULL);
+    }
     else if(consume_reserved("data"))
     {
         current_section = SC_DATA;
         return new_directive(NULL);
     }
-    else if(consume_reserved("text"))
+    else if(consume_reserved("bss"))
     {
-        current_section = SC_TEXT;
+        current_section = SC_BSS;
         return new_directive(NULL);
     }
     else if(consume_reserved("byte"))
@@ -154,6 +167,10 @@ static Directive *directive(Symbol *sym)
     else if(consume_reserved("quad"))
     {
         return new_directive_data(SIZEOF_64BIT, sym);
+    }
+    else if(consume_reserved("zero"))
+    {
+        return new_directive_zero(sym);
     }
     else
     {
@@ -293,6 +310,16 @@ static Directive *new_directive_data(size_t size, Symbol *symbol)
 
 
 /*
+make a new directive for zero
+*/
+static Directive *new_directive_zero(Symbol *symbol)
+{
+    symbol->bss = new_bss(expect_immediate()->value);
+    return new_directive(NULL);
+}
+
+
+/*
 make a new symbol
 */
 static Symbol *new_symbol(SymbolKind kind, const char *body)
@@ -308,6 +335,21 @@ static Symbol *new_symbol(SymbolKind kind, const char *body)
     add_list_entry_tail(Symbol)(symbol_list, symbol);
 
     return symbol;
+}
+
+
+/*
+make a new bss
+*/
+static Bss *new_bss(size_t size)
+{
+    Bss *bss = calloc(1, sizeof(Bss));
+    bss->size = size;
+
+    // update list of bss
+    add_list_entry_tail(Bss)(bss_list, bss);
+
+    return bss;
 }
 
 

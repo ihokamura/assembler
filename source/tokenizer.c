@@ -68,6 +68,8 @@ static const char *directive_list[] = {
     "quad",
     "text",
     "word",
+    "zero",
+    "bss",
 };
 // information on reserved words
 static const ReservedWordInfo reserved_word_info[] = 
