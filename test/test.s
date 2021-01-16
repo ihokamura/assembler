@@ -4,6 +4,15 @@
 test_internal_data_uint32:
 	.long 0xffffffff
 
+test_internal_data_uint64:
+	.quad 0xffffffffffffffff
+
+test_internal_data_uint32_2:
+	.long 0xfeeeeeef
+
+test_internal_data_uint64_2:
+	.quad 0xfeeeeeeeeeeeeeef
+
 	.text
 # main function
 	.globl main
@@ -29,6 +38,18 @@ test_internal_data:
 	mov esi, dword ptr [rip+test_internal_data_uint32]
 	mov edi, 0xffffffff
 	call assert_equal_uint32
+
+	mov esi, dword ptr [rip+test_internal_data_uint32_2]
+	mov edi, 0xfeeeeeef
+	call assert_equal_uint32
+
+	mov rsi, qword ptr [rip+test_internal_data_uint64]
+	mov rdi, 0xffffffffffffffff
+	call assert_equal_uint64
+
+	mov rsi, qword ptr [rip+test_internal_data_uint64_2]
+	mov rdi, 0xfeeeeeeeeeeeeeef
+	call assert_equal_uint64
 
 	mov rax, 0
 	ret

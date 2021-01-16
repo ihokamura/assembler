@@ -57,6 +57,7 @@ static const char *directive_list[] = {
     "globl",
     "data",
     "long",
+    "quad",
     "text",
 };
 // list of size specifiers

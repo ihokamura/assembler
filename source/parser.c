@@ -141,6 +141,11 @@ static Directive *directive(Symbol *sym)
         sym->data = new_data(SIZEOF_32BIT, expect_immediate()->value);
         return new_directive(NULL);
     }
+    else if(consume_reserved("quad"))
+    {
+        sym->data = new_data(SIZEOF_64BIT, expect_immediate()->value);
+        return new_directive(NULL);
+    }
     else
     {
         report_error(NULL, "expected directive.");

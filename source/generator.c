@@ -41,7 +41,7 @@ define_list_operations(RelocationInfo)
 define_list_operations(SectionInfo)
 
 static RelocationInfo *new_relocation_info(const LabelInfo *label);
-static RelocationInfo *new_relocation_info_data(const LabelInfo *label);
+static RelocationInfo *new_relocation_info_data(Elf_Addr address, Elf_Sxword addend);
 static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr);
 static void set_elf_header
 (
@@ -185,13 +185,13 @@ static RelocationInfo *new_relocation_info(const LabelInfo *label)
 /*
 make a new relocatable symbol for data section
 */
-static RelocationInfo *new_relocation_info_data(const LabelInfo *label)
+static RelocationInfo *new_relocation_info_data(Elf_Addr address, Elf_Sxword addend)
 {
     LabelInfo *data_label = calloc(1, sizeof(LabelInfo));
     data_label->body = NULL;
     data_label->section = SC_DATA;
-    data_label->address = label->address;
-    data_label->addend = label->addend;
+    data_label->address = address;
+    data_label->addend = addend;
 
     RelocationInfo *reloc_info = calloc(1, sizeof(RelocationInfo));
     reloc_info->label = data_label;
@@ -594,7 +594,7 @@ static void resolve_symbols(const List(Symbol) *symbols)
                     break;
 
                 case SC_DATA:
-                    new_relocation_info_data(label);
+                    new_relocation_info_data(label->address, label->addend + symbol->data->address);
                     break;
 
                 default:
