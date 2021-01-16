@@ -40,6 +40,8 @@ static List(Operation) *operation_list = NULL; // list of operations
 static List(Data) *data_list = NULL; // list of data
 static List(Symbol) *symbol_list = NULL; // list of symbols
 
+static SectionKind current_section = SC_TEXT;
+
 
 /*
 construct program
@@ -124,8 +126,14 @@ static Directive *directive(Symbol *sym)
         globl_symbol->kind = SY_GLOBAL; // overwrite the kind
         return new_directive(globl_symbol);
     }
-    else if(consume_reserved("data") || consume_reserved("text"))
+    else if(consume_reserved("data"))
     {
+        current_section = SC_DATA;
+        return new_directive(NULL);
+    }
+    else if(consume_reserved("text"))
+    {
+        current_section = SC_TEXT;
         return new_directive(NULL);
     }
     else if(consume_reserved("long"))
@@ -267,8 +275,10 @@ static Symbol *new_symbol(SymbolKind kind, const char *body)
 {
     Symbol *symbol = calloc(1, sizeof(Symbol));
     symbol->kind = kind;
+    symbol->section = current_section;
     symbol->body = body;
     symbol->operation = NULL;
+    symbol->data = NULL;
 
     // update list of symbols
     add_list_entry_tail(Symbol)(symbol_list, symbol);

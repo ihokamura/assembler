@@ -7,6 +7,7 @@
 #include "elf_wrap.h"
 #include "processor.h"
 
+typedef enum SectionKind SectionKind;
 typedef enum SymbolKind SymbolKind;
 typedef struct Directive Directive;
 typedef struct Program Program;
@@ -14,6 +15,13 @@ typedef struct Symbol Symbol;
 
 #include "list.h"
 define_list(Symbol)
+
+// kind of section
+enum SectionKind
+{
+    SC_TEXT, // text section
+    SC_DATA, // data section
+};
 
 // kind of symbol
 enum SymbolKind
@@ -40,6 +48,7 @@ struct Program
 struct Symbol
 {
     SymbolKind kind;            // kind of symbol
+    SectionKind section;        // section of symbol
     const char *body;           // contents of symbol
     const Operation *operation; // operation labeled by symbol
     const Data *data;           // data labeled by symbol

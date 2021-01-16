@@ -134,7 +134,7 @@ struct Data
 {
     size_t size;      // size of data
     uintmax_t value;  // value of data
-    Elf_Off offset;   // offset from the beginning of .data section 
+    Elf_Addr address; // address of data
 };
 
 // structure for mapping from string to kind of mnemonic
