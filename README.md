@@ -15,7 +15,9 @@ directive ::= ".intel_syntax noprefix"
             | ".globl" symbol
             | ".data"
             | ".long"
+            | ".quad"
             | ".text"
+            | ".word"
 operation ::= mnemonic operands?
 mnemonic ::= "add"
            | "and"

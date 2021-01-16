@@ -136,6 +136,11 @@ static Directive *directive(Symbol *sym)
         current_section = SC_TEXT;
         return new_directive(NULL);
     }
+    else if(consume_reserved("word"))
+    {
+        sym->data = new_data(SIZEOF_16BIT, expect_immediate()->value);
+        return new_directive(NULL);
+    }
     else if(consume_reserved("long"))
     {
         sym->data = new_data(SIZEOF_32BIT, expect_immediate()->value);

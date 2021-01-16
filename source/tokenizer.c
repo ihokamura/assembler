@@ -59,6 +59,7 @@ static const char *directive_list[] = {
     "long",
     "quad",
     "text",
+    "word",
 };
 // list of size specifiers
 static const char *size_specifier_list[] = {
@@ -71,8 +72,8 @@ static const char *size_specifier_list[] = {
 static const ReservedWordInfo reserved_word_info[] = 
 {
     {punctuator_list, sizeof(punctuator_list) / sizeof(punctuator_list[0])},
-    {directive_list, sizeof(directive_list) / sizeof(directive_list[0])},
     {size_specifier_list, sizeof(size_specifier_list) / sizeof(size_specifier_list[0])},
+    {directive_list, sizeof(directive_list) / sizeof(directive_list[0])},
 };
 static size_t RESERVED_WORD_INFO_SIZE = sizeof(reserved_word_info) / sizeof(reserved_word_info[0]); // size of information on reserved words
 static char *user_input; // input of assembler
