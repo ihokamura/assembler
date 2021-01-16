@@ -9,14 +9,15 @@
 #include "tokenizer.h"
 
 #include "list.h"
-define_list_operations(Operation)
+define_list_operations(Data)
 define_list_operations(Operand)
+define_list_operations(Operation)
 define_list_operations(Symbol)
 
 // function prototype
 static void program(void);
 static void statement(void);
-static Directive *directive(void);
+static Directive *directive(Symbol *sym);
 static Symbol *symbol(const Token *token);
 static Operation *operation(const Token *token);
 static const MnemonicInfo *mnemonic(const Token *token);
@@ -24,6 +25,7 @@ static List(Operand) *operands(void);
 static Operand *operand(void);
 static Directive *new_directive(const Symbol *symbol);
 static Symbol *new_symbol(SymbolKind kind, const char *body);
+static Data *new_data(size_t size, uintmax_t value);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
 static Operand *new_operand(OperandKind kind);
 static Operand *new_operand_immediate(uintmax_t immediate);
@@ -35,6 +37,7 @@ static bool consume_size_specifier(OperandKind *kind);
 
 // global variable
 static List(Operation) *operation_list = NULL; // list of operations
+static List(Data) *data_list = NULL; // list of data
 static List(Symbol) *symbol_list = NULL; // list of symbols
 
 
@@ -44,10 +47,12 @@ construct program
 void construct(Program *prog)
 {
     operation_list = new_list(Operation)();
+    data_list = new_list(Data)();
     symbol_list = new_list(Symbol)();
 
     program();
     prog->operations = operation_list;
+    prog->data_list = data_list;
     prog->symbols = symbol_list;
 }
 
@@ -87,7 +92,7 @@ static void statement(void)
     if(consume_reserved("."))
     {
         // symbol is ignored if exists
-        directive();
+        directive(sym);
     }
     else if(consume_token(TK_MNEMONIC, &token))
     {
@@ -102,10 +107,12 @@ parse a directive
 ```
 directive ::= ".intel_syntax noprefix"
             | ".globl" symbol
+            | ".data"
+            | ".long"
             | ".text"
 ```
 */
-static Directive *directive(void)
+static Directive *directive(Symbol *sym)
 {
     if(consume_reserved("intel_syntax noprefix"))
     {
@@ -113,13 +120,18 @@ static Directive *directive(void)
     }
     else if(consume_reserved("globl"))
     {
-        Symbol *sym = symbol(expect_symbol());
-        sym->kind = SY_GLOBAL; // overwrite the kind
-        return new_directive(sym);
+        Symbol *globl_symbol = symbol(expect_symbol());
+        globl_symbol->kind = SY_GLOBAL; // overwrite the kind
+        return new_directive(globl_symbol);
     }
-    else if(consume_reserved("text"))
+    else if(consume_reserved("data") || consume_reserved("text"))
     {
-        return NULL;
+        return new_directive(NULL);
+    }
+    else if(consume_reserved("long"))
+    {
+        sym->data = new_data(SIZEOF_32BIT, expect_immediate()->value);
+        return new_directive(NULL);
     }
     else
     {
@@ -262,6 +274,22 @@ static Symbol *new_symbol(SymbolKind kind, const char *body)
     add_list_entry_tail(Symbol)(symbol_list, symbol);
 
     return symbol;
+}
+
+
+/*
+make a new data
+*/
+static Data *new_data(size_t size, uintmax_t value)
+{
+    Data *data = calloc(1, sizeof(Data));
+    data->size = size;
+    data->value = value;
+
+    // update list of data
+    add_list_entry_tail(Data)(data_list, data);
+
+    return data;
 }
 
 

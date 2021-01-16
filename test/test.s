@@ -1,10 +1,15 @@
 	.intel_syntax noprefix
 
+	.data
+test_internal_data_uint32:
+	.long 0xffffffff
+
 	.text
 # main function
 	.globl main
 main:
 	call test_external_text
+	call test_internal_data
 	call test_external_data
 
 	mov rax, 0
@@ -14,6 +19,16 @@ main:
 # test access to external text section
 test_external_text:
 	call test_external_function1
+
+	mov rax, 0
+	ret
+
+
+# test access to internal data section
+test_internal_data:
+	mov esi, dword ptr [rip+test_internal_data_uint32]
+	mov edi, 0xffffffff
+	call assert_equal_uint32
 
 	mov rax, 0
 	ret

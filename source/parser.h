@@ -32,6 +32,7 @@ struct Directive
 struct Program
 {
     List(Operation) *operations; // list of operations
+    List(Data) *data_list;       // list of data
     List(Symbol) *symbols;       // list of symbols
 };
 
@@ -41,6 +42,7 @@ struct Symbol
     SymbolKind kind;            // kind of symbol
     const char *body;           // contents of symbol
     const Operation *operation; // operation labeled by symbol
+    const Data *data;           // data labeled by symbol
 };
 
 void construct(Program *prog);

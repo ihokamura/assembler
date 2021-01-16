@@ -14,6 +14,7 @@ typedef struct SectionInfo SectionInfo;
 struct LabelInfo
 {
     const char *body;  // label body
+    Elf_Section shndx; // section index
     Elf_Addr address;  // address to be replaced
     Elf_Sxword addend; // addend
 };
@@ -79,6 +80,7 @@ static void set_symbol_table_entries(const List(Symbol) *symbols);
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const LabelInfo *label);
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_operations(const List(Operation) *operations);
+static void generate_data_list(const List(Data) *data_list);
 static void resolve_symbols(const List(Symbol) *symbols);
 static void classify_symbols(const List(Symbol) *symbols);
 static void fill_paddings(size_t pad_size, FILE *fp);
@@ -112,6 +114,7 @@ static List(Symbol) *unresolved_symbol_list;  // list of unresolved symbols
 static List(RelocationInfo) *reloc_info_list; // list of relocatable symbols
 
 static ByteBufferType text_body = {NULL, 0, 0};      // buffer for section ".text"
+static ByteBufferType data_body = {NULL, 0, 0};      // buffer for section ".data"
 static ByteBufferType rela_text_body = {NULL, 0, 0}; // buffer for section ".rela.text"
 static ByteBufferType symtab_body = {NULL, 0, 0};    // buffer for section ".symtab"
 static ByteBufferType strtab_body = {NULL, 0, 0};    // buffer for string containing names of symbols
@@ -129,6 +132,7 @@ LabelInfo *new_label_info(const char *body, Elf_Addr address, Elf_Sxword addend)
 {
     LabelInfo *label_info = calloc(1, sizeof(LabelInfo));
     label_info->body = body;
+    label_info->shndx = SHNDX_TEXT;
     label_info->address = address;
     label_info->addend = addend;
     add_list_entry_tail(LabelInfo)(label_info_list, label_info);
@@ -390,8 +394,8 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
             st_name,
             ELF_ST_INFO(STB_LOCAL, STT_NOTYPE),
             0,
-            SHNDX_TEXT,
-            symbol->operation->address,
+            (symbol->operation != NULL) ? SHNDX_TEXT : SHNDX_DATA,
+            (symbol->operation != NULL) ? symbol->operation->address : symbol->data->offset,
             0
         );
         append_bytes(body, strlen(body) + 1, &strtab_body);
@@ -407,8 +411,8 @@ static void set_symbol_table_entries(const List(Symbol) *symbols)
             st_name,
             ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
             0,
-            SHNDX_TEXT,
-            symbol->operation->address,
+            (symbol->operation != NULL) ? SHNDX_TEXT : SHNDX_DATA,
+            (symbol->operation != NULL) ? symbol->operation->address : symbol->data->offset,
             0
         );
         append_bytes(body, strlen(body) + 1, &strtab_body);
@@ -439,6 +443,12 @@ get index of symbol table entry for relocatable symbol
 */
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const LabelInfo *label)
 {
+    if(label->shndx == SHNDX_DATA)
+    {
+        const static Elf_Xword SYMTAB_INDEX_DATA = 2;
+        return SYMTAB_INDEX_DATA;
+    }
+
     Elf_Xword sym_index = RESERVED_SYMTAB_ENTRIES + resolved_symbols;
     for_each_entry(Symbol, cursor, unresolved_symbol_list)
     {
@@ -488,6 +498,22 @@ static void generate_operations(const List(Operation) *operations)
 
 
 /*
+generate data list
+*/
+static void generate_data_list(const List(Data) *data_list)
+{
+    for_each_entry(Data, cursor, data_list)
+    {
+        Data *data = get_element(Data)(cursor);
+        data->offset = data_body.size;
+
+        //generate_data(data, &data_body);
+        generate_data(data, &data_body);
+    }
+}
+
+
+/*
 resolve symbols
 */
 static void resolve_symbols(const List(Symbol) *symbols)
@@ -502,8 +528,27 @@ static void resolve_symbols(const List(Symbol) *symbols)
             Symbol *symbol = get_element(Symbol)(symbol_cursor);
             if(strcmp(label->body, symbol->body) == 0)
             {
-                uint32_t rel32 = symbol->operation->address - (label->address + sizeof(uint32_t));
-                *(uint32_t *)&text_body.body[label->address] = rel32;
+                if(symbol->operation != NULL)
+                {
+                    uint32_t rel32 = symbol->operation->address - (label->address + sizeof(uint32_t));
+                    *(uint32_t *)&text_body.body[label->address] = rel32;
+                }
+                if(symbol->data != NULL)
+                {
+                    uint32_t rel32 = symbol->data->offset;
+                    *(uint32_t *)&data_body.body[label->address] = rel32;
+
+                    LabelInfo *data_label = calloc(1, sizeof(LabelInfo));
+                    data_label->body = "";
+                    data_label->shndx = SHNDX_DATA;
+                    data_label->address = label->address;
+                    data_label->addend = label->addend;
+
+                    RelocationInfo *reloc_info = calloc(1, sizeof(RelocationInfo));
+                    reloc_info->label = data_label;
+                    add_list_entry_tail(RelocationInfo)(reloc_info_list, reloc_info);
+                }
+
                 resolved = true;
                 break;
             }
@@ -556,6 +601,7 @@ generate section bodies
 static void generate_sections(const Program *program)
 {
     generate_operations(program->operations);
+    generate_data_list(program->data_list);
     resolve_symbols(program->symbols);
     set_relocation_table_entries(get_length(Symbol)(program->symbols));
     classify_symbols(program->symbols);
@@ -620,13 +666,13 @@ static void generate_section_header_table_entries(void)
         SHT_PROGBITS,
         SHF_WRITE | SHF_ALLOC,
         0,
-        0,
+        data_body.size,
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
         0,
         &shdr_data);
-    new_section_info(NULL, &shdr_data);
+    new_section_info(&data_body, &shdr_data);
 
     // .bss section
     Elf_Shdr shdr_bss;

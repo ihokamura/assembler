@@ -196,6 +196,15 @@ static const size_t SIB_POSITION_BASE = 0;
 
 
 /*
+generate data
+*/
+void generate_data(const Data *data, ByteBufferType *data_body)
+{
+    append_binary_imm(data->value, data->size, data_body);
+}
+
+
+/*
 generate an operation
 */
 void generate_operation(const Operation *operation, ByteBufferType *text_body)

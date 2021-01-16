@@ -13,6 +13,8 @@ program ::= statement*
 statement ::= (symbol ":")? directive | operation
 directive ::= ".intel_syntax noprefix"
             | ".globl" symbol
+            | ".data"
+            | ".long"
             | ".text"
 operation ::= mnemonic operands?
 mnemonic ::= "add"

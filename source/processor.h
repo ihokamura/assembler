@@ -14,12 +14,14 @@
 typedef enum OperandKind OperandKind;
 typedef enum MnemonicKind MnemonicKind;
 typedef enum RegisterKind RegisterKind;
+typedef struct Data Data;
 typedef struct MnemonicInfo MnemonicInfo;
 typedef struct Operand Operand;
 typedef struct Operation Operation;
 typedef struct RegisterInfo RegisterInfo;
 
 #include "list.h"
+define_list(Data)
 define_list(Operand)
 define_list(Operation)
 
@@ -127,6 +129,14 @@ enum RegisterKind
     REG_RIP,
 };
 
+// structure for data
+struct Data
+{
+    size_t size;      // size of data
+    uintmax_t value;  // value of data
+    Elf_Off offset;   // offset from the beginning of .data section 
+};
+
 // structure for mapping from string to kind of mnemonic
 struct MnemonicInfo
 {
@@ -170,6 +180,7 @@ extern const size_t MNEMONIC_INFO_LIST_SIZE;
 extern const RegisterInfo register_info_list[];
 extern const size_t REGISTER_INFO_LIST_SIZE;
 
+void generate_data(const Data *data, ByteBufferType *data_body);
 void generate_operation(const Operation *operation, ByteBufferType *text_body);
 
 #endif /* !__PROCESSOR_H__ */
