@@ -295,7 +295,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffe
         uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x8a : 0x8b;
         append_binary_opecode(opecode, buffer);
         append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
-        append_binary_disp(operand2, buffer->size, -SIZEOF_32BIT, buffer);
+        append_binary_disp(operand2, buffer->size, operand2->immediate - SIZEOF_32BIT, buffer);
     }
     else if(is_register(operand1->kind) && is_immediate(operand2->kind))
     {
@@ -875,19 +875,26 @@ static uint8_t get_mod_field(const Operand *operand)
     }
     else
     {
-        switch(get_least_size(operand->immediate))
+        if(operand->reg == REG_RIP)
         {
-        case 0:
             return MOD_MEM;
+        }
+        else
+        {
+            switch(get_least_size(operand->immediate))
+            {
+            case 0:
+                return MOD_MEM;
 
-        case SIZEOF_8BIT:
-            return MOD_MEM_DISP8;
+            case SIZEOF_8BIT:
+                return MOD_MEM_DISP8;
 
-        case SIZEOF_32BIT:
-            return MOD_MEM_DISP32;
+            case SIZEOF_32BIT:
+                return MOD_MEM_DISP32;
 
-        default:
-            return MOD_INVALID;
+            default:
+                return MOD_INVALID;
+            }
         }
     }
 }

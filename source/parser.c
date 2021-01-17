@@ -435,20 +435,27 @@ static Operand *new_operand_memory(OperandKind kind)
     expect_reserved("[");
     Token *token = expect_register();
     operand->reg = get_register_info(token)->reg_kind;
-    if(consume_reserved("+"))
+    while(true)
     {
-        if(consume_token(TK_IDENTIFIER, &token))
+        if(consume_reserved("+"))
         {
-            operand->symbol = make_identifier(token);
+            if(consume_token(TK_IDENTIFIER, &token))
+            {
+                operand->symbol = make_identifier(token);
+            }
+            else
+            {
+                operand->immediate += expect_immediate()->value;
+            }
+        }
+        else if(consume_reserved("-"))
+        {
+            operand->immediate -= expect_immediate()->value;
         }
         else
         {
-            operand->immediate = expect_immediate()->value;
+            break;
         }
-    }
-    else if(consume_reserved("-"))
-    {
-        operand->immediate = -expect_immediate()->value;
     }
     expect_reserved("]");
 

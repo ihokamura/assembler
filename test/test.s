@@ -47,32 +47,48 @@ test_internal_data:
 	mov dil, 0xff
 	call assert_equal_uint8
 
-	mov sil, byte ptr [rip+test_internal_data_uint8_2]
+	mov sil, byte ptr [rip+test_internal_data_uint8_array]
 	mov dil, 0x81
+	call assert_equal_uint8
+
+	mov sil, byte ptr [rip+test_internal_data_uint8_array+1]
+	mov dil, 0x93
 	call assert_equal_uint8
 
 	mov si, word ptr [rip+test_internal_data_uint16]
 	mov di, 0xffff
 	call assert_equal_uint16
 
-	mov si, word ptr [rip+test_internal_data_uint16_2]
+	mov si, word ptr [rip+test_internal_data_uint16_array]
 	mov di, 0x8001
+	call assert_equal_uint16
+
+	mov si, word ptr [rip+test_internal_data_uint16_array+2]
+	mov di, 0x9003
 	call assert_equal_uint16
 
 	mov esi, dword ptr [rip+test_internal_data_uint32]
 	mov edi, 0xffffffff
 	call assert_equal_uint32
 
-	mov esi, dword ptr [rip+test_internal_data_uint32_2]
+	mov esi, dword ptr [rip+test_internal_data_uint32_array]
 	mov edi, 0x80000001
+	call assert_equal_uint32
+
+	mov esi, dword ptr [rip+test_internal_data_uint32_array+4]
+	mov edi, 0x90000003
 	call assert_equal_uint32
 
 	mov rsi, qword ptr [rip+test_internal_data_uint64]
 	mov rdi, 0xffffffffffffffff
 	call assert_equal_uint64
 
-	mov rsi, qword ptr [rip+test_internal_data_uint64_2]
+	mov rsi, qword ptr [rip+test_internal_data_uint64_array]
 	mov rdi, 0x8000000000000001
+	call assert_equal_uint64
+
+	mov rsi, qword ptr [rip+test_internal_data_uint64_array+8]
+	mov rdi, 0x9000000000000003
 	call assert_equal_uint64
 
 	mov rax, 0
@@ -138,11 +154,15 @@ test_internal_bss:
 	ret
 
 .data
-test_internal_data_uint8_2:
+test_internal_data_uint8_array:
 	.byte 0x81
-test_internal_data_uint16_2:
+	.byte 0x93
+test_internal_data_uint16_array:
 	.word 0x8001
-test_internal_data_uint32_2:
+	.word 0x9003
+test_internal_data_uint32_array:
 	.long 0x80000001
-test_internal_data_uint64_2:
+	.long 0x90000003
+test_internal_data_uint64_array:
 	.quad 0x8000000000000001
+	.quad 0x9000000000000003
