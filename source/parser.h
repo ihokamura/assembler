@@ -9,22 +9,15 @@
 #include "processor.h"
 #include "section.h"
 
-typedef struct Directive Directive;
 typedef struct Program Program;
-
-// structure for directive
-struct Directive
-{
-    const Label *symbol; // symbol associated with the directive
-};
 
 // structure for program
 struct Program
 {
-    List(Operation) *operations; // list of operations
-    List(Data) *data_list;       // list of data
-    List(Bss) *bss_list;         // list of bss
-    List(Label) *symbols;        // list of symbols
+    List(Operation) *operation_list; // list of operations
+    List(Data) *data_list;           // list of data
+    List(Bss) *bss_list;             // list of bss
+    List(Label) *label_list;         // list of labels
 };
 
 void construct(Program *prog);

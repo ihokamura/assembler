@@ -5,13 +5,20 @@
 #include "processor.h"
 #include "section.h"
 
+typedef enum LabelKind LabelKind;
 typedef enum SectionKind SectionKind;
-typedef enum SymbolKind SymbolKind;
 typedef struct Label Label;
 typedef struct Symbol Symbol;
 
 #include "list.h"
 define_list(Label)
+
+// kind of label
+enum LabelKind
+{
+    LB_GLOBAL, // global label
+    LB_LOCAL,  // local label
+};
 
 // kind of section
 enum SectionKind
@@ -22,17 +29,10 @@ enum SectionKind
     SC_BSS,  // bss section
 };
 
-// kind of symbol
-enum SymbolKind
-{
-    SY_GLOBAL, // global symbol
-    SY_LOCAL,  // local symbol
-};
-
 // structure for label
 struct Label
 {
-    SymbolKind kind;            // kind of symbol
+    LabelKind kind;            // kind of symbol
     SectionKind section;        // section of label
     const char *body;           // contents of label
     const Operation *operation; // operation of label

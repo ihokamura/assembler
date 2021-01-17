@@ -19,16 +19,15 @@ define_list_operations(Label)
 // function prototype
 static void program(void);
 static void statement(void);
-static Directive *parse_directive(Label *label);
+static void parse_directive(Label *label);
+static void parse_directive_size(size_t size, Label *label);
+static void parse_directive_zero(Label *label);
 static Label *parse_label(const Token *token);
 static Operation *parse_operation(const Token *token);
 static const MnemonicInfo *parse_mnemonic(const Token *token);
 static List(Operand) *parse_operands(void);
 static Operand *parse_operand(void);
-static Directive *new_directive(const Label *lab);
-static Directive *new_directive_data(size_t size, Label *label);
-static Directive *new_directive_zero(Label *label);
-static Label *new_label(SymbolKind kind, const char *body);
+static Label *new_label(LabelKind kind, const char *body);
 static Bss *new_bss(size_t size);
 static Data *new_data(size_t size, uintmax_t value);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
@@ -60,10 +59,10 @@ void construct(Program *prog)
     label_list = new_list(Label)();
 
     program();
-    prog->operations = operation_list;
+    prog->operation_list = operation_list;
     prog->data_list = data_list;
     prog->bss_list = bss_list;
-    prog->symbols = label_list;
+    prog->label_list = label_list;
 }
 
 
@@ -126,58 +125,71 @@ directive ::= ".bss"
             | ".zero"
 ```
 */
-static Directive *parse_directive(Label *label)
+static void parse_directive(Label *label)
 {
     if(consume_reserved("bss"))
     {
         current_section = SC_BSS;
-        return new_directive(NULL);
     }
     else if(consume_reserved("byte"))
     {
-        return new_directive_data(SIZEOF_8BIT, label);
+        parse_directive_size(SIZEOF_8BIT, label);
     }
     else if(consume_reserved("data"))
     {
         current_section = SC_DATA;
-        return new_directive(NULL);
     }
     else if(consume_reserved("globl"))
     {
-        Label *globl_symbol = parse_label(expect_identifier());
-        globl_symbol->kind = SY_GLOBAL; // overwrite the kind
-        return new_directive(globl_symbol);
+        Label *label = parse_label(expect_identifier());
+        label->kind = LB_GLOBAL; // overwrite the kind
     }
     else if(consume_reserved("intel_syntax noprefix"))
     {
-        return new_directive(NULL);
+        // do nothing
     }
     else if(consume_reserved("long"))
     {
-        return new_directive_data(SIZEOF_32BIT, label);
+        parse_directive_size(SIZEOF_32BIT, label);
     }
     else if(consume_reserved("quad"))
     {
-        return new_directive_data(SIZEOF_64BIT, label);
+        parse_directive_size(SIZEOF_64BIT, label);
     }
     else if(consume_reserved("text"))
     {
         current_section = SC_TEXT;
-        return new_directive(NULL);
     }
     else if(consume_reserved("word"))
     {
-        return new_directive_data(SIZEOF_16BIT, label);
+        parse_directive_size(SIZEOF_16BIT, label);
     }
     else if(consume_reserved("zero"))
     {
-        return new_directive_zero(label);
+        parse_directive_zero(label);
     }
     else
     {
         report_error(NULL, "expected directive.");
-        return NULL;
     }
+}
+
+
+/*
+parse directive for size
+*/
+static void parse_directive_size(size_t size, Label *label)
+{
+    label->data = new_data(size, expect_immediate()->value);
+}
+
+
+/*
+parse directive for zero
+*/
+static void parse_directive_zero(Label *label)
+{
+    label->bss = new_bss(expect_immediate()->value);
 }
 
 
@@ -198,7 +210,7 @@ static Label *parse_label(const Token *token)
         }
     }
 
-    return new_label(SY_LOCAL, body);
+    return new_label(LB_LOCAL, body);
 }
 
 
@@ -289,41 +301,9 @@ static Operand *parse_operand(void)
 
 
 /*
-make a new directive
-*/
-static Directive *new_directive(const Label *lab)
-{
-    Directive *directive = calloc(1, sizeof(Directive));
-    directive->symbol = lab;
-
-    return directive;
-}
-
-
-/*
-make a new directive for data
-*/
-static Directive *new_directive_data(size_t size, Label *lab)
-{
-    lab->data = new_data(size, expect_immediate()->value);
-    return new_directive(NULL);
-}
-
-
-/*
-make a new directive for zero
-*/
-static Directive *new_directive_zero(Label *lab)
-{
-    lab->bss = new_bss(expect_immediate()->value);
-    return new_directive(NULL);
-}
-
-
-/*
 make a new label
 */
-static Label *new_label(SymbolKind kind, const char *body)
+static Label *new_label(LabelKind kind, const char *body)
 {
     Label *lab = calloc(1, sizeof(Label));
     lab->kind = kind;
