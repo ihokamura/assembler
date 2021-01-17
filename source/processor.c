@@ -4,7 +4,7 @@
 #include <stdint.h>
 
 #include "buffer.h"
-#include "generator.h"
+#include "identifier.h"
 #include "parser.h"
 #include "processor.h"
 
@@ -62,7 +62,7 @@ static void append_binary_disp(const Operand *operand, Elf_Addr address, Elf_Sxw
 static void append_binary_imm(uintmax_t imm, size_t size, ByteBufferType *buffer);
 static void append_binary_imm_least(uintmax_t imm, ByteBufferType *buffer);
 static void append_binary_imm32(uint32_t imm32, ByteBufferType *buffer);
-static void append_binary_relocation(size_t size, const char *label, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer);
+static void append_binary_relocation(size_t size, const char *symbol, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer);
 static void may_append_binary_instruction_prefix(OperandKind kind, uint8_t prefix, ByteBufferType *buffer);
 static void may_append_binary_rex_prefix_reg_rm(const Operand *operand_reg, const Operand *operand_rm, bool specify_size, ByteBufferType *buffer);
 static void may_append_binary_rex_prefix_reg(const Operand *operand, bool specify_size, ByteBufferType *buffer);
@@ -246,7 +246,7 @@ static void generate_op_call(const List(Operand) *operands, ByteBufferType *buff
         * CALL rel32
         */
         append_binary_opecode(0xe8, buffer);
-        append_binary_relocation(SIZEOF_32BIT, operand->label, buffer->size, -SIZEOF_32BIT, buffer);
+        append_binary_relocation(SIZEOF_32BIT, operand->symbol, buffer->size, -SIZEOF_32BIT, buffer);
     }
 }
 
@@ -961,7 +961,7 @@ static void append_binary_disp(const Operand *operand, Elf_Addr address, Elf_Sxw
 {
     if(operand->reg == REG_RIP)
     {
-        append_binary_relocation(SIZEOF_32BIT, operand->label, address, addend, buffer);
+        append_binary_relocation(SIZEOF_32BIT, operand->symbol, address, addend, buffer);
     }
     else
     {
@@ -1004,9 +1004,9 @@ static void append_binary_imm32(uint32_t imm32, ByteBufferType *buffer)
 /*
 append binary for relocation value
 */
-static void append_binary_relocation(size_t size, const char *label, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer)
+static void append_binary_relocation(size_t size, const char *symbol, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer)
 {
-    new_label_info(label, address, addend);
+    new_symbol(symbol, address, addend);
     switch(size)
     {
     case SIZEOF_32BIT:

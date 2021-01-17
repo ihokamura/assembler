@@ -30,7 +30,7 @@ static int is_space(const char *str);
 static int is_comment(const char *str);
 static int is_reserved(const char *str);
 static int is_mnemonic(const char *str);
-static int is_symbol(const char *str);
+static int is_identifier(const char *str);
 static int is_register(const char *str);
 static int is_immediate(const char *str, uintmax_t *value);
 static int is_octal_digit(int character);
@@ -60,16 +60,16 @@ static const char *size_specifier_list[] = {
 };
 // list of directives
 static const char *directive_list[] = {
-    "intel_syntax noprefix",
-    "globl",
+    "bss",
     "byte",
     "data",
+    "globl",
+    "intel_syntax noprefix",
     "long",
     "quad",
     "text",
     "word",
     "zero",
-    "bss",
 };
 // information on reserved words
 static const ReservedWordInfo reserved_word_info[] = 
@@ -213,16 +213,16 @@ void expect_reserved(const char *str)
 
 
 /*
-parse a symbol
-* If the next token is a symbol, this function parses and returns the token.
+parse an identifier
+* If the next token is an identifier, this function parses and returns the token.
 * Otherwise, it reports an error.
 */
-Token *expect_symbol(void)
+Token *expect_identifier(void)
 {
     Token *current = get_element(Token)(current_token);
-    if(current->kind != TK_SYMBOL)
+    if(current->kind != TK_IDENTIFIER)
     {
-        report_error(current->str, "expected a symbol.");
+        report_error(current->str, "expected an identifier.");
     }
 
     current_token = next_entry(Token, current_token);
@@ -330,11 +330,11 @@ void tokenize(char *str)
             continue;
         }
 
-        // parse a symbol
-        len = is_symbol(str);
+        // parse an identifier
+        len = is_identifier(str);
         if(len > 0)
         {
-            Token *token = new_token(TK_SYMBOL, str, len);
+            Token *token = new_token(TK_IDENTIFIER, str, len);
             current_token = add_list_entry_tail(Token)(token_list, token);
             str += len;
             continue;
@@ -371,13 +371,13 @@ bool at_eof(void)
 
 
 /*
-make string of a symbol
+make string of an identifier
 */
-char *make_symbol(const Token *token)
+char *make_identifier(const Token *token)
 {
-    char *ident = calloc(token->len + 1, sizeof(char));
+    char *identifier = calloc(token->len + 1, sizeof(char));
 
-    return strncpy(ident, token->str, token->len);
+    return strncpy(identifier, token->str, token->len);
 }
 
 
@@ -544,9 +544,9 @@ static int is_mnemonic(const char *str)
 
 
 /*
-check if the following string is a symbol
+check if the following string is an identifier
 */
-static int is_symbol(const char *str)
+static int is_identifier(const char *str)
 {
     int len = 0;
 

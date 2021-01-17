@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "parser.h"
+#include "identifier.h"
 #include "processor.h"
 #include "tokenizer.h"
 
@@ -13,21 +14,21 @@ define_list_operations(Bss)
 define_list_operations(Data)
 define_list_operations(Operand)
 define_list_operations(Operation)
-define_list_operations(Symbol)
+define_list_operations(Label)
 
 // function prototype
 static void program(void);
 static void statement(void);
-static Directive *directive(Symbol *sym);
-static Symbol *symbol(const Token *token);
-static Operation *operation(const Token *token);
-static const MnemonicInfo *mnemonic(const Token *token);
-static List(Operand) *operands(void);
-static Operand *operand(void);
-static Directive *new_directive(const Symbol *symbol);
-static Directive *new_directive_data(size_t size, Symbol *symbol);
-static Directive *new_directive_zero(Symbol *symbol);
-static Symbol *new_symbol(SymbolKind kind, const char *body);
+static Directive *parse_directive(Label *label);
+static Label *parse_label(const Token *token);
+static Operation *parse_operation(const Token *token);
+static const MnemonicInfo *parse_mnemonic(const Token *token);
+static List(Operand) *parse_operands(void);
+static Operand *parse_operand(void);
+static Directive *new_directive(const Label *lab);
+static Directive *new_directive_data(size_t size, Label *label);
+static Directive *new_directive_zero(Label *label);
+static Label *new_label(SymbolKind kind, const char *body);
 static Bss *new_bss(size_t size);
 static Data *new_data(size_t size, uintmax_t value);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
@@ -43,7 +44,7 @@ static bool consume_size_specifier(OperandKind *kind);
 static List(Operation) *operation_list = NULL; // list of operations
 static List(Data) *data_list = NULL; // list of data
 static List(Bss) *bss_list = NULL; // list of bss
-static List(Symbol) *symbol_list = NULL; // list of symbols
+static List(Label) *label_list = NULL; // list of labels
 
 static SectionKind current_section = SC_UND;
 
@@ -56,13 +57,13 @@ void construct(Program *prog)
     operation_list = new_list(Operation)();
     data_list = new_list(Data)();
     bss_list = new_list(Bss)();
-    symbol_list = new_list(Symbol)();
+    label_list = new_list(Label)();
 
     program();
     prog->operations = operation_list;
     prog->data_list = data_list;
     prog->bss_list = bss_list;
-    prog->symbols = symbol_list;
+    prog->symbols = label_list;
 }
 
 
@@ -85,28 +86,27 @@ static void program(void)
 /*
 parse a statement
 ```
-statement ::= (symbol ":")? directive | operation
+statement ::= (label ":")? directive | operation
 ```
 */
 static void statement(void)
 {
     Token *token;
-    Symbol *sym;
-    if(consume_token(TK_SYMBOL, &token))
+    Label *label;
+    if(consume_token(TK_IDENTIFIER, &token))
     {
-        sym = symbol(token);
+        label = parse_label(token);
         expect_reserved(":");
     }
 
     if(consume_reserved("."))
     {
-        // symbol is ignored if exists
-        directive(sym);
+        parse_directive(label);
     }
     else if(consume_token(TK_MNEMONIC, &token))
     {
-        Operation *op = operation(token);
-        sym->operation = op;
+        Operation *op = parse_operation(token);
+        label->operation = op;
     }
 }
 
@@ -114,63 +114,64 @@ static void statement(void)
 /*
 parse a directive
 ```
-directive ::= ".intel_syntax noprefix"
-            | ".globl" symbol
+directive ::= ".bss"
             | ".byte"
             | ".data"
+            | ".globl" symbol
+            | ".intel_syntax noprefix"
+            | ".long"
             | ".quad"
             | ".text"
             | ".word"
-            | ".word"
-            | ".bss"
+            | ".zero"
 ```
 */
-static Directive *directive(Symbol *sym)
+static Directive *parse_directive(Label *label)
 {
-    if(consume_reserved("intel_syntax noprefix"))
-    {
-        return new_directive(NULL);
-    }
-    else if(consume_reserved("globl"))
-    {
-        Symbol *globl_symbol = symbol(expect_symbol());
-        globl_symbol->kind = SY_GLOBAL; // overwrite the kind
-        return new_directive(globl_symbol);
-    }
-    else if(consume_reserved("text"))
-    {
-        current_section = SC_TEXT;
-        return new_directive(NULL);
-    }
-    else if(consume_reserved("data"))
-    {
-        current_section = SC_DATA;
-        return new_directive(NULL);
-    }
-    else if(consume_reserved("bss"))
+    if(consume_reserved("bss"))
     {
         current_section = SC_BSS;
         return new_directive(NULL);
     }
     else if(consume_reserved("byte"))
     {
-        return new_directive_data(SIZEOF_8BIT, sym);
+        return new_directive_data(SIZEOF_8BIT, label);
     }
-    else if(consume_reserved("word"))
+    else if(consume_reserved("data"))
     {
-        return new_directive_data(SIZEOF_16BIT, sym);
+        current_section = SC_DATA;
+        return new_directive(NULL);
+    }
+    else if(consume_reserved("globl"))
+    {
+        Label *globl_symbol = parse_label(expect_identifier());
+        globl_symbol->kind = SY_GLOBAL; // overwrite the kind
+        return new_directive(globl_symbol);
+    }
+    else if(consume_reserved("intel_syntax noprefix"))
+    {
+        return new_directive(NULL);
     }
     else if(consume_reserved("long"))
     {
-        return new_directive_data(SIZEOF_32BIT, sym);
+        return new_directive_data(SIZEOF_32BIT, label);
     }
     else if(consume_reserved("quad"))
     {
-        return new_directive_data(SIZEOF_64BIT, sym);
+        return new_directive_data(SIZEOF_64BIT, label);
+    }
+    else if(consume_reserved("text"))
+    {
+        current_section = SC_TEXT;
+        return new_directive(NULL);
+    }
+    else if(consume_reserved("word"))
+    {
+        return new_directive_data(SIZEOF_16BIT, label);
     }
     else if(consume_reserved("zero"))
     {
-        return new_directive_zero(sym);
+        return new_directive_zero(label);
     }
     else
     {
@@ -181,23 +182,23 @@ static Directive *directive(Symbol *sym)
 
 
 /*
-parse a symbol
+parse a label
 */
-static Symbol *symbol(const Token *token)
+static Label *parse_label(const Token *token)
 {
-    const char *body = make_symbol(token);
+    const char *body = make_identifier(token);
 
-    // serch the existing symbols
-    for_each_entry(Symbol, cursor, symbol_list)
+    // serch the existing labels
+    for_each_entry(Label, cursor, label_list)
     {
-        Symbol *symbol = get_element(Symbol)(cursor);
-        if(strcmp(body, symbol->body) == 0)
+        Label *label = get_element(Label)(cursor);
+        if(strcmp(body, label->body) == 0)
         {
-            return symbol;
+            return label;
         }
     }
 
-    return new_symbol(SY_LOCAL, body);
+    return new_label(SY_LOCAL, body);
 }
 
 
@@ -207,18 +208,18 @@ parse an operation
 operation ::= mnemonic operands?
 ```
 */
-static Operation *operation(const Token *token)
+static Operation *parse_operation(const Token *token)
 {
-    const MnemonicInfo *map = mnemonic(token);
+    const MnemonicInfo *map = parse_mnemonic(token);
 
-    return new_operation(map->kind, map->take_operands ? operands() : NULL);
+    return new_operation(map->kind, map->take_operands ? parse_operands() : NULL);
 }
 
 
 /*
 parse a mnemonic
 */
-static const MnemonicInfo *mnemonic(const Token *token)
+static const MnemonicInfo *parse_mnemonic(const Token *token)
 {
     for(size_t i = 0; i < MNEMONIC_INFO_LIST_SIZE; i++)
     {
@@ -228,7 +229,7 @@ static const MnemonicInfo *mnemonic(const Token *token)
         }
     }
 
-    report_error(NULL, "invalid mnemonic '%s.", make_symbol(token));
+    report_error(NULL, "invalid mnemonic '%s.", make_identifier(token));
 
     return &mnemonic_info_list[MN_NOP];
 }
@@ -240,13 +241,13 @@ parse operands
 operands ::= operand ("," operand)?
 ```
 */
-static List(Operand) *operands(void)
+static List(Operand) *parse_operands(void)
 {
     List(Operand) *operand_list = new_list(Operand)();
-    add_list_entry_tail(Operand)(operand_list, operand());
+    add_list_entry_tail(Operand)(operand_list, parse_operand());
     while(consume_reserved(","))
     {
-        add_list_entry_tail(Operand)(operand_list, operand());
+        add_list_entry_tail(Operand)(operand_list, parse_operand());
     }
 
     return operand_list;
@@ -259,7 +260,7 @@ parse an operand
 operand ::= immediate | register | memory | symbol
 ```
 */
-static Operand *operand(void)
+static Operand *parse_operand(void)
 {
     Token *token;
     OperandKind kind;
@@ -275,7 +276,7 @@ static Operand *operand(void)
     {
         return new_operand_memory(kind);
     }
-    else if(consume_token(TK_SYMBOL, &token))
+    else if(consume_token(TK_IDENTIFIER, &token))
     {
         return new_operand_symbol(token);
     }
@@ -290,10 +291,10 @@ static Operand *operand(void)
 /*
 make a new directive
 */
-static Directive *new_directive(const Symbol *symbol)
+static Directive *new_directive(const Label *lab)
 {
     Directive *directive = calloc(1, sizeof(Directive));
-    directive->symbol = symbol;
+    directive->symbol = lab;
 
     return directive;
 }
@@ -302,9 +303,9 @@ static Directive *new_directive(const Symbol *symbol)
 /*
 make a new directive for data
 */
-static Directive *new_directive_data(size_t size, Symbol *symbol)
+static Directive *new_directive_data(size_t size, Label *lab)
 {
-    symbol->data = new_data(size, expect_immediate()->value);
+    lab->data = new_data(size, expect_immediate()->value);
     return new_directive(NULL);
 }
 
@@ -312,29 +313,29 @@ static Directive *new_directive_data(size_t size, Symbol *symbol)
 /*
 make a new directive for zero
 */
-static Directive *new_directive_zero(Symbol *symbol)
+static Directive *new_directive_zero(Label *lab)
 {
-    symbol->bss = new_bss(expect_immediate()->value);
+    lab->bss = new_bss(expect_immediate()->value);
     return new_directive(NULL);
 }
 
 
 /*
-make a new symbol
+make a new label
 */
-static Symbol *new_symbol(SymbolKind kind, const char *body)
+static Label *new_label(SymbolKind kind, const char *body)
 {
-    Symbol *symbol = calloc(1, sizeof(Symbol));
-    symbol->kind = kind;
-    symbol->section = current_section;
-    symbol->body = body;
-    symbol->operation = NULL;
-    symbol->data = NULL;
+    Label *lab = calloc(1, sizeof(Label));
+    lab->kind = kind;
+    lab->section = current_section;
+    lab->body = body;
+    lab->operation = NULL;
+    lab->data = NULL;
 
     // update list of symbols
-    add_list_entry_tail(Symbol)(symbol_list, symbol);
+    add_list_entry_tail(Label)(label_list, lab);
 
-    return symbol;
+    return lab;
 }
 
 
@@ -456,9 +457,9 @@ static Operand *new_operand_memory(OperandKind kind)
     operand->reg = get_register_info(token)->reg_kind;
     if(consume_reserved("+"))
     {
-        if(consume_token(TK_SYMBOL, &token))
+        if(consume_token(TK_IDENTIFIER, &token))
         {
-            operand->label = make_symbol(token);
+            operand->symbol = make_identifier(token);
         }
         else
         {
@@ -481,7 +482,7 @@ make a new operand for symbol
 static Operand *new_operand_symbol(const Token *token)
 {
     Operand *operand = new_operand(OP_SYMBOL);
-    operand->label = make_symbol(token);
+    operand->symbol = make_identifier(token);
 
     return operand;
 }

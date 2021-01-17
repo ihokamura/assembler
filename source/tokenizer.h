@@ -9,11 +9,11 @@ typedef struct Token Token;
 // kind of token
 enum TokenKind
 {
-    TK_RESERVED,  // reserved token (punctuator or directive)
-    TK_SYMBOL,    // symbol
-    TK_MNEMONIC,  // mnemonic
-    TK_IMMEDIATE, // immediate
-    TK_REGISTER,  // register
+    TK_RESERVED,   // reserved token (punctuator, size-specifier or directive)
+    TK_IDENTIFIER, // identifier
+    TK_MNEMONIC,   // mnemonic
+    TK_IMMEDIATE,  // immediate
+    TK_REGISTER,   // register
 };
 
 // structure for token
@@ -32,12 +32,12 @@ bool consume_token(TokenKind kind, Token **token);
 Token *get_token(void);
 void set_token(Token *token);
 void expect_reserved(const char *str);
-Token *expect_symbol(void);
+Token *expect_identifier(void);
 Token *expect_immediate(void);
 Token *expect_register(void);
 void tokenize(char *str);
 bool at_eof(void);
-char *make_symbol(const Token *token);
+char *make_identifier(const Token *token);
 char *read_file(const char *path);
 void report_warning(const char *loc, const char *fmt, ...);
 void report_error(const char *loc, const char *fmt, ...);

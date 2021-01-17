@@ -10,16 +10,17 @@ asm <input-file> -c -o <output-file>
 
 ```
 program ::= statement*
-statement ::= (symbol ":")? directive | operation
-directive ::= ".intel_syntax noprefix"
-            | ".globl" symbol
+statement ::= (label ":")? directive | operation
+directive ::= ".bss"
             | ".byte"
             | ".data"
+            | ".globl" symbol
+            | ".intel_syntax noprefix"
             | ".long"
             | ".quad"
             | ".text"
             | ".word"
-            | ".bss"
+            | ".zero"
 operation ::= mnemonic operands?
 mnemonic ::= "add"
            | "and"

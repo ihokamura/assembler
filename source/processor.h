@@ -5,6 +5,7 @@
 
 #include "buffer.h"
 #include "elf_wrap.h"
+#include "section.h"
 
 #define SIZEOF_8BIT     sizeof(uint8_t)
 #define SIZEOF_16BIT    sizeof(uint16_t)
@@ -14,16 +15,12 @@
 typedef enum OperandKind OperandKind;
 typedef enum MnemonicKind MnemonicKind;
 typedef enum RegisterKind RegisterKind;
-typedef struct Bss Bss;
-typedef struct Data Data;
 typedef struct MnemonicInfo MnemonicInfo;
 typedef struct Operand Operand;
 typedef struct Operation Operation;
 typedef struct RegisterInfo RegisterInfo;
 
 #include "list.h"
-define_list(Bss)
-define_list(Data)
 define_list(Operand)
 define_list(Operation)
 
@@ -131,21 +128,6 @@ enum RegisterKind
     REG_RIP,
 };
 
-// structure for bss
-struct Bss
-{
-    size_t size;      // size of data
-    Elf_Addr address; // address of data
-};
-
-// structure for data
-struct Data
-{
-    size_t size;      // size of data
-    uintmax_t value;  // value of data
-    Elf_Addr address; // address of data
-};
-
 // structure for mapping from string to kind of mnemonic
 struct MnemonicInfo
 {
@@ -163,7 +145,7 @@ struct Operand
     {
         uintmax_t immediate; // immediate value
         RegisterKind reg;    // kind of register
-        const char *label;   // label
+        const char *symbol;  // body of symbol
     };
 };
 
