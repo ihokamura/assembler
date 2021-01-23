@@ -10,8 +10,20 @@
 #include "parser.h"
 #include "processor.h"
 
+typedef struct BaseSection BaseSection;
 typedef struct RelocationInfo RelocationInfo;
 typedef struct SectionInfo SectionInfo;
+
+// structure for base section
+struct BaseSection
+{
+    SectionKind kind;         // kind of section
+    size_t index;             // index of section
+    char *name;               // name of section
+    size_t size;              // size of section
+    ByteBufferType body;      // body of section
+    ByteBufferType rela_body; // body of relocation section
+};
 
 struct Symbol
 {
@@ -39,13 +51,16 @@ struct SectionInfo
 
 
 #include "list.h"
+define_list(BaseSection)
 define_list(RelocationInfo)
 define_list(SectionInfo)
 define_list(Symbol)
+define_list_operations(BaseSection)
 define_list_operations(RelocationInfo)
 define_list_operations(SectionInfo)
 define_list_operations(Symbol)
 
+static BaseSection *new_base_section(SectionKind kind);
 static RelocationInfo *new_relocation_info(SectionKind source, SectionKind destination, const char *body, Elf_Addr address, Elf_Sxword addend);
 static RelocationInfo *new_relocation_info_undefined(Symbol *symbol);
 static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr);
@@ -86,7 +101,7 @@ static void set_relocation_table
 );
 static void set_symbol_table_entries(void);
 static Elf_Section get_section_index(SectionKind kind);
-static ByteBufferType *get_section_body(SectionKind kind);
+static BaseSection *get_base_section(SectionKind kind);
 static ByteBufferType *get_rela_section_body(SectionKind kind);
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info);
 static void set_relocation_table_entries(size_t resolved_symbols);
@@ -96,7 +111,7 @@ static void classify_label_list(const List(Label) *label_list);
 static void fill_paddings(size_t pad_size, FILE *fp);
 static void generate_sections(const Program *program);
 static void generate_section_header_table_entries(void);
-static void generate_elf_header(void);
+static void generate_elf_header(Elf_Ehdr *ehdr);
 
 static const Elf_Word DEFAULT_SECTION_INFO = 0;
 
@@ -118,6 +133,7 @@ static Elf_Off e_shoff = 0;     // offset of section header table
 static Elf_Half e_shnum = 0;    // number of section header table entries
 static Elf_Half e_shstrndx = 0; // index of section ".shstrtab"
 
+static List(BaseSection) *base_section_list;  // list of base sections
 static List(SectionInfo) *section_info_list;  // list of section information
 static List(Label) *local_label_list;         // list of local labels
 static List(Label) *global_label_list;        // list of global labels
@@ -125,18 +141,12 @@ static List(Symbol) *symbol_list;             // list of symbols
 static List(Symbol) *unresolved_symbol_list;  // list of unresolved symbols
 static List(RelocationInfo) *reloc_info_list; // list of relocatable symbols
 
-static ByteBufferType text_body = {NULL, 0, 0};      // buffer for section ".text"
-static ByteBufferType data_body = {NULL, 0, 0};      // buffer for section ".data"
 static ByteBufferType rela_text_body = {NULL, 0, 0}; // buffer for section ".rela.text"
 static ByteBufferType symtab_body = {NULL, 0, 0};    // buffer for section ".symtab"
 static ByteBufferType strtab_body = {NULL, 0, 0};    // buffer for string containing names of symbols
 static ByteBufferType shstrtab_body = {NULL, 0, 0};  // buffer for string containing names of sections
 
-static size_t bss_size = 0; // size of section ".bss"
-
 static Elf_Word sh_name = 0; // index of string where a section name starts
-
-static Elf_Ehdr elf_header;
 
 
 /*
@@ -153,6 +163,19 @@ Symbol *new_symbol(const char *body, Elf_Addr address, Elf_Sxword addend)
     add_list_entry_tail(Symbol)(symbol_list, symbol);
 
     return symbol;
+}
+
+
+/*
+make a new base section
+*/
+static BaseSection *new_base_section(SectionKind kind)
+{
+    BaseSection *base_section = calloc(1, sizeof(BaseSection));
+    base_section->kind = kind;
+    add_list_entry_tail(BaseSection)(base_section_list, base_section);
+
+    return base_section;
 }
 
 
@@ -491,25 +514,22 @@ static Elf_Section get_section_index(SectionKind kind)
 
 
 /*
-get body of section
+get base section
 */
-static ByteBufferType *get_section_body(SectionKind kind)
+static BaseSection *get_base_section(SectionKind kind)
 {
-    switch(kind)
+    // search the existing base sections
+    for_each_entry(BaseSection, cursor, base_section_list)
     {
-    case SC_TEXT:
-        return &text_body;
-
-    case SC_DATA:
-        return &data_body;
-
-    case SC_BSS:
-        return NULL;
-
-    default:
-        assert(0);
-        return NULL;
+        BaseSection *base_section = get_element(BaseSection)(cursor);
+        if(base_section->kind == kind)
+        {
+            return base_section;
+        }
     }
+
+    // make a new base section
+    return new_base_section(kind);
 }
 
 
@@ -580,6 +600,46 @@ static void set_relocation_table_entries(size_t resolved_symbols)
 
 
 /*
+update section
+*/
+static void update_section(Statement *statement, BaseSection *base_section)
+{
+    size_t section_size = 0;
+    statement->address = base_section->size;
+    switch(statement->kind)
+    {
+    case ST_INSTRUCTION:
+        {
+        ByteBufferType *body = &base_section->body;
+        Operation *operation = statement->operation;
+        generate_operation(operation, body);
+        section_size = body->size;
+        }
+        break;
+
+    case ST_VALUE:
+        {
+        ByteBufferType *body = &base_section->body;
+        Data *data = statement->data;
+        append_bytes((char *)&data->value, data->size, body);
+        section_size = body->size;
+        }
+        break;
+
+    case ST_ZERO:
+        section_size = base_section->size + statement->bss->size;
+        break;
+
+    default:
+        assert(0);
+        break;
+    }
+
+    base_section->size = section_size;
+}
+
+
+/*
 generate statement list
 */
 static void generate_statement_list(const List(Statement) *statement_list)
@@ -587,33 +647,8 @@ static void generate_statement_list(const List(Statement) *statement_list)
     for_each_entry(Statement, cursor, statement_list)
     {
         Statement *statement = get_element(Statement)(cursor);
-        switch (statement->kind)
-        {
-        case ST_INSTRUCTION:
-        {
-            ByteBufferType *body = get_section_body(statement->section);
-            statement->address = body->size;
-            generate_operation(statement->operation, body);
-        }
-            break;
-
-        case ST_VALUE:
-        {
-            ByteBufferType *body = get_section_body(statement->section);
-            statement->address = body->size;
-            generate_data(statement->data, body);
-        }
-            break;
-
-        case ST_ZERO:
-            statement->address = bss_size;
-            bss_size += statement->bss->size;
-            break;
-
-        default:
-            assert(0);
-            break;
-        }
+        BaseSection *base_section = get_base_section(statement->section);
+        update_section(statement, base_section);
     }
 }
 
@@ -634,7 +669,7 @@ static void resolve_symbols(const List(Label) *label_list)
                 switch(label->statement->section)
                 {
                 case SC_TEXT:
-                    *(uint32_t *)&text_body.body[symbol->address] = label->statement->address - (symbol->address + sizeof(uint32_t));
+                    *(uint32_t *)&get_base_section(SC_TEXT)->body.body[symbol->address] = label->statement->address - (symbol->address + sizeof(uint32_t));
                     break;
 
                 case SC_DATA:
@@ -725,17 +760,18 @@ static void generate_section_header_table_entries(void)
     new_section_info(NULL, shdr_null);
 
     // .text section
+    BaseSection *base_section_text = get_base_section(SC_TEXT);
     Elf_Shdr *shdr_text = set_section_header_table(
         ".text",
         SHT_PROGBITS,
         SHF_ALLOC | SHF_EXECINSTR,
         0,
-        text_body.size,
+        base_section_text->size,
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
         0);
-    new_section_info(&text_body, shdr_text);
+    new_section_info(&base_section_text->body, shdr_text);
 
     // .rela.text section
     Elf_Shdr *shdr_rela_text = set_section_header_table(
@@ -751,25 +787,27 @@ static void generate_section_header_table_entries(void)
     new_section_info(&rela_text_body, shdr_rela_text);
 
     // .data section
+    BaseSection *base_section_data = get_base_section(SC_DATA);
     Elf_Shdr *shdr_data = set_section_header_table(
         ".data",
         SHT_PROGBITS,
         SHF_WRITE | SHF_ALLOC,
         0,
-        data_body.size,
+        base_section_data->size,
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
         0);
-    new_section_info(&data_body, shdr_data);
+    new_section_info(&base_section_data->body, shdr_data);
 
     // .bss section
+    BaseSection *base_section_bss = get_base_section(SC_BSS);
     Elf_Shdr *shdr_bss = set_section_header_table(
         ".bss",
         SHT_NOBITS,
         SHF_WRITE | SHF_ALLOC,
         0,
-        bss_size,
+        base_section_bss->size,
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
@@ -820,7 +858,7 @@ static void generate_section_header_table_entries(void)
 /*
 generate ELF header
 */
-static void generate_elf_header(void)
+static void generate_elf_header(Elf_Ehdr *ehdr)
 {
     e_shoff = align_to(e_shoff, sizeof(Elf_Shdr));
     e_shstrndx--;
@@ -828,7 +866,7 @@ static void generate_elf_header(void)
         e_shoff,
         e_shnum,
         e_shstrndx,
-        &elf_header
+        ehdr
     );
 }
 
@@ -839,6 +877,7 @@ generate an object file
 void generate(const char *output_file, const Program *program)
 {
     // initialize lists
+    base_section_list = new_list(BaseSection)();
     section_info_list = new_list(SectionInfo)();
     symbol_list = new_list(Symbol)();
     local_label_list = new_list(Label)();
@@ -849,15 +888,16 @@ void generate(const char *output_file, const Program *program)
     // generate contents
     generate_sections(program);
     generate_section_header_table_entries();
-    generate_elf_header();
 
     // output an object file
     FILE *fp = fopen(output_file, "wb");
 
-    // ELF header
+    // output ELF header
+    Elf_Ehdr elf_header;
+    generate_elf_header(&elf_header);
     fwrite(&elf_header, sizeof(Elf_Ehdr), 1, fp);
 
-    // sections
+    // output sections
     size_t end_pos = sizeof(Elf_Ehdr);
     for_each_entry(SectionInfo, cursor, section_info_list)
     {
@@ -875,7 +915,7 @@ void generate(const char *output_file, const Program *program)
         }
     }
 
-    // section header table entries
+    // output section header table entries
     fill_paddings(elf_header.e_shoff - end_pos, fp);
     for_each_entry(SectionInfo, cursor, section_info_list)
     {

@@ -169,7 +169,6 @@ extern const size_t MNEMONIC_INFO_LIST_SIZE;
 extern const RegisterInfo register_info_list[];
 extern const size_t REGISTER_INFO_LIST_SIZE;
 
-void generate_data(const Data *data, ByteBufferType *data_body);
 void generate_operation(const Operation *operation, ByteBufferType *text_body);
 
 #endif /* !__PROCESSOR_H__ */
