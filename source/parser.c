@@ -42,8 +42,6 @@ static bool consume_size_specifier(OperandKind *kind);
 static List(Statement) *statement_list = NULL; // list of statements
 static List(Label) *label_list = NULL; // list of labels
 
-static SectionKind current_section = SC_UND;
-
 
 /*
 construct program
@@ -52,6 +50,7 @@ void construct(Program *prog)
 {
     statement_list = new_list(Statement)();
     label_list = new_list(Label)();
+    initialize_base_section();
 
     program();
     prog->statement_list = statement_list;
@@ -121,7 +120,7 @@ static void parse_directive(Label *label)
 {
     if(consume_reserved("bss"))
     {
-        current_section = SC_BSS;
+        set_current_section(SC_BSS);
     }
     else if(consume_reserved("byte"))
     {
@@ -129,7 +128,7 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved("data"))
     {
-        current_section = SC_DATA;
+        set_current_section(SC_DATA);
     }
     else if(consume_reserved("globl"))
     {
@@ -150,7 +149,7 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved("text"))
     {
-        current_section = SC_TEXT;
+        set_current_section(SC_TEXT);
     }
     else if(consume_reserved("word"))
     {
@@ -299,7 +298,7 @@ static Statement *new_statement(StatementKind kind, Label *label)
 {
     Statement *statement = calloc(1, sizeof(Statement));
     statement->kind = kind;
-    statement->section = current_section;
+    statement->section = get_current_section();
 
     // update list of statements
     add_list_entry_tail(Statement)(statement_list, statement);

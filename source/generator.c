@@ -9,21 +9,10 @@
 #include "identifier.h"
 #include "parser.h"
 #include "processor.h"
+#include "section.h"
 
-typedef struct BaseSection BaseSection;
 typedef struct RelocationInfo RelocationInfo;
 typedef struct SectionInfo SectionInfo;
-
-// structure for base section
-struct BaseSection
-{
-    SectionKind kind;         // kind of section
-    size_t index;             // index of section
-    char *name;               // name of section
-    size_t size;              // size of section
-    ByteBufferType body;      // body of section
-    ByteBufferType rela_body; // body of relocation section
-};
 
 struct Symbol
 {
@@ -51,16 +40,13 @@ struct SectionInfo
 
 
 #include "list.h"
-define_list(BaseSection)
 define_list(RelocationInfo)
 define_list(SectionInfo)
 define_list(Symbol)
-define_list_operations(BaseSection)
 define_list_operations(RelocationInfo)
 define_list_operations(SectionInfo)
 define_list_operations(Symbol)
 
-static BaseSection *new_base_section(SectionKind kind);
 static RelocationInfo *new_relocation_info(SectionKind source, SectionKind destination, const char *body, Elf_Addr address, Elf_Sxword addend);
 static RelocationInfo *new_relocation_info_undefined(Symbol *symbol);
 static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr);
@@ -101,8 +87,6 @@ static void set_relocation_table
 );
 static void set_symbol_table_entries(void);
 static Elf_Section get_section_index(SectionKind kind);
-static BaseSection *get_base_section(SectionKind kind);
-static ByteBufferType *get_rela_section_body(SectionKind kind);
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info);
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_statement_list(const List(Statement) *statement_list);
@@ -133,7 +117,6 @@ static Elf_Off e_shoff = 0;     // offset of section header table
 static Elf_Half e_shnum = 0;    // number of section header table entries
 static Elf_Half e_shstrndx = 0; // index of section ".shstrtab"
 
-static List(BaseSection) *base_section_list;  // list of base sections
 static List(SectionInfo) *section_info_list;  // list of section information
 static List(Label) *local_label_list;         // list of local labels
 static List(Label) *global_label_list;        // list of global labels
@@ -141,7 +124,6 @@ static List(Symbol) *symbol_list;             // list of symbols
 static List(Symbol) *unresolved_symbol_list;  // list of unresolved symbols
 static List(RelocationInfo) *reloc_info_list; // list of relocatable symbols
 
-static ByteBufferType rela_text_body = {NULL, 0, 0}; // buffer for section ".rela.text"
 static ByteBufferType symtab_body = {NULL, 0, 0};    // buffer for section ".symtab"
 static ByteBufferType strtab_body = {NULL, 0, 0};    // buffer for string containing names of symbols
 static ByteBufferType shstrtab_body = {NULL, 0, 0};  // buffer for string containing names of sections
@@ -163,19 +145,6 @@ Symbol *new_symbol(const char *body, Elf_Addr address, Elf_Sxword addend)
     add_list_entry_tail(Symbol)(symbol_list, symbol);
 
     return symbol;
-}
-
-
-/*
-make a new base section
-*/
-static BaseSection *new_base_section(SectionKind kind)
-{
-    BaseSection *base_section = calloc(1, sizeof(BaseSection));
-    base_section->kind = kind;
-    add_list_entry_tail(BaseSection)(base_section_list, base_section);
-
-    return base_section;
 }
 
 
@@ -514,43 +483,6 @@ static Elf_Section get_section_index(SectionKind kind)
 
 
 /*
-get base section
-*/
-static BaseSection *get_base_section(SectionKind kind)
-{
-    // search the existing base sections
-    for_each_entry(BaseSection, cursor, base_section_list)
-    {
-        BaseSection *base_section = get_element(BaseSection)(cursor);
-        if(base_section->kind == kind)
-        {
-            return base_section;
-        }
-    }
-
-    // make a new base section
-    return new_base_section(kind);
-}
-
-
-/*
-get body of relocation section
-*/
-static ByteBufferType *get_rela_section_body(SectionKind kind)
-{
-    switch(kind)
-    {
-    case SC_TEXT:
-        return &rela_text_body;
-
-    default:
-        assert(0);
-        return NULL;
-    }
-}
-
-
-/*
 get index of symbol table entry for relocatable symbol
 */
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info)
@@ -593,7 +525,7 @@ static void set_relocation_table_entries(size_t resolved_symbols)
             reloc_info->address,
             ELF_R_INFO(get_symtab_index(resolved_symbols, reloc_info), R_X86_64_PC32),
             reloc_info->addend,
-            get_rela_section_body(reloc_info->source)
+            &get_base_section(reloc_info->source)->rela_body
         );
     }
 }
@@ -779,12 +711,12 @@ static void generate_section_header_table_entries(void)
         SHT_RELA,
         SHF_INFO_LINK,
         0,
-        rela_text_body.size,
+        base_section_text->rela_body.size,
         SHNDX_SYMTAB, // sh_link holds section header index of the associated symbol table (i.e. .symtab section)
         SHNDX_TEXT, // sh_info holds section header index of the section to which the relocation applies (i.e. .text section)
         RELA_SECTION_ALIGNMENT,
         sizeof(Elf_Rela));
-    new_section_info(&rela_text_body, shdr_rela_text);
+    new_section_info(&base_section_text->rela_body, shdr_rela_text);
 
     // .data section
     BaseSection *base_section_data = get_base_section(SC_DATA);
@@ -877,7 +809,6 @@ generate an object file
 void generate(const char *output_file, const Program *program)
 {
     // initialize lists
-    base_section_list = new_list(BaseSection)();
     section_info_list = new_list(SectionInfo)();
     symbol_list = new_list(Symbol)();
     local_label_list = new_list(Label)();
