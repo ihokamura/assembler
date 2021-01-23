@@ -10,11 +10,8 @@
 #include "tokenizer.h"
 
 #include "list.h"
-define_list_operations(Bss)
-define_list_operations(Data)
 define_list_operations(Statement)
 define_list_operations(Operand)
-define_list_operations(Operation)
 define_list_operations(Label)
 
 // function prototype
@@ -24,15 +21,15 @@ static void parse_directive(Label *label);
 static void parse_directive_size(size_t size, Label *label);
 static void parse_directive_zero(Label *label);
 static Label *parse_label(const Token *token);
-static Operation *parse_operation(const Token *token);
+static Operation *parse_operation(const Token *token, Label *label);
 static const MnemonicInfo *parse_mnemonic(const Token *token);
 static List(Operand) *parse_operands(void);
 static Operand *parse_operand(void);
-static Statement *new_statement(StatementKind kind);
+static Statement *new_statement(StatementKind kind, Label *label);
 static Label *new_label(LabelKind kind, const char *body);
-static Bss *new_bss(size_t size);
-static Data *new_data(size_t size, uintmax_t value);
-static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands);
+static Bss *new_bss(size_t size, Label *label);
+static Data *new_data(size_t size, uintmax_t value, Label *label);
+static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, Label *label);
 static Operand *new_operand(OperandKind kind);
 static Operand *new_operand_immediate(uintmax_t immediate);
 static Operand *new_operand_register(const Token *token);
@@ -87,7 +84,7 @@ statement ::= (label ":")? directive | operation
 static void statement(void)
 {
     Token *token;
-    Label *label;
+    Label *label = NULL;
     if(consume_token(TK_IDENTIFIER, &token))
     {
         label = parse_label(token);
@@ -100,8 +97,7 @@ static void statement(void)
     }
     else if(consume_token(TK_MNEMONIC, &token))
     {
-        Operation *op = parse_operation(token);
-        label->operation = op;
+        parse_operation(token, label);
     }
 }
 
@@ -176,7 +172,7 @@ parse directive for size
 */
 static void parse_directive_size(size_t size, Label *label)
 {
-    label->data = new_data(size, expect_immediate()->value);
+    new_data(size, expect_immediate()->value, label);
 }
 
 
@@ -185,7 +181,7 @@ parse directive for zero
 */
 static void parse_directive_zero(Label *label)
 {
-    label->bss = new_bss(expect_immediate()->value);
+    new_bss(expect_immediate()->value, label);
 }
 
 
@@ -216,11 +212,11 @@ parse an operation
 operation ::= mnemonic operands?
 ```
 */
-static Operation *parse_operation(const Token *token)
+static Operation *parse_operation(const Token *token, Label *label)
 {
     const MnemonicInfo *map = parse_mnemonic(token);
 
-    return new_operation(map->kind, map->take_operands ? parse_operands() : NULL);
+    return new_operation(map->kind, map->take_operands ? parse_operands() : NULL, label);
 }
 
 
@@ -299,13 +295,20 @@ static Operand *parse_operand(void)
 /*
 make a new statement
 */
-static Statement *new_statement(StatementKind kind)
+static Statement *new_statement(StatementKind kind, Label *label)
 {
     Statement *statement = calloc(1, sizeof(Statement));
     statement->kind = kind;
+    statement->section = current_section;
 
     // update list of statements
     add_list_entry_tail(Statement)(statement_list, statement);
+
+    // associate statement with label
+    if(label != NULL)
+    {
+        label->statement = statement;
+    }
 
     return statement;
 }
@@ -316,29 +319,27 @@ make a new label
 */
 static Label *new_label(LabelKind kind, const char *body)
 {
-    Label *lab = calloc(1, sizeof(Label));
-    lab->kind = kind;
-    lab->section = current_section;
-    lab->body = body;
-    lab->operation = NULL;
-    lab->data = NULL;
+    Label *label = calloc(1, sizeof(Label));
+    label->kind = kind;
+    label->body = body;
+    label->statement = NULL;
 
     // update list of symbols
-    add_list_entry_tail(Label)(label_list, lab);
+    add_list_entry_tail(Label)(label_list, label);
 
-    return lab;
+    return label;
 }
 
 
 /*
 make a new bss
 */
-static Bss *new_bss(size_t size)
+static Bss *new_bss(size_t size, Label *label)
 {
     Bss *bss = calloc(1, sizeof(Bss));
     bss->size = size;
 
-    Statement *statement = new_statement(ST_ZERO);
+    Statement *statement = new_statement(ST_ZERO, label);
     statement->bss = bss;
 
     return bss;
@@ -348,13 +349,13 @@ static Bss *new_bss(size_t size)
 /*
 make a new data
 */
-static Data *new_data(size_t size, uintmax_t value)
+static Data *new_data(size_t size, uintmax_t value, Label *label)
 {
     Data *data = calloc(1, sizeof(Data));
     data->size = size;
     data->value = value;
 
-    Statement *statement = new_statement(ST_VALUE);
+    Statement *statement = new_statement(ST_VALUE, label);
     statement->data = data;
 
     return data;
@@ -364,13 +365,13 @@ static Data *new_data(size_t size, uintmax_t value)
 /*
 make a new operation
 */
-static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands)
+static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, Label *label)
 {
     Operation *operation = calloc(1, sizeof(Operation));
     operation->kind = kind;
     operation->operands = operands;
 
-    Statement *statement = new_statement(ST_INSTRUCTION);
+    Statement *statement = new_statement(ST_INSTRUCTION, label);
     statement->operation = operation;
 
     return operation;

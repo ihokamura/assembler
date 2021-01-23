@@ -22,7 +22,6 @@ typedef struct RegisterInfo RegisterInfo;
 
 #include "list.h"
 define_list(Operand)
-define_list(Operation)
 
 // kind of mnemonic
 enum MnemonicKind
@@ -154,7 +153,6 @@ struct Operation
 {
     MnemonicKind kind;             // kind of operation
     const List(Operand) *operands; // list of operands
-    Elf_Addr address;              // address of operation
 };
 
 // structure for mapping from string to kind of register

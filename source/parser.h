@@ -9,12 +9,22 @@
 #include "processor.h"
 #include "section.h"
 
+typedef enum LabelKind LabelKind;
 typedef enum StatementKind StatementKind;
+typedef struct Label Label;
 typedef struct Statement Statement;
 typedef struct Program Program;
 
 #include "list.h"
+define_list(Label)
 define_list(Statement)
+
+// kind of label
+enum LabelKind
+{
+    LB_GLOBAL, // global label
+    LB_LOCAL,  // local label
+};
 
 // kind of statement
 enum StatementKind
@@ -24,10 +34,20 @@ enum StatementKind
     ST_ZERO,        // .zero directive
 };
 
+// structure for label
+struct Label
+{
+    LabelKind kind;             // kind of label
+    const char *body;           // contents of label
+    const Statement *statement; // statement marked by the label
+};
+
 // structure for statement
 struct Statement
 {
     StatementKind kind;       // kind of statement
+    SectionKind section;      // section of statement
+    Elf_Addr address;         // address of statement
     union
     {
         Operation *operation; // instruction

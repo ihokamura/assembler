@@ -84,8 +84,8 @@ static void set_relocation_table
     Elf_Sxword r_addend
 );
 static void set_symbol_table_entries(void);
-static Elf_Addr get_label_address(const Label *label);
 static Elf_Section get_section_index(SectionKind kind);
+static ByteBufferType *get_section_body(SectionKind kind);
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info);
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_statement_list(const List(Statement) *statement_list);
@@ -416,8 +416,8 @@ static void set_symbol_table_entries(void)
             st_name,
             ELF_ST_INFO(STB_LOCAL, STT_NOTYPE),
             0,
-            get_section_index(label->section),
-            get_label_address(label),
+            get_section_index(label->statement->section),
+            label->statement->address,
             0
         );
         append_bytes(body, strlen(body) + 1, &strtab_body);
@@ -433,8 +433,8 @@ static void set_symbol_table_entries(void)
             st_name,
             ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
             0,
-            get_section_index(label->section),
-            get_label_address(label),
+            get_section_index(label->statement->section),
+            label->statement->address,
             0
         );
         append_bytes(body, strlen(body) + 1, &strtab_body);
@@ -461,29 +461,6 @@ static void set_symbol_table_entries(void)
 
 
 /*
-get address of label
-*/
-static Elf_Addr get_label_address(const Label *label)
-{
-    switch(label->section)
-    {
-    case SC_TEXT:
-        return label->operation->address;
-
-    case SC_DATA:
-        return label->data->address;
-
-    case SC_BSS:
-        return label->bss->address;
-
-    default:
-        assert(0);
-        return 0;
-    }
-}
-
-
-/*
 get index of section
 */
 static Elf_Section get_section_index(SectionKind kind)
@@ -502,6 +479,29 @@ static Elf_Section get_section_index(SectionKind kind)
     default:
         assert(0);
         return 0;
+    }
+}
+
+
+/*
+get body of section
+*/
+static ByteBufferType *get_section_body(SectionKind kind)
+{
+    switch(kind)
+    {
+    case SC_TEXT:
+        return &text_body;
+
+    case SC_DATA:
+        return &data_body;
+
+    case SC_BSS:
+        return NULL;
+
+    default:
+        assert(0);
+        return NULL;
     }
 }
 
@@ -566,26 +566,23 @@ static void generate_statement_list(const List(Statement) *statement_list)
         {
         case ST_INSTRUCTION:
         {
-            Operation *operation = statement->operation;
-            operation->address = text_body.size;
-            generate_operation(operation, &text_body);
+            ByteBufferType *body = get_section_body(statement->section);
+            statement->address = body->size;
+            generate_operation(statement->operation, body);
         }
             break;
 
         case ST_VALUE:
         {
-            Data *data = statement->data;
-            data->address = data_body.size;
-            generate_data(data, &data_body);
+            ByteBufferType *body = get_section_body(statement->section);
+            statement->address = body->size;
+            generate_data(statement->data, body);
         }
             break;
 
         case ST_ZERO:
-        {
-            Bss *bss = statement->bss;
-            bss->address = bss_size;
-            bss_size += bss->size;
-        }
+            statement->address = bss_size;
+            bss_size += statement->bss->size;
             break;
 
         default:
@@ -609,18 +606,15 @@ static void resolve_symbols(const List(Label) *label_list)
             Label *label = get_element(Label)(label_cursor);
             if(strcmp(symbol->body, label->body) == 0)
             {
-                switch(label->section)
+                switch(label->statement->section)
                 {
                 case SC_TEXT:
-                    *(uint32_t *)&text_body.body[symbol->address] = label->operation->address - (symbol->address + sizeof(uint32_t));
+                    *(uint32_t *)&text_body.body[symbol->address] = label->statement->address - (symbol->address + sizeof(uint32_t));
                     break;
 
                 case SC_DATA:
-                    new_relocation_info(SC_DATA, NULL, symbol->address, symbol->addend + label->data->address);
-                    break;
-
                 case SC_BSS:
-                    new_relocation_info(SC_BSS, NULL, symbol->address, symbol->addend + label->bss->address);
+                    new_relocation_info(label->statement->section, NULL, symbol->address, symbol->addend + label->statement->address);
                     break;
 
                 default:
