@@ -24,16 +24,17 @@ struct Symbol
 
 struct RelocationInfo
 {
-    SectionKind section; // section of relocation target
-    const char *body;    // label body (only for SC_UND)
-    Elf_Addr address;    // address to be replaced
-    Elf_Sxword addend;   // addend
+    SectionKind source;      // section of relocation source
+    SectionKind destination; // section of relocation destination
+    const char *body;        // label body
+    Elf_Addr address;        // address to be replaced
+    Elf_Sxword addend;       // addend
 };
 
 struct SectionInfo
 {
-    ByteBufferType *body; // section body
-    Elf_Shdr shdr;        // section header table entry
+    const ByteBufferType *body; // section body
+    const Elf_Shdr *shdr;       // section header table entry
 };
 
 
@@ -45,7 +46,7 @@ define_list_operations(RelocationInfo)
 define_list_operations(SectionInfo)
 define_list_operations(Symbol)
 
-static RelocationInfo *new_relocation_info(SectionKind section, const char *body, Elf_Addr address, Elf_Sxword addend);
+static RelocationInfo *new_relocation_info(SectionKind source, SectionKind destination, const char *body, Elf_Addr address, Elf_Sxword addend);
 static RelocationInfo *new_relocation_info_undefined(Symbol *symbol);
 static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr);
 static void set_elf_header
@@ -55,7 +56,7 @@ static void set_elf_header
     Elf_Half e_shstrndx,
     Elf_Ehdr *ehdr
 );
-static void set_section_header_table
+static Elf_Shdr *set_section_header_table
 (
     const char *section_name,
     Elf_Word sh_type,
@@ -65,8 +66,7 @@ static void set_section_header_table
     Elf_Word sh_link,
     Elf_Word sh_info,
     Elf_Xword sh_addralign,
-    Elf_Xword sh_entsize,
-    Elf_Shdr *shdr
+    Elf_Xword sh_entsize
 );
 static void set_symbol_table
 (
@@ -81,11 +81,13 @@ static void set_relocation_table
 (
     Elf_Addr r_offset,
     Elf_Xword r_info,
-    Elf_Sxword r_addend
+    Elf_Sxword r_addend,
+    ByteBufferType *rela_body
 );
 static void set_symbol_table_entries(void);
 static Elf_Section get_section_index(SectionKind kind);
 static ByteBufferType *get_section_body(SectionKind kind);
+static ByteBufferType *get_rela_section_body(SectionKind kind);
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info);
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_statement_list(const List(Statement) *statement_list);
@@ -157,10 +159,11 @@ Symbol *new_symbol(const char *body, Elf_Addr address, Elf_Sxword addend)
 /*
 make a new relocatable symbol information
 */
-static RelocationInfo *new_relocation_info(SectionKind section, const char *body, Elf_Addr address, Elf_Sxword addend)
+static RelocationInfo *new_relocation_info(SectionKind source, SectionKind destination, const char *body, Elf_Addr address, Elf_Sxword addend)
 {
     RelocationInfo *reloc_info = calloc(1, sizeof(RelocationInfo));
-    reloc_info->section = section;
+    reloc_info->source = source;
+    reloc_info->destination = destination;
     reloc_info->body = body;
     reloc_info->address = address;
     reloc_info->addend = addend;
@@ -176,7 +179,7 @@ make a new relocatable symbol information for undefined section
 static RelocationInfo *new_relocation_info_undefined(Symbol *symbol)
 {
     // make a new relocation information
-    RelocationInfo *reloc_info = new_relocation_info(SC_UND, symbol->body, symbol->address, symbol->addend);
+    RelocationInfo *reloc_info = new_relocation_info(symbol->section, SC_UND, symbol->body, symbol->address, symbol->addend);
 
     // serch the existing symbols to avoid duplication
     bool found = false;
@@ -206,7 +209,7 @@ static SectionInfo *new_section_info(ByteBufferType *body, const Elf_Shdr *shdr)
 {
     SectionInfo *section_info = calloc(1, sizeof(SectionInfo));
     section_info->body = body;
-    section_info->shdr = *shdr;
+    section_info->shdr = shdr;
     add_list_entry_tail(SectionInfo)(section_info_list, section_info);
 
     return section_info;
@@ -254,7 +257,7 @@ static void set_elf_header
 /*
 set members of a section header table entry
 */
-static void set_section_header_table
+static Elf_Shdr *set_section_header_table
 (
     const char *section_name,
     Elf_Word sh_type,
@@ -264,10 +267,11 @@ static void set_section_header_table
     Elf_Word sh_link,
     Elf_Word sh_info,
     Elf_Xword sh_addralign,
-    Elf_Xword sh_entsize,
-    Elf_Shdr *shdr
+    Elf_Xword sh_entsize
 )
 {
+    Elf_Shdr *shdr = calloc(1, sizeof(Elf_Shdr));
+
     // set offset
     Elf_Off sh_offset;
     if(e_shoff == 0)
@@ -305,6 +309,8 @@ static void set_section_header_table
     size_t size = strlen(section_name) + 1;
     append_bytes(section_name, size, &shstrtab_body);
     sh_name += size;
+
+    return shdr;
 }
 
 
@@ -343,7 +349,8 @@ static void set_relocation_table
 (
     Elf_Addr r_offset,
     Elf_Xword r_info,
-    Elf_Sxword r_addend
+    Elf_Sxword r_addend,
+    ByteBufferType *rela_body
 )
 {
     Elf_Rela rela;
@@ -354,7 +361,7 @@ static void set_relocation_table
     rela.r_addend = r_addend;
 
     // update buffer
-    append_bytes((char *)&rela, sizeof(rela), &rela_text_body);
+    append_bytes((char *)&rela, sizeof(rela), rela_body);
 }
 
 
@@ -507,15 +514,32 @@ static ByteBufferType *get_section_body(SectionKind kind)
 
 
 /*
+get body of relocation section
+*/
+static ByteBufferType *get_rela_section_body(SectionKind kind)
+{
+    switch(kind)
+    {
+    case SC_TEXT:
+        return &rela_text_body;
+
+    default:
+        assert(0);
+        return NULL;
+    }
+}
+
+
+/*
 get index of symbol table entry for relocatable symbol
 */
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info)
 {
-    if(reloc_info->section == SC_DATA)
+    if(reloc_info->destination == SC_DATA)
     {
         return SYMTAB_INDEX_DATA;
     }
-    else if(reloc_info->section == SC_BSS)
+    else if(reloc_info->destination == SC_BSS)
     {
         return SYMTAB_INDEX_BSS;
     }
@@ -548,7 +572,8 @@ static void set_relocation_table_entries(size_t resolved_symbols)
         set_relocation_table(
             reloc_info->address,
             ELF_R_INFO(get_symtab_index(resolved_symbols, reloc_info), R_X86_64_PC32),
-            reloc_info->addend
+            reloc_info->addend,
+            get_rela_section_body(reloc_info->source)
         );
     }
 }
@@ -614,7 +639,7 @@ static void resolve_symbols(const List(Label) *label_list)
 
                 case SC_DATA:
                 case SC_BSS:
-                    new_relocation_info(label->statement->section, NULL, symbol->address, symbol->addend + label->statement->address);
+                    new_relocation_info(symbol->section, label->statement->section, NULL, symbol->address, symbol->addend + label->statement->address);
                     break;
 
                 default:
@@ -687,8 +712,7 @@ generate section header table entries
 static void generate_section_header_table_entries(void)
 {
    // undefined section
-    Elf_Shdr shdr_null;
-    set_section_header_table(
+    Elf_Shdr *shdr_null = set_section_header_table(
         "",
         SHT_NULL,
         0,
@@ -697,13 +721,11 @@ static void generate_section_header_table_entries(void)
         SHN_UNDEF,
         0,
         0,
-        0,
-        &shdr_null);
-    new_section_info(NULL, &shdr_null);
+        0);
+    new_section_info(NULL, shdr_null);
 
     // .text section
-    Elf_Shdr shdr_text;
-    set_section_header_table(
+    Elf_Shdr *shdr_text = set_section_header_table(
         ".text",
         SHT_PROGBITS,
         SHF_ALLOC | SHF_EXECINSTR,
@@ -712,13 +734,11 @@ static void generate_section_header_table_entries(void)
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
-        0,
-        &shdr_text);
-    new_section_info(&text_body, &shdr_text);
+        0);
+    new_section_info(&text_body, shdr_text);
 
     // .rela.text section
-    Elf_Shdr shdr_rela_text;
-    set_section_header_table(
+    Elf_Shdr *shdr_rela_text = set_section_header_table(
         ".rela.text",
         SHT_RELA,
         SHF_INFO_LINK,
@@ -727,13 +747,11 @@ static void generate_section_header_table_entries(void)
         SHNDX_SYMTAB, // sh_link holds section header index of the associated symbol table (i.e. .symtab section)
         SHNDX_TEXT, // sh_info holds section header index of the section to which the relocation applies (i.e. .text section)
         RELA_SECTION_ALIGNMENT,
-        sizeof(Elf_Rela),
-        &shdr_rela_text);
-    new_section_info(&rela_text_body, &shdr_rela_text);
+        sizeof(Elf_Rela));
+    new_section_info(&rela_text_body, shdr_rela_text);
 
     // .data section
-    Elf_Shdr shdr_data;
-    set_section_header_table(
+    Elf_Shdr *shdr_data = set_section_header_table(
         ".data",
         SHT_PROGBITS,
         SHF_WRITE | SHF_ALLOC,
@@ -742,13 +760,11 @@ static void generate_section_header_table_entries(void)
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
-        0,
-        &shdr_data);
-    new_section_info(&data_body, &shdr_data);
+        0);
+    new_section_info(&data_body, shdr_data);
 
     // .bss section
-    Elf_Shdr shdr_bss;
-    set_section_header_table(
+    Elf_Shdr *shdr_bss = set_section_header_table(
         ".bss",
         SHT_NOBITS,
         SHF_WRITE | SHF_ALLOC,
@@ -757,13 +773,11 @@ static void generate_section_header_table_entries(void)
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
-        0,
-        &shdr_bss);
-    new_section_info(NULL, &shdr_bss);
+        0);
+    new_section_info(NULL, shdr_bss);
 
     // .symtab section
-    Elf_Shdr shdr_symtab;
-    set_section_header_table(
+    Elf_Shdr *shdr_symtab = set_section_header_table(
         ".symtab",
         SHT_SYMTAB,
         0,
@@ -772,13 +786,11 @@ static void generate_section_header_table_entries(void)
         SHNDX_STRTAB, // sh_link holds section header index of the associated string table (i.e. .strtab section)
         RESERVED_SYMTAB_ENTRIES + get_length(Label)(local_label_list), // sh_info holds one greater than the symbol table index of the laxt local symbol
         SYMTAB_SECTION_ALIGNMENT,
-        sizeof(Elf_Sym),
-        &shdr_symtab);
-    new_section_info(&symtab_body, &shdr_symtab);
+        sizeof(Elf_Sym));
+    new_section_info(&symtab_body, shdr_symtab);
 
     // .strtab section
-    Elf_Shdr shdr_strtab;
-    set_section_header_table(
+    Elf_Shdr *shdr_strtab = set_section_header_table(
         ".strtab",
         SHT_STRTAB,
         0,
@@ -787,13 +799,11 @@ static void generate_section_header_table_entries(void)
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
-        0,
-        &shdr_strtab);
-    new_section_info(&strtab_body, &shdr_strtab);
+        0);
+    new_section_info(&strtab_body, shdr_strtab);
 
     // .shstrtab section
-    Elf_Shdr shdr_shstrtab;
-    set_section_header_table(
+    Elf_Shdr *shdr_shstrtab = set_section_header_table(
         ".shstrtab",
         SHT_STRTAB,
         0,
@@ -802,9 +812,8 @@ static void generate_section_header_table_entries(void)
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,
-        0,
-        &shdr_shstrtab);
-    new_section_info(&shstrtab_body, &shdr_shstrtab);
+        0);
+    new_section_info(&shstrtab_body, shdr_shstrtab);
 }
 
 
@@ -853,10 +862,10 @@ void generate(const char *output_file, const Program *program)
     for_each_entry(SectionInfo, cursor, section_info_list)
     {
         SectionInfo *section_info = get_element(SectionInfo)(cursor);
-        size_t size = section_info->shdr.sh_size;
+        size_t size = section_info->shdr->sh_size;
         if((section_info->body != NULL) && (size > 0))
         {
-            size_t pad_size = section_info->shdr.sh_offset - end_pos;
+            size_t pad_size = section_info->shdr->sh_offset - end_pos;
             fill_paddings(pad_size, fp);
 
             char *body = section_info->body->body;
@@ -871,7 +880,7 @@ void generate(const char *output_file, const Program *program)
     for_each_entry(SectionInfo, cursor, section_info_list)
     {
         SectionInfo *section_info = get_element(SectionInfo)(cursor);
-        Elf_Shdr *shdr = &section_info->shdr;
+        const Elf_Shdr *shdr = section_info->shdr;
         fwrite(shdr, sizeof(Elf_Shdr), 1, fp);
     }
 
