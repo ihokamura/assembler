@@ -88,9 +88,7 @@ static Elf_Addr get_label_address(const Label *label);
 static Elf_Section get_section_index(SectionKind kind);
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info);
 static void set_relocation_table_entries(size_t resolved_symbols);
-static void generate_operation_list(const List(Operation) *operation_list);
-static void generate_data_list(const List(Data) *data_list);
-static void generate_bss_list(const List(Bss) *bss_list);
+static void generate_statement_list(const List(Statement) *statement_list);
 static void resolve_symbols(const List(Label) *label_list);
 static void classify_label_list(const List(Label) *label_list);
 static void fill_paddings(size_t pad_size, FILE *fp);
@@ -557,46 +555,43 @@ static void set_relocation_table_entries(size_t resolved_symbols)
 
 
 /*
-generate operation list
+generate statement list
 */
-static void generate_operation_list(const List(Operation) *operation_list)
+static void generate_statement_list(const List(Statement) *statement_list)
 {
-    for_each_entry(Operation, cursor, operation_list)
+    for_each_entry(Statement, cursor, statement_list)
     {
-        Operation *operation = get_element(Operation)(cursor);
-        operation->address = text_body.size;
+        Statement *statement = get_element(Statement)(cursor);
+        switch (statement->kind)
+        {
+        case ST_INSTRUCTION:
+        {
+            Operation *operation = statement->operation;
+            operation->address = text_body.size;
+            generate_operation(operation, &text_body);
+        }
+            break;
 
-        generate_operation(operation, &text_body);
-    }
-}
+        case ST_VALUE:
+        {
+            Data *data = statement->data;
+            data->address = data_body.size;
+            generate_data(data, &data_body);
+        }
+            break;
 
+        case ST_ZERO:
+        {
+            Bss *bss = statement->bss;
+            bss->address = bss_size;
+            bss_size += bss->size;
+        }
+            break;
 
-/*
-generate data list
-*/
-static void generate_data_list(const List(Data) *data_list)
-{
-    for_each_entry(Data, cursor, data_list)
-    {
-        Data *data = get_element(Data)(cursor);
-        data->address = data_body.size;
-
-        generate_data(data, &data_body);
-    }
-}
-
-
-/*
-generate bss list
-*/
-static void generate_bss_list(const List(Bss) *bss_list)
-{
-    bss_size = 0;
-    for_each_entry(Bss, cursor, bss_list)
-    {
-        Bss *bss = get_element(Bss)(cursor);
-        bss->address = bss_size;
-        bss_size += bss->size;
+        default:
+            assert(0);
+            break;
+        }
     }
 }
 
@@ -684,9 +679,7 @@ generate section bodies
 */
 static void generate_sections(const Program *program)
 {
-    generate_operation_list(program->operation_list);
-    generate_data_list(program->data_list);
-    generate_bss_list(program->bss_list);
+    generate_statement_list(program->statement_list);
     resolve_symbols(program->label_list);
     set_relocation_table_entries(get_length(Label)(program->label_list));
     classify_label_list(program->label_list);

@@ -9,14 +9,37 @@
 #include "processor.h"
 #include "section.h"
 
+typedef enum StatementKind StatementKind;
+typedef struct Statement Statement;
 typedef struct Program Program;
+
+#include "list.h"
+define_list(Statement)
+
+// kind of statement
+enum StatementKind
+{
+    ST_INSTRUCTION, // instruction
+    ST_VALUE,       // .byte, .word, .dword, .qword directive
+    ST_ZERO,        // .zero directive
+};
+
+// structure for statement
+struct Statement
+{
+    StatementKind kind;       // kind of statement
+    union
+    {
+        Operation *operation; // instruction
+        Data *data;           // .byte, .word, .dword, .qword directive
+        Bss *bss;             // .zero directive
+    };
+};
 
 // structure for program
 struct Program
 {
-    List(Operation) *operation_list; // list of operations
-    List(Data) *data_list;           // list of data
-    List(Bss) *bss_list;             // list of bss
+    List(Statement) *statement_list; // list of statements
     List(Label) *label_list;         // list of labels
 };
 

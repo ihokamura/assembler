@@ -12,6 +12,7 @@
 #include "list.h"
 define_list_operations(Bss)
 define_list_operations(Data)
+define_list_operations(Statement)
 define_list_operations(Operand)
 define_list_operations(Operation)
 define_list_operations(Label)
@@ -27,6 +28,7 @@ static Operation *parse_operation(const Token *token);
 static const MnemonicInfo *parse_mnemonic(const Token *token);
 static List(Operand) *parse_operands(void);
 static Operand *parse_operand(void);
+static Statement *new_statement(StatementKind kind);
 static Label *new_label(LabelKind kind, const char *body);
 static Bss *new_bss(size_t size);
 static Data *new_data(size_t size, uintmax_t value);
@@ -40,9 +42,7 @@ static const RegisterInfo *get_register_info(const Token *token);
 static bool consume_size_specifier(OperandKind *kind);
 
 // global variable
-static List(Operation) *operation_list = NULL; // list of operations
-static List(Data) *data_list = NULL; // list of data
-static List(Bss) *bss_list = NULL; // list of bss
+static List(Statement) *statement_list = NULL; // list of statements
 static List(Label) *label_list = NULL; // list of labels
 
 static SectionKind current_section = SC_UND;
@@ -53,15 +53,11 @@ construct program
 */
 void construct(Program *prog)
 {
-    operation_list = new_list(Operation)();
-    data_list = new_list(Data)();
-    bss_list = new_list(Bss)();
+    statement_list = new_list(Statement)();
     label_list = new_list(Label)();
 
     program();
-    prog->operation_list = operation_list;
-    prog->data_list = data_list;
-    prog->bss_list = bss_list;
+    prog->statement_list = statement_list;
     prog->label_list = label_list;
 }
 
@@ -301,6 +297,21 @@ static Operand *parse_operand(void)
 
 
 /*
+make a new statement
+*/
+static Statement *new_statement(StatementKind kind)
+{
+    Statement *statement = calloc(1, sizeof(Statement));
+    statement->kind = kind;
+
+    // update list of statements
+    add_list_entry_tail(Statement)(statement_list, statement);
+
+    return statement;
+}
+
+
+/*
 make a new label
 */
 static Label *new_label(LabelKind kind, const char *body)
@@ -327,8 +338,8 @@ static Bss *new_bss(size_t size)
     Bss *bss = calloc(1, sizeof(Bss));
     bss->size = size;
 
-    // update list of bss
-    add_list_entry_tail(Bss)(bss_list, bss);
+    Statement *statement = new_statement(ST_ZERO);
+    statement->bss = bss;
 
     return bss;
 }
@@ -343,8 +354,8 @@ static Data *new_data(size_t size, uintmax_t value)
     data->size = size;
     data->value = value;
 
-    // update list of data
-    add_list_entry_tail(Data)(data_list, data);
+    Statement *statement = new_statement(ST_VALUE);
+    statement->data = data;
 
     return data;
 }
@@ -359,8 +370,8 @@ static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands
     operation->kind = kind;
     operation->operands = operands;
 
-    // update list of operations
-    add_list_entry_tail(Operation)(operation_list, operation);
+    Statement *statement = new_statement(ST_INSTRUCTION);
+    statement->operation = operation;
 
     return operation;
 }
