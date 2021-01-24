@@ -34,11 +34,16 @@ struct BaseSection
     const char *name;          // name of section
     ByteBufferType *body;      // body of section
     ByteBufferType *rela_body; // body of relocation section
-    Elf_Word index;            // index of section
-    Elf_Xword size;            // size of section
-    Elf_Xword alignment;       // alignment of section
-    Elf_Off offset;            // offset of section
     Elf_Off rela_offset;       // offset of corresponding relocation section
+    Elf_Word index;            // index of section
+    Elf_Word type;             // type of section
+    Elf_Xword flags;           // flagss of section
+    Elf_Off offset;            // offset of section
+    Elf_Xword size;            // size of section
+    Elf_Word link;             // link to another section
+    Elf_Word info;             // dditional section information
+    Elf_Xword alignment;       // alignment of section
+    Elf_Xword entry_size;      // entry size of table in section (if exists)
 };
 
 // structure for bss
