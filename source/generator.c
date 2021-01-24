@@ -88,6 +88,7 @@ static void set_relocation_table
 static void set_symbol_table_entries(void);
 static Elf_Section get_section_index(SectionKind kind);
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info);
+static Elf_Word get_strtab_position(const ByteBufferType *strtab_body, const char *name);
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_statement_list(const List(Statement) *statement_list);
 static void resolve_symbols(const List(Label) *label_list);
@@ -127,8 +128,6 @@ static List(RelocationInfo) *reloc_info_list; // list of relocatable symbols
 static ByteBufferType symtab_body = {NULL, 0, 0};    // buffer for section ".symtab"
 static ByteBufferType strtab_body = {NULL, 0, 0};    // buffer for string containing names of symbols
 static ByteBufferType shstrtab_body = {NULL, 0, 0};  // buffer for string containing names of sections
-
-static Elf_Word sh_name = 0; // index of string where a section name starts
 
 
 /*
@@ -281,7 +280,7 @@ static Elf_Shdr *set_section_header_table
     }
     
     // set members
-    shdr->sh_name = sh_name;
+    shdr->sh_name = get_strtab_position(&shstrtab_body, section_name);
     shdr->sh_type = sh_type;
     shdr->sh_flags = sh_flags;
     shdr->sh_addr = sh_addr;
@@ -296,11 +295,6 @@ static Elf_Shdr *set_section_header_table
     e_shoff += sh_size;
     e_shnum++;
     e_shstrndx++;
-
-    // update list of section names
-    size_t size = strlen(section_name) + 1;
-    append_bytes(section_name, size, &shstrtab_body);
-    sh_name += size;
 
     return shdr;
 }
@@ -514,6 +508,37 @@ static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo 
 
 
 /*
+get string table index of name
+*/
+static Elf_Word get_strtab_position(const ByteBufferType *strtab_body, const char *name)
+{
+    size_t len = strlen(name);
+    size_t range = strtab_body->size - len;
+
+    for(Elf_Word pos = 0; pos < range; pos++)
+    {
+        const char *start = &strtab_body->body[pos];
+        bool equal = true;
+        for(size_t i = 0; i < len; i++)
+        {
+            if(start[i] != name[i])
+            {
+                equal = false;
+                break;
+            }
+        }
+
+        if(equal)
+        {
+            return pos;
+        }
+    }
+
+    return range;
+}
+
+
+/*
 set entries of relocation table
 */
 static void set_relocation_table_entries(size_t resolved_symbols)
@@ -670,6 +695,7 @@ static void generate_sections(const Program *program)
     set_relocation_table_entries(get_length(Label)(program->label_list));
     classify_label_list(program->label_list);
     set_symbol_table_entries();
+    make_shstrtab(&shstrtab_body);
 }
 
 
@@ -778,7 +804,7 @@ static void generate_section_header_table_entries(void)
         SHT_STRTAB,
         0,
         0,
-        sh_name + strlen(".shstrtab") + 1, // add 1 for the trailing '\0'
+        shstrtab_body.size,
         SHN_UNDEF,
         DEFAULT_SECTION_INFO,
         DEFAULT_SECTION_ALIGNMENT,

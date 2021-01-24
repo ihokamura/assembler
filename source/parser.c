@@ -120,7 +120,7 @@ static void parse_directive(Label *label)
 {
     if(consume_reserved("bss"))
     {
-        set_current_section(SC_BSS);
+        set_current_section(".bss");
     }
     else if(consume_reserved("byte"))
     {
@@ -128,7 +128,7 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved("data"))
     {
-        set_current_section(SC_DATA);
+        set_current_section(".data");
     }
     else if(consume_reserved("globl"))
     {
@@ -149,7 +149,7 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved("text"))
     {
-        set_current_section(SC_TEXT);
+        set_current_section(".text");
     }
     else if(consume_reserved("word"))
     {
