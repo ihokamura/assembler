@@ -6,13 +6,18 @@
 #include "section.h"
 
 #include "list.h"
-define_list(BaseSection)
 define_list_operations(BaseSection)
 
-static BaseSection *new_base_section(SectionKind kind, const char *name);
+static BaseSection *new_base_section(SectionKind kind, const char *name, Elf_Xword alignment);
 static BaseSection *get_base_section_by_name(const char *name);
+static bool has_rela_section(const BaseSection *base_section);
+static void set_index_of_sections(void);
 
-static List(BaseSection) *base_section_list;  // list of base sections
+List(BaseSection) *base_section_list;  // list of base sections
+
+const Elf_Xword DEFAULT_SECTION_ALIGNMENT = 1;
+const Elf_Xword RELA_SECTION_ALIGNMENT = 8;
+const Elf_Xword SYMTAB_SECTION_ALIGNMENT = 8;
 
 static SectionKind current_section = SC_TEXT;
 
@@ -20,11 +25,14 @@ static SectionKind current_section = SC_TEXT;
 /*
 make a new base section
 */
-static BaseSection *new_base_section(SectionKind kind, const char *name)
+static BaseSection *new_base_section(SectionKind kind, const char *name, Elf_Xword alignment)
 {
     BaseSection *base_section = calloc(1, sizeof(BaseSection));
+    base_section->body = calloc(1, sizeof(ByteBufferType));
+    base_section->rela_body = calloc(1, sizeof(ByteBufferType));
     base_section->kind = kind;
     base_section->name = name;
+    base_section->alignment = alignment;
     add_list_entry_tail(BaseSection)(base_section_list, base_section);
 
     return base_section;
@@ -39,9 +47,28 @@ void initialize_base_section(void)
     base_section_list = new_list(BaseSection)();
 
     // make reserved sections
-    new_base_section(SC_TEXT, ".text");
-    new_base_section(SC_DATA, ".data");
-    new_base_section(SC_BSS, ".bss");
+    new_base_section(SC_UND, "", 0);
+    new_base_section(SC_TEXT, ".text", DEFAULT_SECTION_ALIGNMENT);
+    new_base_section(SC_DATA, ".data", DEFAULT_SECTION_ALIGNMENT);
+    new_base_section(SC_BSS, ".bss", DEFAULT_SECTION_ALIGNMENT);
+}
+
+
+/*
+make metadata sections
+*/
+void make_metadata_sections(ByteBufferType *symtab_body, ByteBufferType *strtab_body, ByteBufferType *shstrtab_body)
+{
+    BaseSection *base_section_symtab = new_base_section(SC_SYMTAB, ".symtab", SYMTAB_SECTION_ALIGNMENT);
+    base_section_symtab->body = symtab_body;
+
+    BaseSection *base_section_strtab = new_base_section(SC_STRTAB, ".strtab", DEFAULT_SECTION_ALIGNMENT);
+    base_section_strtab->body = strtab_body;
+
+    BaseSection *base_section_shstrtab = new_base_section(SC_SHSTRTAB, ".shstrtab", DEFAULT_SECTION_ALIGNMENT);
+    base_section_shstrtab->body = shstrtab_body;
+
+    set_index_of_sections();
 }
 
 
@@ -125,12 +152,81 @@ ByteBufferType *make_shstrtab(ByteBufferType *buffer)
     for_each_entry(BaseSection, cursor, base_section_list)
     {
         BaseSection *base_section = get_element(BaseSection)(cursor);
-        if(base_section->rela_body.size > 0)
+        if(base_section->kind != SC_UND)
         {
-            append_bytes(rela_prefix, prefix_size, buffer); // append prefix ".rela" if the section has the associated relocation section
+            if(base_section->rela_body->size > 0)
+            {
+                append_bytes(rela_prefix, prefix_size, buffer); // append prefix ".rela" if the section has the associated relocation section
+            }
+            append_shstrtab(base_section->name, buffer);
         }
-        append_shstrtab(base_section->name, buffer);
     }
 
     return buffer;
+}
+
+
+/*
+check if the section has the associated relocation section
+*/
+static bool has_rela_section(const BaseSection *base_section)
+{
+    return (base_section->rela_body->size > 0);
+}
+
+
+/*
+set index of sections
+*/
+static void set_index_of_sections(void)
+{
+    Elf_Word index = 0;
+    for_each_entry(BaseSection, cursor, base_section_list)
+    {
+        BaseSection *base_section = get_element(BaseSection)(cursor);
+        base_section->index = index;
+        index++;
+        if(has_rela_section(base_section))
+        {
+            index++;
+        }
+    }
+}
+
+
+/*
+set offset of sections
+*/
+void set_offset_of_sections(void)
+{
+    Elf_Off offset = sizeof(Elf_Ehdr);
+    for_each_entry(BaseSection, cursor, base_section_list)
+    {
+        BaseSection *base_section = get_element(BaseSection)(cursor);
+        switch(base_section->kind)
+        {
+        case SC_UND:
+        case SC_SHSTRTAB:
+            // set offset in later
+            break;
+
+        default:
+            base_section->offset = align_to(offset, base_section->alignment);
+            offset = base_section->offset + base_section->body->size;
+            break;
+        }
+    }
+
+    for_each_entry(BaseSection, cursor, base_section_list)
+    {
+        BaseSection *base_section = get_element(BaseSection)(cursor);
+        if(has_rela_section(base_section))
+        {
+            base_section->rela_offset = align_to(offset, RELA_SECTION_ALIGNMENT);
+            offset = base_section->rela_offset + base_section->rela_body->size;
+        }
+    }
+
+    get_base_section(SC_UND)->offset = 0;
+    get_base_section(SC_SHSTRTAB)->offset = offset;
 }
