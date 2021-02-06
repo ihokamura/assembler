@@ -29,6 +29,7 @@ struct BinaryOperationOpecode
 static void generate_op_add(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_and(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_or(const List(Operand) *operands, ByteBufferType *buffer);
@@ -72,6 +73,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_ADD,  "add",  true,  generate_op_add},
     {MN_AND,  "and",  true,  generate_op_and},
     {MN_CALL, "call", true,  generate_op_call},
+    {MN_LEA,  "lea",  true,  generate_op_lea},
     {MN_MOV,  "mov",  true,  generate_op_mov},
     {MN_NOP,  "nop",  false, generate_op_nop},
     {MN_OR,   "or",   true,  generate_op_or},
@@ -239,6 +241,26 @@ static void generate_op_call(const List(Operand) *operands, ByteBufferType *buff
         append_binary_opecode(0xe8, buffer);
         append_binary_relocation(SIZEOF_32BIT, operand->symbol, buffer->size, -SIZEOF_32BIT, buffer);
     }
+}
+
+
+/*
+generate lea operation
+*/
+static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
+    Operand *operand1 = get_element(Operand)(entry);
+    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
+
+    /*
+    handle the following instructions
+    * LEA r64, m
+    */
+    may_append_binary_rex_prefix_reg_rm(operand1, operand2, true, buffer);
+    append_binary_opecode(0x8D, buffer);
+    append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
+    append_binary_disp(operand2, buffer->size, operand2->immediate - SIZEOF_32BIT, buffer);
 }
 
 

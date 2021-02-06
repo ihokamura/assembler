@@ -29,6 +29,7 @@ enum MnemonicKind
     MN_ADD,
     MN_AND,
     MN_CALL,
+    MN_LEA,
     MN_MOV,
     MN_NOP,
     MN_OR,

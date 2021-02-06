@@ -6,6 +6,7 @@ static void (* const generate_test[])(void) =
 {
     generate_test_add,
     generate_test_and,
+    generate_test_lea,
     generate_test_mov,
     generate_test_nop,
     generate_test_or,
