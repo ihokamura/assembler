@@ -259,7 +259,7 @@ static void set_symbol_table_entries(void)
         0,
         ELF_ST_INFO(STB_LOCAL, STT_SECTION),
         0,
-        get_base_section(SC_TEXT)->index,
+        get_section(SC_TEXT)->index,
         0,
         0
     );
@@ -269,7 +269,7 @@ static void set_symbol_table_entries(void)
         0,
         ELF_ST_INFO(STB_LOCAL, STT_SECTION),
         0,
-        get_base_section(SC_DATA)->index,
+        get_section(SC_DATA)->index,
         0,
         0
     );
@@ -279,7 +279,7 @@ static void set_symbol_table_entries(void)
         0,
         ELF_ST_INFO(STB_LOCAL, STT_SECTION),
         0,
-        get_base_section(SC_BSS)->index,
+        get_section(SC_BSS)->index,
         0,
         0
     );
@@ -297,7 +297,7 @@ static void set_symbol_table_entries(void)
             st_name,
             ELF_ST_INFO(STB_LOCAL, STT_NOTYPE),
             0,
-            get_base_section(label->statement->section)->index,
+            get_section(label->statement->section)->index,
             label->statement->address,
             0
         );
@@ -314,7 +314,7 @@ static void set_symbol_table_entries(void)
             st_name,
             ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
             0,
-            get_base_section(label->statement->section)->index,
+            get_section(label->statement->section)->index,
             label->statement->address,
             0
         );
@@ -384,7 +384,7 @@ static void set_relocation_table_entries(size_t resolved_symbols)
             reloc_info->address,
             ELF_R_INFO(get_symtab_index(resolved_symbols, reloc_info), R_X86_64_PC32),
             reloc_info->addend,
-            get_base_section(reloc_info->source)->rela_body
+            get_section(reloc_info->source)->rela_body
         );
     }
 }
@@ -393,15 +393,15 @@ static void set_relocation_table_entries(size_t resolved_symbols)
 /*
 update section
 */
-static void update_section(Statement *statement, BaseSection *base_section)
+static void update_section(Statement *statement, Section *section)
 {
     size_t section_size = 0;
-    statement->address = base_section->size;
+    statement->address = section->size;
     switch(statement->kind)
     {
     case ST_INSTRUCTION:
         {
-        ByteBufferType *body = base_section->body;
+        ByteBufferType *body = section->body;
         Operation *operation = statement->operation;
         generate_operation(operation, body);
         section_size = body->size;
@@ -410,7 +410,7 @@ static void update_section(Statement *statement, BaseSection *base_section)
 
     case ST_VALUE:
         {
-        ByteBufferType *body = base_section->body;
+        ByteBufferType *body = section->body;
         Data *data = statement->data;
         append_bytes((char *)&data->value, data->size, body);
         section_size = body->size;
@@ -418,7 +418,7 @@ static void update_section(Statement *statement, BaseSection *base_section)
         break;
 
     case ST_ZERO:
-        section_size = base_section->size + statement->bss->size;
+        section_size = section->size + statement->bss->size;
         break;
 
     default:
@@ -426,7 +426,7 @@ static void update_section(Statement *statement, BaseSection *base_section)
         break;
     }
 
-    base_section->size = section_size;
+    section->size = section_size;
 }
 
 
@@ -438,8 +438,8 @@ static void generate_statement_list(const List(Statement) *statement_list)
     for_each_entry(Statement, cursor, statement_list)
     {
         Statement *statement = get_element(Statement)(cursor);
-        BaseSection *base_section = get_base_section(statement->section);
-        update_section(statement, base_section);
+        Section *section = get_section(statement->section);
+        update_section(statement, section);
     }
 }
 
@@ -460,7 +460,7 @@ static void resolve_symbols(const List(Label) *label_list)
                 switch(label->statement->section)
                 {
                 case SC_TEXT:
-                    *(uint32_t *)&get_base_section(SC_TEXT)->body->body[symbol->address] = label->statement->address - (symbol->address + sizeof(uint32_t));
+                    *(uint32_t *)&get_section(SC_TEXT)->body->body[symbol->address] = label->statement->address - (symbol->address + sizeof(uint32_t));
                     break;
 
                 case SC_DATA:
@@ -528,10 +528,10 @@ generate ELF header
 */
 static void generate_elf_header(Elf_Ehdr *ehdr)
 {
-    BaseSection *base_section_shstrtab = get_base_section(SC_SHSTRTAB);
-    Elf_Off e_shoff = align_to(base_section_shstrtab->offset + base_section_shstrtab->body->size, sizeof(Elf_Xword));
-    Elf_Half e_shnum = base_section_shstrtab->index + 1;
-    Elf_Half e_shstrndx = base_section_shstrtab->index;
+    Section *section_shstrtab = get_section(SC_SHSTRTAB);
+    Elf_Off e_shoff = align_to(section_shstrtab->offset + section_shstrtab->body->size, sizeof(Elf_Xword));
+    Elf_Half e_shnum = section_shstrtab->index + 1;
+    Elf_Half e_shstrndx = section_shstrtab->index;
 
     set_elf_header(
         e_shoff,

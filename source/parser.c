@@ -50,7 +50,7 @@ void construct(Program *prog)
 {
     statement_list = new_list(Statement)();
     label_list = new_list(Label)();
-    initialize_base_section();
+    initialize_section();
 
     program();
     prog->statement_list = statement_list;
