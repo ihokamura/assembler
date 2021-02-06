@@ -53,7 +53,6 @@ static Elf_Shdr *new_section_header_table
     const char *section_name,
     Elf_Word sh_type,
     Elf_Xword sh_flags,
-    Elf_Addr sh_addr,
     Elf_Off sh_offset,
     Elf_Xword sh_size,
     Elf_Word sh_link,
@@ -61,6 +60,7 @@ static Elf_Shdr *new_section_header_table
     Elf_Xword sh_addralign,
     Elf_Xword sh_entsize
 );
+static void new_section_header_table_from_base_section(const BaseSection *base_section);
 static void set_symbol_table
 (
     Elf_Word st_name,
@@ -89,8 +89,6 @@ static size_t fwrite_section(const ByteBufferType *buffer, Elf_Off offset, size_
 static void generate_sections(const Program *program);
 static void generate_section_header_table_entries(void);
 static void generate_elf_header(Elf_Ehdr *ehdr);
-
-static const Elf_Word DEFAULT_SECTION_INFO = 0;
 
 static const size_t RESERVED_SYMTAB_ENTRIES = 4; // number of reserved symbol table entries (undefined, .text, .data, .bss)
 static const Elf_Xword SYMTAB_INDEX_DATA = 2; // index of symbol table entry for .data section
@@ -217,7 +215,6 @@ static Elf_Shdr *new_section_header_table
     const char *section_name,
     Elf_Word sh_type,
     Elf_Xword sh_flags,
-    Elf_Addr sh_addr,
     Elf_Off sh_offset,
     Elf_Xword sh_size,
     Elf_Word sh_link,
@@ -230,9 +227,13 @@ static Elf_Shdr *new_section_header_table
 
     // set members
     shdr->sh_name = get_strtab_position(&shstrtab_body, section_name);
+    if(sh_type == SHT_RELA)
+    {
+        shdr->sh_name -= strlen(".rela");
+    }
     shdr->sh_type = sh_type;
     shdr->sh_flags = sh_flags;
-    shdr->sh_addr = sh_addr;
+    shdr->sh_addr = 0;
     shdr->sh_offset = sh_offset;
     shdr->sh_size = sh_size;
     shdr->sh_link = sh_link;
@@ -244,6 +245,40 @@ static Elf_Shdr *new_section_header_table
     add_list_entry_tail(Elf_Shdr)(shdr_list, shdr);
 
     return shdr;
+}
+
+
+/*
+set members of a section header table entry
+*/
+static void new_section_header_table_from_base_section(const BaseSection *base_section)
+{
+    new_section_header_table(
+        base_section->name,
+        base_section->type,
+        base_section->flags,
+        base_section->offset,
+        base_section->size,
+        base_section->link,
+        base_section->info,
+        base_section->alignment,
+        base_section->entry_size);
+
+    if(base_section->rela_body->size > 0)
+    {
+        // .rela.xxx section
+        const BaseSection *base_section_symtab = get_base_section(SC_SYMTAB);
+        new_section_header_table(
+            base_section->name,
+            SHT_RELA,
+            SHF_INFO_LINK,
+            base_section->rela_offset,
+            base_section->rela_body->size,
+            base_section_symtab->index, // sh_link holds section header index of the associated symbol table
+            base_section->index, // sh_info holds section header index of the section to which the relocation applies
+            RELA_SECTION_ALIGNMENT,
+            sizeof(Elf_Rela));
+    }
 }
 
 
@@ -660,112 +695,21 @@ static void generate_section_header_table_entries(void)
     BaseSection *base_section_strtab = get_base_section(SC_STRTAB);
     BaseSection *base_section_shstrtab = get_base_section(SC_SHSTRTAB);
 
-    // undefined section
-    new_section_header_table(
-        "",
-        base_section_und->type,
-        base_section_und->flags,
-        0,
-        base_section_und->offset,
-        base_section_und->size,
-        SHN_UNDEF,
-        0,
-        base_section_und->alignment,
-        0);
+    // set information of metadata sections
+    base_section_symtab->size = base_section_symtab->body->size;
+    base_section_symtab->link = base_section_strtab->index; // sh_link holds section header index of the associated string table (i.e. .strtab section)
+    base_section_symtab->info = RESERVED_SYMTAB_ENTRIES + get_length(Label)(local_label_list); // sh_info holds one greater than the symbol table index of the laxt local symbol
+    base_section_strtab->size = base_section_strtab->body->size;
+    base_section_shstrtab->size = base_section_shstrtab->body->size;
 
-    // .text section
-    new_section_header_table(
-        ".text",
-        base_section_text->type,
-        base_section_text->flags,
-        0,
-        base_section_text->offset,
-        base_section_text->size,
-        SHN_UNDEF,
-        DEFAULT_SECTION_INFO,
-        base_section_text->alignment,
-        0);
-
-    // .rela.text section
-    if(base_section_text->rela_body->size > 0)
-    {
-        new_section_header_table(
-            ".rela.text",
-            SHT_RELA,
-            SHF_INFO_LINK,
-            0,
-            base_section_text->rela_offset,
-            base_section_text->rela_body->size,
-            base_section_symtab->index, // sh_link holds section header index of the associated symbol table (i.e. .symtab section)
-            base_section_text->index, // sh_info holds section header index of the section to which the relocation applies (i.e. .text section)
-            RELA_SECTION_ALIGNMENT,
-            sizeof(Elf_Rela));
-    }
-
-    // .data section
-    new_section_header_table(
-        ".data",
-        base_section_data->type,
-        base_section_data->flags,
-        0,
-        base_section_data->offset,
-        base_section_data->size,
-        SHN_UNDEF,
-        DEFAULT_SECTION_INFO,
-        base_section_data->alignment,
-        0);
-
-    // .bss section
-    new_section_header_table(
-        ".bss",
-        base_section_bss->type,
-        base_section_bss->flags,
-        0,
-        base_section_bss->offset,
-        base_section_bss->size,
-        SHN_UNDEF,
-        DEFAULT_SECTION_INFO,
-        base_section_bss->alignment,
-        0);
-
-    // .symtab section
-    new_section_header_table(
-        ".symtab",
-        base_section_symtab->type,
-        base_section_symtab->flags,
-        0,
-        base_section_symtab->offset,
-        symtab_body.size,
-        base_section_strtab->index, // sh_link holds section header index of the associated string table (i.e. .strtab section)
-        RESERVED_SYMTAB_ENTRIES + get_length(Label)(local_label_list), // sh_info holds one greater than the symbol table index of the laxt local symbol
-        base_section_symtab->alignment,
-        sizeof(Elf_Sym));
-
-    // .strtab section
-    new_section_header_table(
-        ".strtab",
-        base_section_strtab->type,
-        base_section_strtab->flags,
-        0,
-        base_section_strtab->offset,
-        strtab_body.size,
-        SHN_UNDEF,
-        DEFAULT_SECTION_INFO,
-        base_section_strtab->alignment,
-        0);
-
-    // .shstrtab section
-    new_section_header_table(
-        ".shstrtab",
-        base_section_shstrtab->type,
-        base_section_shstrtab->flags,
-        0,
-        base_section_shstrtab->offset,
-        shstrtab_body.size,
-        SHN_UNDEF,
-        DEFAULT_SECTION_INFO,
-        base_section_shstrtab->alignment,
-        0);
+    // make section header table entries
+    new_section_header_table_from_base_section(base_section_und);
+    new_section_header_table_from_base_section(base_section_text);
+    new_section_header_table_from_base_section(base_section_data);
+    new_section_header_table_from_base_section(base_section_bss);
+    new_section_header_table_from_base_section(base_section_symtab);
+    new_section_header_table_from_base_section(base_section_strtab);
+    new_section_header_table_from_base_section(base_section_shstrtab);
 }
 
 

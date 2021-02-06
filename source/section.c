@@ -14,7 +14,8 @@ static BaseSection *new_base_section
     const char *name,
     Elf_Word type,
     Elf_Xword flags,
-    Elf_Xword alignment
+    Elf_Xword alignment,
+    Elf_Xword entry_size
 );
 static BaseSection *get_base_section_by_name(const char *name);
 static bool has_rela_section(const BaseSection *base_section);
@@ -22,9 +23,10 @@ static void set_index_of_sections(void);
 
 List(BaseSection) *base_section_list;  // list of base sections
 
-const Elf_Xword DEFAULT_SECTION_ALIGNMENT = 1;
+static const Elf_Word DEFAULT_SECTION_INFO = 0;
+static const Elf_Xword DEFAULT_SECTION_ALIGNMENT = 1;
 const Elf_Xword RELA_SECTION_ALIGNMENT = 8;
-const Elf_Xword SYMTAB_SECTION_ALIGNMENT = 8;
+static const Elf_Xword SYMTAB_SECTION_ALIGNMENT = 8;
 
 static SectionKind current_section = SC_TEXT;
 
@@ -38,7 +40,8 @@ static BaseSection *new_base_section
     const char *name,
     Elf_Word type,
     Elf_Xword flags,
-    Elf_Xword alignment
+    Elf_Xword alignment,
+    Elf_Xword entry_size
 )
 {
     BaseSection *base_section = calloc(1, sizeof(BaseSection));
@@ -48,7 +51,10 @@ static BaseSection *new_base_section
     base_section->name = name;
     base_section->type = type;
     base_section->flags = flags;
+    base_section->link = SHN_UNDEF;
+    base_section->info = DEFAULT_SECTION_INFO;
     base_section->alignment = alignment;
+    base_section->entry_size = entry_size;
     add_list_entry_tail(BaseSection)(base_section_list, base_section);
 
     return base_section;
@@ -63,10 +69,10 @@ void initialize_base_section(void)
     base_section_list = new_list(BaseSection)();
 
     // make reserved sections
-    new_base_section(SC_UND, "", SHT_NULL, 0, 0);
-    new_base_section(SC_TEXT, ".text", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR, DEFAULT_SECTION_ALIGNMENT);
-    new_base_section(SC_DATA, ".data", SHT_PROGBITS, SHF_WRITE | SHF_ALLOC, DEFAULT_SECTION_ALIGNMENT);
-    new_base_section(SC_BSS, ".bss", SHT_NOBITS, SHF_WRITE | SHF_ALLOC, DEFAULT_SECTION_ALIGNMENT);
+    new_base_section(SC_UND, "", SHT_NULL, 0, 0, 0);
+    new_base_section(SC_TEXT, ".text", SHT_PROGBITS, SHF_ALLOC | SHF_EXECINSTR, DEFAULT_SECTION_ALIGNMENT, 0);
+    new_base_section(SC_DATA, ".data", SHT_PROGBITS, SHF_WRITE | SHF_ALLOC, DEFAULT_SECTION_ALIGNMENT, 0);
+    new_base_section(SC_BSS, ".bss", SHT_NOBITS, SHF_WRITE | SHF_ALLOC, DEFAULT_SECTION_ALIGNMENT, 0);
 }
 
 
@@ -75,13 +81,13 @@ make metadata sections
 */
 void make_metadata_sections(ByteBufferType *symtab_body, ByteBufferType *strtab_body, ByteBufferType *shstrtab_body)
 {
-    BaseSection *base_section_symtab = new_base_section(SC_SYMTAB, ".symtab", SHT_SYMTAB, 0, SYMTAB_SECTION_ALIGNMENT);
+    BaseSection *base_section_symtab = new_base_section(SC_SYMTAB, ".symtab", SHT_SYMTAB, 0, SYMTAB_SECTION_ALIGNMENT, sizeof(Elf_Sym));
     base_section_symtab->body = symtab_body;
 
-    BaseSection *base_section_strtab = new_base_section(SC_STRTAB, ".strtab", SHT_STRTAB, 0, DEFAULT_SECTION_ALIGNMENT);
+    BaseSection *base_section_strtab = new_base_section(SC_STRTAB, ".strtab", SHT_STRTAB, 0, DEFAULT_SECTION_ALIGNMENT, 0);
     base_section_strtab->body = strtab_body;
 
-    BaseSection *base_section_shstrtab = new_base_section(SC_SHSTRTAB, ".shstrtab", SHT_STRTAB, 0, DEFAULT_SECTION_ALIGNMENT);
+    BaseSection *base_section_shstrtab = new_base_section(SC_SHSTRTAB, ".shstrtab", SHT_STRTAB, 0, DEFAULT_SECTION_ALIGNMENT, 0);
     base_section_shstrtab->body = shstrtab_body;
 
     set_index_of_sections();

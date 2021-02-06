@@ -60,9 +60,7 @@ struct Data
 };
 
 extern List(BaseSection) *base_section_list;
-extern const Elf_Xword DEFAULT_SECTION_ALIGNMENT;
 extern const Elf_Xword RELA_SECTION_ALIGNMENT;
-extern const Elf_Xword SYMTAB_SECTION_ALIGNMENT;
 
 void initialize_base_section(void);
 void make_metadata_sections(ByteBufferType *symtab_body, ByteBufferType *strtab_body, ByteBufferType *shstrtab_body);
