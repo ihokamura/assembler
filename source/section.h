@@ -2,6 +2,7 @@
 #define __SECTION_H__
 
 #include <stddef.h>
+#include <stdio.h>
 
 #include "buffer.h"
 #include "elf_wrap.h"
@@ -60,10 +61,6 @@ struct Data
     uintmax_t value;  // value of data
 };
 
-extern List(BaseSection) *base_section_list;
-extern List(Elf_Shdr) *shdr_list;
-extern const Elf_Xword RELA_SECTION_ALIGNMENT;
-
 void initialize_base_section(void);
 void make_metadata_sections(ByteBufferType *symtab_body, ByteBufferType *strtab_body, ByteBufferType *shstrtab_body);
 SectionKind get_current_section(void);
@@ -72,5 +69,7 @@ BaseSection *get_base_section(SectionKind kind);
 ByteBufferType *make_shstrtab(ByteBufferType *buffer);
 void set_offset_of_sections(void);
 void generate_section_header_table_entries(size_t local_labels);
+size_t output_section_bodies(size_t start_pos, FILE *fp);
+void output_section_header_table_entries(FILE *fp);
 
 #endif /* !__SECTION_H__ */

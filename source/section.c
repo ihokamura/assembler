@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "buffer.h"
+#include "output.h"
 #include "section.h"
 
 #include "list.h"
@@ -35,16 +36,17 @@ static Elf_Shdr *new_section_header_table
     Elf_Xword sh_entsize
 );
 static void new_section_header_table_from_base_section(const BaseSection *base_section);
-
-List(BaseSection) *base_section_list;  // list of base sections
-List(Elf_Shdr) *shdr_list;             // list of section header table entries
+static size_t output_section(const ByteBufferType *buffer, Elf_Off offset, size_t end_pos, FILE *fp);
 
 static const Elf_Addr DEFAULT_SECTION_ADDR = 0;
 static const Elf_Word DEFAULT_SECTION_INFO = 0;
 static const Elf_Xword DEFAULT_SECTION_ALIGNMENT = 1;
-const Elf_Xword RELA_SECTION_ALIGNMENT = 8;
+static const Elf_Xword RELA_SECTION_ALIGNMENT = 8;
 static const Elf_Xword SYMTAB_SECTION_ALIGNMENT = 8;
 static const size_t STRLEN_OF_RELA = 5; // strlen(".rela")
+
+static List(BaseSection) *base_section_list;  // list of base sections
+static List(Elf_Shdr) *shdr_list;             // list of section header table entries
 
 static SectionKind current_section = SC_TEXT;
 
@@ -404,5 +406,66 @@ void generate_section_header_table_entries(size_t local_labels)
     {
         const BaseSection *base_section = get_element(BaseSection)(cursor);
         new_section_header_table_from_base_section(base_section);
+    }
+}
+
+
+/*
+output section body
+*/
+static size_t output_section(const ByteBufferType *buffer, Elf_Off offset, size_t end_pos, FILE *fp)
+{
+    size_t size = buffer->size;
+    if(size > 0)
+    {
+        fill_paddings(offset - end_pos, fp);
+        output_buffer(buffer->body, size, fp);
+        return offset + size;
+    }
+    else
+    {
+        return end_pos;
+    }
+}
+
+
+/*
+output section bodies
+*/
+size_t output_section_bodies(size_t start_pos, FILE *fp)
+{
+    size_t end_pos = start_pos;
+
+    for_each_entry(BaseSection, cursor, base_section_list)
+    {
+        BaseSection *base_section = get_element(BaseSection)(cursor);
+        if(base_section->kind != SC_SHSTRTAB)
+        {
+            end_pos = output_section(base_section->body, base_section->offset, end_pos, fp);
+        }
+    }
+    for_each_entry(BaseSection, cursor, base_section_list)
+    {
+        BaseSection *base_section = get_element(BaseSection)(cursor);
+        end_pos = output_section(base_section->rela_body, base_section->rela_offset, end_pos, fp);
+    }
+    {
+        BaseSection *base_section = get_base_section(SC_SHSTRTAB);
+        end_pos = output_section(base_section->body, base_section->offset, end_pos, fp);
+    }
+
+    return end_pos;
+}
+
+
+/*
+output section header table entries
+*/
+void output_section_header_table_entries(FILE *fp)
+{
+    for_each_entry(Elf_Shdr, cursor, shdr_list)
+    {
+        const Elf_Shdr *shdr = get_element(Elf_Shdr)(cursor);
+        output_buffer(shdr, sizeof(Elf_Shdr), fp);
     }
 }

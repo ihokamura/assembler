@@ -7,6 +7,7 @@
 #include "elf_wrap.h"
 #include "generator.h"
 #include "identifier.h"
+#include "output.h"
 #include "parser.h"
 #include "processor.h"
 #include "section.h"
@@ -68,8 +69,6 @@ static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_statement_list(const List(Statement) *statement_list);
 static void resolve_symbols(const List(Label) *label_list);
 static void classify_label_list(const List(Label) *label_list);
-static void fill_paddings(size_t pad_size, FILE *fp);
-static size_t fwrite_section(const ByteBufferType *buffer, Elf_Off offset, size_t end_pos, FILE *fp);
 static void generate_sections(const Program *program);
 static void generate_elf_header(Elf_Ehdr *ehdr);
 
@@ -508,41 +507,6 @@ static void classify_label_list(const List(Label) *label_list)
 
 
 /*
-fill padding bytes
-*/
-static void fill_paddings(size_t pad_size, FILE *fp)
-{
-    for(size_t i = 0; i < pad_size; i++)
-    {
-        char pad_byte = 0x00;
-        fwrite(&pad_byte, sizeof(char), 1, fp);
-    }
-}
-
-
-/*
-output section body
-*/
-static size_t fwrite_section(const ByteBufferType *buffer, Elf_Off offset, size_t end_pos, FILE *fp)
-{
-    size_t size = buffer->size;
-    if(size > 0)
-    {
-        size_t pad_size = offset - end_pos;
-        fill_paddings(pad_size, fp);
-
-        fwrite(buffer->body, sizeof(char), size, fp);
-
-        return end_pos + pad_size + size;
-    }
-    else
-    {
-        return end_pos;
-    }
-}
-
-
-/*
 generate section bodies
 */
 static void generate_sections(const Program *program)
@@ -601,33 +565,12 @@ void generate(const char *output_file, const Program *program)
     generate_elf_header(&elf_header);
     fwrite(&elf_header, sizeof(Elf_Ehdr), 1, fp);
 
-    // output sections
-    size_t end_pos = sizeof(Elf_Ehdr);
-    for_each_entry(BaseSection, cursor, base_section_list)
-    {
-        BaseSection *base_section = get_element(BaseSection)(cursor);
-        if(base_section->kind != SC_SHSTRTAB)
-        {
-            end_pos = fwrite_section(base_section->body, base_section->offset, end_pos, fp);
-        }
-    }
-    for_each_entry(BaseSection, cursor, base_section_list)
-    {
-        BaseSection *base_section = get_element(BaseSection)(cursor);
-        end_pos = fwrite_section(base_section->rela_body, base_section->rela_offset, end_pos, fp);
-    }
-    {
-        BaseSection *base_section = get_base_section(SC_SHSTRTAB);
-        end_pos = fwrite_section(base_section->body, base_section->offset, end_pos, fp);
-    }
+    // output section bodies
+    size_t end_pos = output_section_bodies(sizeof(Elf_Ehdr), fp);
 
     // output section header table entries
     fill_paddings(elf_header.e_shoff - end_pos, fp);
-    for_each_entry(Elf_Shdr, cursor, shdr_list)
-    {
-        const Elf_Shdr *shdr = get_element(Elf_Shdr)(cursor);
-        fwrite(shdr, sizeof(Elf_Shdr), 1, fp);
-    }
+    output_section_header_table_entries(fp);
 
     fclose(fp);
 }
