@@ -12,8 +12,8 @@
 typedef enum LabelKind LabelKind;
 typedef enum StatementKind StatementKind;
 typedef struct Label Label;
-typedef struct Statement Statement;
 typedef struct Program Program;
+typedef struct Statement Statement;
 
 #include "list.h"
 define_list(Label)
@@ -42,6 +42,13 @@ struct Label
     const Statement *statement; // statement marked by the label
 };
 
+// structure for program
+struct Program
+{
+    List(Statement) *statement_list; // list of statements
+    List(Label) *label_list;         // list of labels
+};
+
 // structure for statement
 struct Statement
 {
@@ -56,14 +63,6 @@ struct Statement
     };
 };
 
-// structure for program
-struct Program
-{
-    List(Statement) *statement_list; // list of statements
-    List(Label) *label_list;         // list of labels
-};
-
 void construct(Program *prog);
-size_t get_least_size(uintmax_t value);
 
 #endif /* !__PARSER_H__ */

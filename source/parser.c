@@ -4,15 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "parser.h"
 #include "identifier.h"
+#include "parser.h"
 #include "processor.h"
 #include "tokenizer.h"
 
 #include "list.h"
-define_list_operations(Statement)
-define_list_operations(Operand)
 define_list_operations(Label)
+define_list_operations(Operand)
+define_list_operations(Statement)
 
 // function prototype
 static void program(void);
@@ -28,7 +28,9 @@ static Operand *parse_operand(void);
 static Statement *new_statement(StatementKind kind, Label *label);
 static Label *new_label(LabelKind kind, const char *body);
 static Bss *new_bss(size_t size, Label *label);
-static Data *new_data(size_t size, uintmax_t value, Label *label);
+static Data *new_data(size_t size, Label *label);
+static Data *new_data_immediate(size_t size, uintmax_t value, Label *label);
+static Data *new_data_memory(size_t size, const Token *token, Label *label);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, Label *label);
 static Operand *new_operand(OperandKind kind);
 static Operand *new_operand_immediate(uintmax_t immediate);
@@ -171,7 +173,15 @@ parse directive for size
 */
 static void parse_directive_size(size_t size, Label *label)
 {
-    new_data(size, expect_immediate()->value, label);
+    Token *token;
+    if(consume_token(TK_IDENTIFIER, &token))
+    {
+        new_data_memory(size, token, label);
+    }
+    else
+    {
+        new_data_immediate(size, expect_immediate()->value, label);
+    }
 }
 
 
@@ -348,14 +358,39 @@ static Bss *new_bss(size_t size, Label *label)
 /*
 make a new data
 */
-static Data *new_data(size_t size, uintmax_t value, Label *label)
+static Data *new_data(size_t size, Label *label)
 {
     Data *data = calloc(1, sizeof(Data));
     data->size = size;
-    data->value = value;
+    data->value = 0;
+    data->symbol = NULL;
 
     Statement *statement = new_statement(ST_VALUE, label);
     statement->data = data;
+
+    return data;
+}
+
+
+/*
+make a new data for immediate
+*/
+static Data *new_data_immediate(size_t size, uintmax_t value, Label *label)
+{
+    Data *data = new_data(size, label);
+    data->value = value;
+
+    return data;
+}
+
+
+/*
+make a new data for memory
+*/
+static Data *new_data_memory(size_t size, const Token *token, Label *label)
+{
+    Data *data = new_data(size, label);
+    data->symbol = make_identifier(token);
 
     return data;
 }
@@ -483,34 +518,6 @@ static Operand *new_operand_symbol(const Token *token)
     operand->symbol = make_identifier(token);
 
     return operand;
-}
-
-
-/*
-get the least number of bytes to represent an immediate value
-*/
-size_t get_least_size(uintmax_t value)
-{
-    if(value == 0)
-    {
-        return 0;
-    }
-    else if((value <= UINT8_MAX) || (-value <= UINT8_MAX))
-    {
-        return SIZEOF_8BIT;
-    }
-    else if((value <= UINT16_MAX) || (-value <= UINT16_MAX))
-    {
-        return SIZEOF_16BIT;
-    }
-    else if((value <= UINT32_MAX) || (-value <= UINT32_MAX))
-    {
-        return SIZEOF_32BIT;
-    }
-    else
-    {
-        return SIZEOF_64BIT;
-    }
 }
 
 

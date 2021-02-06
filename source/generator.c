@@ -90,13 +90,13 @@ static ByteBufferType shstrtab_body = {NULL, 0, 0};  // buffer for string contai
 /*
 make a new label information
 */
-Symbol *new_symbol(const char *body, Elf_Addr address, Elf_Sxword addend)
+Symbol *new_symbol(const char *body, Elf_Addr address, Elf_Sxword addend, SectionKind section)
 {
     Symbol *symbol = calloc(1, sizeof(Symbol));
     symbol->body = body;
     symbol->address = address;
     symbol->addend = addend;
-    symbol->section = SC_TEXT;
+    symbol->section = section;
     symbol->resolved = false;
     add_list_entry_tail(Symbol)(symbol_list, symbol);
 
@@ -380,9 +380,11 @@ static void set_relocation_table_entries(size_t resolved_symbols)
     for_each_entry(RelocationInfo, cursor, reloc_info_list)
     {
         RelocationInfo *reloc_info = get_element(RelocationInfo)(cursor);
+        Elf_Xword sym = get_symtab_index(resolved_symbols, reloc_info);
+        Elf_Xword type = (reloc_info->source == SC_TEXT) ? R_X86_64_PC32 : R_X86_64_64;
         set_relocation_table(
             reloc_info->address,
-            ELF_R_INFO(get_symtab_index(resolved_symbols, reloc_info), R_X86_64_PC32),
+            ELF_R_INFO(sym, type),
             reloc_info->addend,
             get_section(reloc_info->source)->rela_body
         );
@@ -412,7 +414,7 @@ static void update_section(Statement *statement, Section *section)
         {
         ByteBufferType *body = section->body;
         Data *data = statement->data;
-        append_bytes((char *)&data->value, data->size, body);
+        generate_data(data, body);
         section_size = body->size;
         }
         break;

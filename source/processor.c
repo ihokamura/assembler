@@ -5,8 +5,8 @@
 
 #include "buffer.h"
 #include "identifier.h"
-#include "parser.h"
 #include "processor.h"
+#include "section.h"
 
 #define min(a, b)    ((a) < (b) ? (a) : (b))
 
@@ -195,6 +195,19 @@ static const size_t MODRM_POSITION_RM = 0;
 static const size_t SIB_POSITION_SS = 6;
 static const size_t SIB_POSITION_INDEX = 3;
 static const size_t SIB_POSITION_BASE = 0;
+
+
+/*
+generate data
+*/
+void generate_data(const Data *data, ByteBufferType *buffer)
+{
+    if(data->symbol != NULL)
+    {
+        new_symbol(data->symbol, buffer->size, 0, SC_DATA);
+    }
+    append_binary_imm(data->value, data->size, buffer);
+}
 
 
 /*
@@ -656,6 +669,34 @@ static bool is_type_i_encoding(const Operand *operand1, const Operand *operand2)
 
 
 /*
+get the least number of bytes to represent an immediate value
+*/
+size_t get_least_size(uintmax_t value)
+{
+    if(value == 0)
+    {
+        return 0;
+    }
+    else if((value <= UINT8_MAX) || (-value <= UINT8_MAX))
+    {
+        return SIZEOF_8BIT;
+    }
+    else if((value <= UINT16_MAX) || (-value <= UINT16_MAX))
+    {
+        return SIZEOF_16BIT;
+    }
+    else if((value <= UINT32_MAX) || (-value <= UINT32_MAX))
+    {
+        return SIZEOF_32BIT;
+    }
+    else
+    {
+        return SIZEOF_64BIT;
+    }
+}
+
+
+/*
 get size of operand
 */
 static size_t get_operand_size(OperandKind kind)
@@ -1026,7 +1067,7 @@ append binary for relocation value
 */
 static void append_binary_relocation(size_t size, const char *symbol, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer)
 {
-    new_symbol(symbol, address, addend);
+    new_symbol(symbol, address, addend, SC_TEXT);
     switch(size)
     {
     case SIZEOF_32BIT:

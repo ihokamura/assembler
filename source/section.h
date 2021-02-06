@@ -38,8 +38,9 @@ struct Bss
 // structure for data
 struct Data
 {
-    size_t size;      // size of data
-    uintmax_t value;  // value of data
+    size_t size;        // size of data
+    uintmax_t value;    // value of data
+    const char *symbol; // body of symbol
 };
 
 // structure for base section
