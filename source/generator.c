@@ -32,10 +32,8 @@ struct RelocationInfo
 };
 
 #include "list.h"
-define_list(Elf_Shdr)
 define_list(RelocationInfo)
 define_list(Symbol)
-define_list_operations(Elf_Shdr)
 define_list_operations(RelocationInfo)
 define_list_operations(Symbol)
 
@@ -48,19 +46,6 @@ static void set_elf_header
     Elf_Half e_shstrndx,
     Elf_Ehdr *ehdr
 );
-static Elf_Shdr *new_section_header_table
-(
-    const char *section_name,
-    Elf_Word sh_type,
-    Elf_Xword sh_flags,
-    Elf_Off sh_offset,
-    Elf_Xword sh_size,
-    Elf_Word sh_link,
-    Elf_Word sh_info,
-    Elf_Xword sh_addralign,
-    Elf_Xword sh_entsize
-);
-static void new_section_header_table_from_base_section(const BaseSection *base_section);
 static void set_symbol_table
 (
     Elf_Word st_name,
@@ -79,7 +64,6 @@ static void set_relocation_table
 );
 static void set_symbol_table_entries(void);
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info);
-static Elf_Word get_strtab_position(const ByteBufferType *strtab_body, const char *name);
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_statement_list(const List(Statement) *statement_list);
 static void resolve_symbols(const List(Label) *label_list);
@@ -87,14 +71,12 @@ static void classify_label_list(const List(Label) *label_list);
 static void fill_paddings(size_t pad_size, FILE *fp);
 static size_t fwrite_section(const ByteBufferType *buffer, Elf_Off offset, size_t end_pos, FILE *fp);
 static void generate_sections(const Program *program);
-static void generate_section_header_table_entries(void);
 static void generate_elf_header(Elf_Ehdr *ehdr);
 
 static const size_t RESERVED_SYMTAB_ENTRIES = 4; // number of reserved symbol table entries (undefined, .text, .data, .bss)
 static const Elf_Xword SYMTAB_INDEX_DATA = 2; // index of symbol table entry for .data section
 static const Elf_Xword SYMTAB_INDEX_BSS = 3;  // index of symbol table entry for .bss section
 
-static List(Elf_Shdr) *shdr_list;             // list of section header table entries
 static List(Label) *local_label_list;         // list of local labels
 static List(Label) *global_label_list;        // list of global labels
 static List(Symbol) *symbol_list;             // list of symbols
@@ -204,81 +186,6 @@ static void set_elf_header
     ehdr->e_shentsize = sizeof(Elf_Shdr);
     ehdr->e_shnum = e_shnum;
     ehdr->e_shstrndx = e_shstrndx;
-}
-
-
-/*
-set members of a section header table entry
-*/
-static Elf_Shdr *new_section_header_table
-(
-    const char *section_name,
-    Elf_Word sh_type,
-    Elf_Xword sh_flags,
-    Elf_Off sh_offset,
-    Elf_Xword sh_size,
-    Elf_Word sh_link,
-    Elf_Word sh_info,
-    Elf_Xword sh_addralign,
-    Elf_Xword sh_entsize
-)
-{
-    Elf_Shdr *shdr = calloc(1, sizeof(Elf_Shdr));
-
-    // set members
-    shdr->sh_name = get_strtab_position(&shstrtab_body, section_name);
-    if(sh_type == SHT_RELA)
-    {
-        shdr->sh_name -= strlen(".rela");
-    }
-    shdr->sh_type = sh_type;
-    shdr->sh_flags = sh_flags;
-    shdr->sh_addr = 0;
-    shdr->sh_offset = sh_offset;
-    shdr->sh_size = sh_size;
-    shdr->sh_link = sh_link;
-    shdr->sh_info = sh_info;
-    shdr->sh_addralign = sh_addralign;
-    shdr->sh_entsize = sh_entsize;
-
-    // update list of section header table entries
-    add_list_entry_tail(Elf_Shdr)(shdr_list, shdr);
-
-    return shdr;
-}
-
-
-/*
-set members of a section header table entry
-*/
-static void new_section_header_table_from_base_section(const BaseSection *base_section)
-{
-    new_section_header_table(
-        base_section->name,
-        base_section->type,
-        base_section->flags,
-        base_section->offset,
-        base_section->size,
-        base_section->link,
-        base_section->info,
-        base_section->alignment,
-        base_section->entry_size);
-
-    if(base_section->rela_body->size > 0)
-    {
-        // .rela.xxx section
-        const BaseSection *base_section_symtab = get_base_section(SC_SYMTAB);
-        new_section_header_table(
-            base_section->name,
-            SHT_RELA,
-            SHF_INFO_LINK,
-            base_section->rela_offset,
-            base_section->rela_body->size,
-            base_section_symtab->index, // sh_link holds section header index of the associated symbol table
-            base_section->index, // sh_info holds section header index of the section to which the relocation applies
-            RELA_SECTION_ALIGNMENT,
-            sizeof(Elf_Rela));
-    }
 }
 
 
@@ -467,37 +374,6 @@ static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo 
 
 
 /*
-get string table index of name
-*/
-static Elf_Word get_strtab_position(const ByteBufferType *strtab_body, const char *name)
-{
-    size_t len = strlen(name);
-    size_t range = strtab_body->size - len;
-
-    for(Elf_Word pos = 0; pos < range; pos++)
-    {
-        const char *start = &strtab_body->body[pos];
-        bool equal = true;
-        for(size_t i = 0; i < len; i++)
-        {
-            if(start[i] != name[i])
-            {
-                equal = false;
-                break;
-            }
-        }
-
-        if(equal)
-        {
-            return pos;
-        }
-    }
-
-    return range;
-}
-
-
-/*
 set entries of relocation table
 */
 static void set_relocation_table_entries(size_t resolved_symbols)
@@ -679,37 +555,7 @@ static void generate_sections(const Program *program)
     classify_label_list(program->label_list);
     set_symbol_table_entries();
     set_offset_of_sections();
-}
-
-
-/*
-generate section header table entries
-*/
-static void generate_section_header_table_entries(void)
-{
-    BaseSection *base_section_und = get_base_section(SC_UND);
-    BaseSection *base_section_text = get_base_section(SC_TEXT);
-    BaseSection *base_section_data = get_base_section(SC_DATA);
-    BaseSection *base_section_bss = get_base_section(SC_BSS);
-    BaseSection *base_section_symtab = get_base_section(SC_SYMTAB);
-    BaseSection *base_section_strtab = get_base_section(SC_STRTAB);
-    BaseSection *base_section_shstrtab = get_base_section(SC_SHSTRTAB);
-
-    // set information of metadata sections
-    base_section_symtab->size = base_section_symtab->body->size;
-    base_section_symtab->link = base_section_strtab->index; // sh_link holds section header index of the associated string table (i.e. .strtab section)
-    base_section_symtab->info = RESERVED_SYMTAB_ENTRIES + get_length(Label)(local_label_list); // sh_info holds one greater than the symbol table index of the laxt local symbol
-    base_section_strtab->size = base_section_strtab->body->size;
-    base_section_shstrtab->size = base_section_shstrtab->body->size;
-
-    // make section header table entries
-    new_section_header_table_from_base_section(base_section_und);
-    new_section_header_table_from_base_section(base_section_text);
-    new_section_header_table_from_base_section(base_section_data);
-    new_section_header_table_from_base_section(base_section_bss);
-    new_section_header_table_from_base_section(base_section_symtab);
-    new_section_header_table_from_base_section(base_section_strtab);
-    new_section_header_table_from_base_section(base_section_shstrtab);
+    generate_section_header_table_entries(RESERVED_SYMTAB_ENTRIES + get_length(Label)(local_label_list));
 }
 
 
@@ -738,7 +584,6 @@ generate an object file
 void generate(const char *output_file, const Program *program)
 {
     // initialize lists
-    shdr_list = new_list(Elf_Shdr)();
     symbol_list = new_list(Symbol)();
     local_label_list = new_list(Label)();
     global_label_list = new_list(Label)();
@@ -747,7 +592,6 @@ void generate(const char *output_file, const Program *program)
 
     // generate contents
     generate_sections(program);
-    generate_section_header_table_entries();
 
     // output an object file
     FILE *fp = fopen(output_file, "wb");

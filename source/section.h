@@ -13,6 +13,7 @@ typedef struct Data Data;
 
 #include "list.h"
 define_list(BaseSection)
+define_list(Elf_Shdr)
 
 // kind of section
 enum SectionKind
@@ -60,6 +61,7 @@ struct Data
 };
 
 extern List(BaseSection) *base_section_list;
+extern List(Elf_Shdr) *shdr_list;
 extern const Elf_Xword RELA_SECTION_ALIGNMENT;
 
 void initialize_base_section(void);
@@ -69,5 +71,6 @@ void set_current_section(const char *name);
 BaseSection *get_base_section(SectionKind kind);
 ByteBufferType *make_shstrtab(ByteBufferType *buffer);
 void set_offset_of_sections(void);
+void generate_section_header_table_entries(size_t local_labels);
 
 #endif /* !__SECTION_H__ */
