@@ -28,9 +28,9 @@ static Operand *parse_operand(void);
 static Statement *new_statement(StatementKind kind, Label *label);
 static Label *new_label(LabelKind kind, const char *body);
 static Bss *new_bss(size_t size, Label *label);
-static Data *new_data(size_t size, Label *label);
+static Data *new_data(DataKind kind, size_t size, Label *label);
 static Data *new_data_immediate(size_t size, uintmax_t value, Label *label);
-static Data *new_data_memory(size_t size, const Token *token, Label *label);
+static Data *new_data_symbol(size_t size, const Token *token, Label *label);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, Label *label);
 static Operand *new_operand(OperandKind kind);
 static Operand *new_operand_immediate(uintmax_t immediate);
@@ -53,10 +53,12 @@ void construct(Program *prog)
     statement_list = new_list(Statement)();
     label_list = new_list(Label)();
     initialize_section();
+    initialize_symbol_list();
 
     program();
     prog->statement_list = statement_list;
     prog->label_list = label_list;
+    prog->symbol_list = get_symbol_list();
 }
 
 
@@ -176,7 +178,7 @@ static void parse_directive_size(size_t size, Label *label)
     Token *token;
     if(consume_token(TK_IDENTIFIER, &token))
     {
-        new_data_memory(size, token, label);
+        new_data_symbol(size, token, label);
     }
     else
     {
@@ -358,9 +360,10 @@ static Bss *new_bss(size_t size, Label *label)
 /*
 make a new data
 */
-static Data *new_data(size_t size, Label *label)
+static Data *new_data(DataKind kind, size_t size, Label *label)
 {
     Data *data = calloc(1, sizeof(Data));
+    data->kind = kind;
     data->size = size;
     data->value = 0;
     data->symbol = NULL;
@@ -377,7 +380,7 @@ make a new data for immediate
 */
 static Data *new_data_immediate(size_t size, uintmax_t value, Label *label)
 {
-    Data *data = new_data(size, label);
+    Data *data = new_data(DT_IMMEDIATE, size, label);
     data->value = value;
 
     return data;
@@ -387,9 +390,9 @@ static Data *new_data_immediate(size_t size, uintmax_t value, Label *label)
 /*
 make a new data for memory
 */
-static Data *new_data_memory(size_t size, const Token *token, Label *label)
+static Data *new_data_symbol(size_t size, const Token *token, Label *label)
 {
-    Data *data = new_data(size, label);
+    Data *data = new_data(DT_SYMBOL, size, label);
     data->symbol = make_identifier(token);
 
     return data;

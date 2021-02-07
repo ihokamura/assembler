@@ -47,6 +47,7 @@ struct Program
 {
     List(Statement) *statement_list; // list of statements
     List(Label) *label_list;         // list of labels
+    List(Symbol) *symbol_list;       // list of symbols
 };
 
 // structure for statement

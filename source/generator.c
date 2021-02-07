@@ -14,15 +14,6 @@
 
 typedef struct RelocationInfo RelocationInfo;
 
-struct Symbol
-{
-    const char *body;    // symbol body
-    Elf_Addr address;    // address to be replaced
-    Elf_Sxword addend;   // addend
-    SectionKind section; // section of symbol
-    bool resolved;       // flag indicating that the symbol is resolved
-};
-
 struct RelocationInfo
 {
     SectionKind source;      // section of relocation source
@@ -34,9 +25,7 @@ struct RelocationInfo
 
 #include "list.h"
 define_list(RelocationInfo)
-define_list(Symbol)
 define_list_operations(RelocationInfo)
-define_list_operations(Symbol)
 
 static RelocationInfo *new_relocation_info(SectionKind source, SectionKind destination, const char *body, Elf_Addr address, Elf_Sxword addend);
 static RelocationInfo *new_relocation_info_undefined(Symbol *symbol);
@@ -67,7 +56,7 @@ static void set_symbol_table_entries(void);
 static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info);
 static void set_relocation_table_entries(size_t resolved_symbols);
 static void generate_statement_list(const List(Statement) *statement_list);
-static void resolve_symbols(const List(Label) *label_list);
+static void resolve_symbols(const List(Symbol) *symbol_list, const List(Label) *label_list);
 static void classify_label_list(const List(Label) *label_list);
 static void generate_sections(const Program *program);
 static void generate_elf_header(Elf_Ehdr *ehdr);
@@ -78,30 +67,12 @@ static const Elf_Xword SYMTAB_INDEX_BSS = 3;  // index of symbol table entry for
 
 static List(Label) *local_label_list;         // list of local labels
 static List(Label) *global_label_list;        // list of global labels
-static List(Symbol) *symbol_list;             // list of symbols
 static List(Symbol) *unresolved_symbol_list;  // list of unresolved symbols
 static List(RelocationInfo) *reloc_info_list; // list of relocatable symbols
 
 static ByteBufferType symtab_body = {NULL, 0, 0};    // buffer for section ".symtab"
 static ByteBufferType strtab_body = {NULL, 0, 0};    // buffer for string containing names of symbols
 static ByteBufferType shstrtab_body = {NULL, 0, 0};  // buffer for string containing names of sections
-
-
-/*
-make a new label information
-*/
-Symbol *new_symbol(const char *body, Elf_Addr address, Elf_Sxword addend, SectionKind section)
-{
-    Symbol *symbol = calloc(1, sizeof(Symbol));
-    symbol->body = body;
-    symbol->address = address;
-    symbol->addend = addend;
-    symbol->section = section;
-    symbol->resolved = false;
-    add_list_entry_tail(Symbol)(symbol_list, symbol);
-
-    return symbol;
-}
 
 
 /*
@@ -449,7 +420,7 @@ static void generate_statement_list(const List(Statement) *statement_list)
 /*
 resolve symbols
 */
-static void resolve_symbols(const List(Label) *label_list)
+static void resolve_symbols(const List(Symbol) *symbol_list, const List(Label) *label_list)
 {
     for_each_entry(Symbol, symbol_cursor, symbol_list)
     {
@@ -514,7 +485,7 @@ generate section bodies
 static void generate_sections(const Program *program)
 {
     generate_statement_list(program->statement_list);
-    resolve_symbols(program->label_list);
+    resolve_symbols(program->symbol_list, program->label_list);
     set_relocation_table_entries(get_length(Label)(program->label_list));
     make_shstrtab(&shstrtab_body);
     make_metadata_sections(&symtab_body, &strtab_body, &shstrtab_body);
@@ -550,7 +521,6 @@ generate an object file
 void generate(const char *output_file, const Program *program)
 {
     // initialize lists
-    symbol_list = new_list(Symbol)();
     local_label_list = new_list(Label)();
     global_label_list = new_list(Label)();
     unresolved_symbol_list = new_list(Symbol)();

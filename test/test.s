@@ -36,6 +36,7 @@ main:
 
 
 # test access to external text section
+	.globl test_external_text
 test_external_text:
 	call test_external_function1
 

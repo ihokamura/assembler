@@ -7,6 +7,7 @@
 #include "buffer.h"
 #include "elf_wrap.h"
 
+typedef enum DataKind DataKind;
 typedef enum SectionKind SectionKind;
 typedef struct Bss Bss;
 typedef struct Data Data;
@@ -15,6 +16,13 @@ typedef struct Section Section;
 #include "list.h"
 define_list(Elf_Shdr)
 define_list(Section)
+
+// kind of data
+enum DataKind
+{
+    DT_IMMEDIATE, // immediate
+    DT_SYMBOL,    // symbol
+};
 
 // kind of section
 enum SectionKind
@@ -38,6 +46,7 @@ struct Bss
 // structure for data
 struct Data
 {
+    DataKind kind;      // kind of data
     size_t size;        // size of data
     uintmax_t value;    // value of data
     const char *symbol; // body of symbol
