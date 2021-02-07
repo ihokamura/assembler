@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "identifier.h"
+#include "symbol.h"
 
 #include "list.h"
 define_list_operations(Symbol)

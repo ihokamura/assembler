@@ -4,10 +4,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "identifier.h"
 #include "parser.h"
 #include "processor.h"
 #include "tokenizer.h"
+#include "symbol.h"
 
 #include "list.h"
 define_list_operations(Label)

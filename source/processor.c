@@ -4,9 +4,9 @@
 #include <stdint.h>
 
 #include "buffer.h"
-#include "identifier.h"
 #include "processor.h"
 #include "section.h"
+#include "symbol.h"
 
 #define min(a, b)    ((a) < (b) ? (a) : (b))
 

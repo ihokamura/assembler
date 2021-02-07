@@ -6,11 +6,11 @@
 #include "buffer.h"
 #include "elf_wrap.h"
 #include "generator.h"
-#include "identifier.h"
 #include "output.h"
 #include "parser.h"
 #include "processor.h"
 #include "section.h"
+#include "symbol.h"
 
 typedef struct RelocationInfo RelocationInfo;
 

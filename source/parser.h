@@ -5,9 +5,9 @@
 #include <stddef.h>
 
 #include "elf_wrap.h"
-#include "identifier.h"
 #include "processor.h"
 #include "section.h"
+#include "symbol.h"
 
 typedef enum LabelKind LabelKind;
 typedef enum StatementKind StatementKind;
