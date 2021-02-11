@@ -202,7 +202,7 @@ generate data
 */
 void generate_data(const Data *data, ByteBufferType *buffer)
 {
-    if(data->symbol != NULL)
+    if(data->kind == DT_SYMBOL)
     {
         new_symbol(data->symbol, buffer->size, 0, SC_DATA);
     }
