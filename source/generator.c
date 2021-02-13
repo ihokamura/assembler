@@ -28,7 +28,6 @@ define_list(RelocationInfo)
 define_list_operations(RelocationInfo)
 
 static RelocationInfo *new_relocation_info(SectionKind source, SectionKind destination, const char *body, Elf_Addr address, Elf_Sxword addend);
-static RelocationInfo *new_relocation_info_undefined(Symbol *symbol);
 static void set_elf_header
 (
     Elf_Off e_shoff,
@@ -53,11 +52,11 @@ static void set_relocation_table
     ByteBufferType *rela_body
 );
 static void set_symbol_table_entries(void);
-static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info);
-static void set_relocation_table_entries(size_t resolved_symbols);
+static Elf_Xword get_symtab_index(const RelocationInfo *reloc_info);
+static void set_relocation_table_entries(void);
 static void generate_statement_list(const List(Statement) *statement_list);
+static void classify_symbol_list(const List(Symbol) *symbol_list, const List(Label) *label_list);
 static void resolve_symbols(const List(Symbol) *symbol_list, const List(Label) *label_list);
-static void classify_label_list(const List(Label) *label_list);
 static void generate_sections(const Program *program);
 static void generate_elf_header(Elf_Ehdr *ehdr);
 
@@ -65,9 +64,8 @@ static const size_t RESERVED_SYMTAB_ENTRIES = 4; // number of reserved symbol ta
 static const Elf_Xword SYMTAB_INDEX_DATA = 2; // index of symbol table entry for .data section
 static const Elf_Xword SYMTAB_INDEX_BSS = 3;  // index of symbol table entry for .bss section
 
-static List(Label) *local_label_list;         // list of local labels
-static List(Label) *global_label_list;        // list of global labels
-static List(Symbol) *unresolved_symbol_list;  // list of unresolved symbols
+static List(Symbol) *local_symbol_list;       // list of local symbols
+static List(Symbol) *global_symbol_list;      // list of global symbols
 static List(RelocationInfo) *reloc_info_list; // list of relocatable symbols
 
 static ByteBufferType symtab_body = {NULL, 0, 0};    // buffer for section ".symtab"
@@ -87,35 +85,6 @@ static RelocationInfo *new_relocation_info(SectionKind source, SectionKind desti
     reloc_info->address = address;
     reloc_info->addend = addend;
     add_list_entry_tail(RelocationInfo)(reloc_info_list, reloc_info);
-
-    return reloc_info;
-}
-
-
-/*
-make a new relocatable symbol information for undefined section
-*/
-static RelocationInfo *new_relocation_info_undefined(Symbol *symbol)
-{
-    // make a new relocation information
-    RelocationInfo *reloc_info = new_relocation_info(symbol->section, SC_UND, symbol->body, symbol->address, symbol->addend);
-
-    // serch the existing symbols to avoid duplication
-    bool found = false;
-    for_each_entry(Symbol, cursor, unresolved_symbol_list)
-    {
-        Symbol *existing_symbol = get_element(Symbol)(cursor);
-        if(strcmp(symbol->body, existing_symbol->body) == 0)
-        {
-            found = true;
-            break;
-        }
-    }
-
-    if(!found)
-    {
-        add_list_entry_tail(Symbol)(unresolved_symbol_list, symbol);
-    }
 
     return reloc_info;
 }
@@ -259,55 +228,26 @@ static void set_symbol_table_entries(void)
     append_bytes("\x00", 1, &strtab_body);
     Elf_Word st_name = 1;
 
-    // local labels
-    for_each_entry(Label, cursor, local_label_list)
+    const List(Symbol) *symbol_lists[] = {local_symbol_list, global_symbol_list};
+    const size_t size = sizeof(symbol_lists) / sizeof(symbol_lists[0]);
+    for(size_t i = 0; i < size; i++)
     {
-        Label *label = get_element(Label)(cursor);
-        const char *body = label->body;
-        set_symbol_table(
-            st_name,
-            ELF_ST_INFO(STB_LOCAL, STT_NOTYPE),
-            0,
-            get_section(label->statement->section)->index,
-            label->statement->address,
-            0
-        );
-        append_bytes(body, strlen(body) + 1, &strtab_body);
-        st_name += strlen(body) + 1;
-    }
-
-    // global labels
-    for_each_entry(Label, cursor, global_label_list)
-    {
-        Label *label = get_element(Label)(cursor);
-        const char *body = label->body;
-        set_symbol_table(
-            st_name,
-            ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
-            0,
-            get_section(label->statement->section)->index,
-            label->statement->address,
-            0
-        );
-        append_bytes(body, strlen(body) + 1, &strtab_body);
-        st_name += strlen(body) + 1;
-    }
-
-    // unresolved symbols
-    for_each_entry(Symbol, cursor, unresolved_symbol_list)
-    {
-        Symbol *symbol = get_element(Symbol)(cursor);
-        const char *body = symbol->body;
-        set_symbol_table(
-            st_name,
-            ELF_ST_INFO(STB_GLOBAL, STT_NOTYPE),
-            0,
-            SHN_UNDEF,
-            0,
-            0
-        );
-        append_bytes(body, strlen(body) + 1, &strtab_body);
-        st_name += strlen(body) + 1;
+        const List(Symbol) *symbol_list = symbol_lists[i];
+        for_each_entry(Symbol, cursor, symbol_list)
+        {
+            const Symbol *symbol = get_element(Symbol)(cursor);
+            const char *body = symbol->body;
+            set_symbol_table(
+                st_name,
+                ELF_ST_INFO(symbol->bind, STT_NOTYPE),
+                0,
+                get_section(symbol->destination)->index,
+                symbol->value,
+                0
+            );
+            append_bytes(body, strlen(body) + 1, &strtab_body);
+            st_name += strlen(body) + 1;
+        }
     }
 }
 
@@ -315,7 +255,7 @@ static void set_symbol_table_entries(void)
 /*
 get index of symbol table entry for relocatable symbol
 */
-static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo *reloc_info)
+static Elf_Xword get_symtab_index(const RelocationInfo *reloc_info)
 {
     if(reloc_info->destination == SC_DATA)
     {
@@ -327,8 +267,8 @@ static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo 
     }
     else
     {
-        Elf_Xword sym_index = RESERVED_SYMTAB_ENTRIES + resolved_symbols;
-        for_each_entry(Symbol, cursor, unresolved_symbol_list)
+        Elf_Xword sym_index = RESERVED_SYMTAB_ENTRIES + get_length(Symbol)(local_symbol_list);
+        for_each_entry(Symbol, cursor, global_symbol_list)
         {
             Symbol *symbol = get_element(Symbol)(cursor);
             if(strcmp(reloc_info->body, symbol->body) == 0)
@@ -346,12 +286,12 @@ static Elf_Xword get_symtab_index(size_t resolved_symbols, const RelocationInfo 
 /*
 set entries of relocation table
 */
-static void set_relocation_table_entries(size_t resolved_symbols)
+static void set_relocation_table_entries(void)
 {
     for_each_entry(RelocationInfo, cursor, reloc_info_list)
     {
         RelocationInfo *reloc_info = get_element(RelocationInfo)(cursor);
-        Elf_Xword sym = get_symtab_index(resolved_symbols, reloc_info);
+        Elf_Xword sym = get_symtab_index(reloc_info);
         Elf_Xword type = (reloc_info->source == SC_TEXT) ? R_X86_64_PC32 : R_X86_64_64;
         set_relocation_table(
             reloc_info->address,
@@ -418,6 +358,66 @@ static void generate_statement_list(const List(Statement) *statement_list)
 
 
 /*
+classify list of symbols
+*/
+static void classify_symbol_list(const List(Symbol) *symbol_list, const List(Label) *label_list)
+{
+    for_each_entry(Symbol, cursor, symbol_list)
+    {
+        Symbol *symbol = get_element(Symbol)(cursor);
+        const char *body = symbol->body;
+        if((search_symbol(local_symbol_list, body) != NULL) || (search_symbol(global_symbol_list, body) != NULL))
+        {
+            continue;
+        }
+
+        if(!(symbol->labeled || symbol->declared))
+        {
+            if(search_label(label_list, symbol) == NULL)
+            {
+                symbol->bind = STB_GLOBAL;
+                add_list_entry_tail(Symbol)(global_symbol_list, symbol);
+            }
+        }
+        else
+        {
+            unsigned char bind = STB_GLOBAL;
+            if(symbol->labeled)
+            {
+                bool found = false;
+                for_each_entry(Symbol, cursor, symbol_list)
+                {
+                    Symbol *decl_symbol = get_element(Symbol)(cursor);
+                    if(decl_symbol->declared && (strcmp(decl_symbol->body, body) == 0))
+                    {
+                        bind = decl_symbol->bind;
+                        found = true;
+                        break;
+                    }
+                }
+                if(!found)
+                {
+                    bind = STB_LOCAL;
+                }
+            }
+            else
+            {
+                bind = symbol->bind;
+            }
+
+            Label *label = search_label(label_list, symbol);
+            assert(label != NULL);
+            symbol->value = label->statement->address;
+            symbol->destination = label->statement->section;
+
+            List(Symbol) *list = (bind == STB_LOCAL) ? local_symbol_list : global_symbol_list;
+            add_list_entry_tail(Symbol)(list, symbol);
+        }
+    }
+}
+
+
+/*
 resolve symbols
 */
 static void resolve_symbols(const List(Symbol) *symbol_list, const List(Label) *label_list)
@@ -425,15 +425,27 @@ static void resolve_symbols(const List(Symbol) *symbol_list, const List(Label) *
     for_each_entry(Symbol, symbol_cursor, symbol_list)
     {
         Symbol *symbol = get_element(Symbol)(symbol_cursor);
+        if(symbol->labeled || symbol->declared)
+        {
+            continue;
+        }
+
         for_each_entry(Label, label_cursor, label_list)
         {
             Label *label = get_element(Label)(label_cursor);
-            if(strcmp(symbol->body, label->body) == 0)
+            if(strcmp(symbol->body, label->symbol->body) == 0)
             {
                 switch(label->statement->section)
                 {
                 case SC_TEXT:
-                    *(uint32_t *)&get_section(SC_TEXT)->body->body[symbol->address] = label->statement->address - (symbol->address + sizeof(uint32_t));
+                    if(search_symbol(global_symbol_list, symbol->body) != NULL)
+                    {
+                        new_relocation_info(symbol->section, label->statement->section, symbol->body, symbol->address, -sizeof(uint32_t));
+                    }
+                    else
+                    {
+                        *(uint32_t *)&get_section(SC_TEXT)->body->body[symbol->address] = label->statement->address - (symbol->address + sizeof(uint32_t));
+                    }
                     break;
 
                 case SC_DATA:
@@ -453,27 +465,7 @@ static void resolve_symbols(const List(Symbol) *symbol_list, const List(Label) *
 
         if(!symbol->resolved)
         {
-            new_relocation_info_undefined(symbol);
-        }
-    }
-}
-
-
-/*
-classify labels
-*/
-static void classify_label_list(const List(Label) *label_list)
-{
-    for_each_entry(Label, cursor, label_list)
-    {
-        Label *label = get_element(Label)(cursor);
-        if(label->kind == LB_LOCAL)
-        {
-            add_list_entry_tail(Label)(local_label_list, label);
-        }
-        else
-        {
-            add_list_entry_tail(Label)(global_label_list, label);
+            new_relocation_info(symbol->section, SC_UND, symbol->body, symbol->address, symbol->addend);
         }
     }
 }
@@ -485,14 +477,14 @@ generate section bodies
 static void generate_sections(const Program *program)
 {
     generate_statement_list(program->statement_list);
+    classify_symbol_list(program->symbol_list, program->label_list);
     resolve_symbols(program->symbol_list, program->label_list);
-    set_relocation_table_entries(get_length(Label)(program->label_list));
+    set_relocation_table_entries();
     make_shstrtab(&shstrtab_body);
     make_metadata_sections(&symtab_body, &strtab_body, &shstrtab_body);
-    classify_label_list(program->label_list);
     set_symbol_table_entries();
     set_offset_of_sections();
-    generate_section_header_table_entries(RESERVED_SYMTAB_ENTRIES + get_length(Label)(local_label_list));
+    generate_section_header_table_entries(RESERVED_SYMTAB_ENTRIES + get_length(Symbol)(local_symbol_list));
 }
 
 
@@ -521,9 +513,8 @@ generate an object file
 void generate(const char *output_file, const Program *program)
 {
     // initialize lists
-    local_label_list = new_list(Label)();
-    global_label_list = new_list(Label)();
-    unresolved_symbol_list = new_list(Symbol)();
+    local_symbol_list = new_list(Symbol)();
+    global_symbol_list = new_list(Symbol)();
     reloc_info_list = new_list(RelocationInfo)();
 
     // generate contents

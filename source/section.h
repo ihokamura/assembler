@@ -7,22 +7,12 @@
 #include "buffer.h"
 #include "elf_wrap.h"
 
-typedef enum DataKind DataKind;
 typedef enum SectionKind SectionKind;
-typedef struct Bss Bss;
-typedef struct Data Data;
 typedef struct Section Section;
 
 #include "list.h"
 define_list(Elf_Shdr)
 define_list(Section)
-
-// kind of data
-enum DataKind
-{
-    DT_IMMEDIATE, // immediate
-    DT_SYMBOL,    // symbol
-};
 
 // kind of section
 enum SectionKind
@@ -35,21 +25,6 @@ enum SectionKind
     SC_STRTAB,   // .strtab section
     SC_SHSTRTAB, // .shstrtab section
     SC_CUSTOM,   // custom section
-};
-
-// structure for bss
-struct Bss
-{
-    size_t size;      // size of data
-};
-
-// structure for data
-struct Data
-{
-    DataKind kind;      // kind of data
-    size_t size;        // size of data
-    uintmax_t value;    // value of data
-    const char *symbol; // body of symbol
 };
 
 // structure for base section
@@ -78,7 +53,7 @@ void set_current_section(const char *name);
 Section *get_section(SectionKind kind);
 ByteBufferType *make_shstrtab(ByteBufferType *buffer);
 void set_offset_of_sections(void);
-void generate_section_header_table_entries(size_t local_labels);
+void generate_section_header_table_entries(size_t symtab_shinfo);
 size_t output_section_bodies(size_t start_pos, FILE *fp);
 void output_section_header_table_entries(FILE *fp);
 

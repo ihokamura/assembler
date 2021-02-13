@@ -63,7 +63,7 @@ static void append_binary_disp(const Operand *operand, Elf_Addr address, Elf_Sxw
 static void append_binary_imm(uintmax_t imm, size_t size, ByteBufferType *buffer);
 static void append_binary_imm_least(uintmax_t imm, ByteBufferType *buffer);
 static void append_binary_imm32(uint32_t imm32, ByteBufferType *buffer);
-static void append_binary_relocation(size_t size, const char *symbol, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer);
+static void append_binary_relocation(size_t size, Symbol *symbol, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer);
 static void may_append_binary_instruction_prefix(OperandKind kind, uint8_t prefix, ByteBufferType *buffer);
 static void may_append_binary_rex_prefix_reg_rm(const Operand *operand_reg, const Operand *operand_rm, bool specify_size, ByteBufferType *buffer);
 static void may_append_binary_rex_prefix_reg(const Operand *operand, bool specify_size, ByteBufferType *buffer);
@@ -204,7 +204,7 @@ void generate_data(const Data *data, ByteBufferType *buffer)
 {
     if(data->kind == DT_SYMBOL)
     {
-        new_symbol(data->symbol, buffer->size, 0, SC_DATA);
+        set_symbol(buffer->size, 0, SC_DATA, data->symbol);
     }
     append_binary_imm(data->value, data->size, buffer);
 }
@@ -1065,9 +1065,9 @@ static void append_binary_imm32(uint32_t imm32, ByteBufferType *buffer)
 /*
 append binary for relocation value
 */
-static void append_binary_relocation(size_t size, const char *symbol, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer)
+static void append_binary_relocation(size_t size, Symbol *symbol, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer)
 {
-    new_symbol(symbol, address, addend, SC_TEXT);
+    set_symbol(address, addend, SC_TEXT, symbol);
     switch(size)
     {
     case SIZEOF_32BIT:

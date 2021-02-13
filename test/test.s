@@ -9,7 +9,9 @@ test_data_uint32:
 	.long 0xffffffff
 test_data_uint64:
 	.quad 0xffffffffffffffff
-test_internal_pointer_to_external_data_uint8:
+test_data_pointer_to_internal_data_uint8:
+	.quad test_data_uint8
+test_data_pointer_to_external_data_uint8:
 	.quad test_external_data_uint8
 
 	.bss
@@ -94,7 +96,11 @@ test_internal_data:
 	mov rdi, 0x9000000000000003
 	call assert_equal_uint64
 
-	mov rdi, qword ptr [rip+test_internal_pointer_to_external_data_uint8]
+	mov rsi, qword ptr [rip+test_data_pointer_to_internal_data_uint8]
+	lea rdi, byte ptr [rip+test_data_uint8]
+	call assert_equal_uint64
+
+	mov rdi, qword ptr [rip+test_data_pointer_to_external_data_uint8]
 	call assert_pointer_to_external_data_uint8
 
 	mov rax, 0

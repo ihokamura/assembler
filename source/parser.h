@@ -9,7 +9,6 @@
 #include "section.h"
 #include "symbol.h"
 
-typedef enum LabelKind LabelKind;
 typedef enum StatementKind StatementKind;
 typedef struct Label Label;
 typedef struct Program Program;
@@ -18,13 +17,6 @@ typedef struct Statement Statement;
 #include "list.h"
 define_list(Label)
 define_list(Statement)
-
-// kind of label
-enum LabelKind
-{
-    LB_GLOBAL, // global label
-    LB_LOCAL,  // local label
-};
 
 // kind of statement
 enum StatementKind
@@ -37,8 +29,7 @@ enum StatementKind
 // structure for label
 struct Label
 {
-    LabelKind kind;             // kind of label
-    const char *body;           // contents of label
+    const Symbol *symbol;       // contents of label
     const Statement *statement; // statement marked by the label
 };
 
@@ -65,5 +56,6 @@ struct Statement
 };
 
 void construct(Program *prog);
+Label *search_label(const List(Label) *label_list, const Symbol *symbol);
 
 #endif /* !__PARSER_H__ */

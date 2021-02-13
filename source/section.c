@@ -386,7 +386,7 @@ static void new_section_header_table_from_section(const Section *section)
 /*
 generate section header table entries
 */
-void generate_section_header_table_entries(size_t local_labels)
+void generate_section_header_table_entries(size_t symtab_shinfo)
 {
     // set information of metadata sections
     Section *section_symtab = get_section(SC_SYMTAB);
@@ -395,7 +395,7 @@ void generate_section_header_table_entries(size_t local_labels)
 
     section_symtab->size = section_symtab->body->size;
     section_symtab->link = section_strtab->index; // sh_link holds section header index of the associated string table (i.e. .strtab section)
-    section_symtab->info = local_labels; // sh_info holds one greater than the symbol table index of the laxt local symbol
+    section_symtab->info = symtab_shinfo; // sh_info holds one greater than the symbol table index of the laxt local symbol
 
     section_strtab->size = section_strtab->body->size;
 

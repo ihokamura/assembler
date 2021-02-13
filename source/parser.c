@@ -26,7 +26,7 @@ static const MnemonicInfo *parse_mnemonic(const Token *token);
 static List(Operand) *parse_operands(void);
 static Operand *parse_operand(void);
 static Statement *new_statement(StatementKind kind, Label *label);
-static Label *new_label(LabelKind kind, const char *body);
+static Label *new_label(const Symbol *symbol);
 static Bss *new_bss(size_t size, Label *label);
 static Data *new_data(DataKind kind, size_t size, Label *label);
 static Data *new_data_immediate(size_t size, uintmax_t value, Label *label);
@@ -136,8 +136,10 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved("globl"))
     {
-        Label *label = parse_label(expect_identifier());
-        label->kind = LB_GLOBAL; // overwrite the kind
+        Token *token = expect_identifier();
+        Symbol *symbol = new_symbol(token);
+        symbol->bind = STB_GLOBAL;
+        symbol->declared = true;
     }
     else if(consume_reserved("intel_syntax noprefix"))
     {
@@ -201,19 +203,16 @@ parse a label
 */
 static Label *parse_label(const Token *token)
 {
-    const char *body = make_identifier(token);
+    Symbol *symbol = new_symbol(token);
+    symbol->destination = get_current_section();
+    symbol->labeled = true;
 
-    // serch the existing labels
-    for_each_entry(Label, cursor, label_list)
+    if(search_label(label_list, symbol) != NULL)
     {
-        Label *label = get_element(Label)(cursor);
-        if(strcmp(body, label->body) == 0)
-        {
-            return label;
-        }
+        report_error(NULL, "duplicated label '%s'", symbol->body);
     }
 
-    return new_label(LB_LOCAL, body);
+    return new_label(symbol);
 }
 
 
@@ -328,11 +327,10 @@ static Statement *new_statement(StatementKind kind, Label *label)
 /*
 make a new label
 */
-static Label *new_label(LabelKind kind, const char *body)
+static Label *new_label(const Symbol *symbol)
 {
     Label *label = calloc(1, sizeof(Label));
-    label->kind = kind;
-    label->body = body;
+    label->symbol = symbol;
     label->statement = NULL;
 
     // update list of symbols
@@ -393,7 +391,7 @@ make a new data for memory
 static Data *new_data_symbol(size_t size, const Token *token, Label *label)
 {
     Data *data = new_data(DT_SYMBOL, size, label);
-    data->symbol = make_identifier(token);
+    data->symbol = new_symbol(token);
 
     return data;
 }
@@ -490,7 +488,7 @@ static Operand *new_operand_memory(OperandKind kind)
         {
             if(consume_token(TK_IDENTIFIER, &token))
             {
-                operand->symbol = make_identifier(token);
+                operand->symbol = new_symbol(token);
             }
             else
             {
@@ -518,9 +516,27 @@ make a new operand for symbol
 static Operand *new_operand_symbol(const Token *token)
 {
     Operand *operand = new_operand(OP_SYMBOL);
-    operand->symbol = make_identifier(token);
+    operand->symbol = new_symbol(token);
 
     return operand;
+}
+
+
+/*
+search label by name
+*/
+Label *search_label(const List(Label) *label_list, const Symbol *symbol)
+{
+    for_each_entry(Label, cursor, label_list)
+    {
+        Label *label = get_element(Label)(cursor);
+        if(strcmp(label->symbol->body, symbol->body) == 0)
+        {
+            return label;
+        }
+    }
+
+    return NULL;
 }
 
 
