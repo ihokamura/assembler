@@ -12,22 +12,7 @@
 #include "section.h"
 #include "symbol.h"
 
-typedef struct RelocationInfo RelocationInfo;
-
-struct RelocationInfo
-{
-    SectionKind source;      // section of relocation source
-    SectionKind destination; // section of relocation destination
-    const char *body;        // label body
-    Elf_Addr address;        // address to be replaced
-    Elf_Sxword addend;       // addend
-};
-
-#include "list.h"
-define_list(RelocationInfo)
-define_list_operations(RelocationInfo)
-
-static RelocationInfo *new_relocation_info(SectionKind source, SectionKind destination, const char *body, Elf_Addr address, Elf_Sxword addend);
+static void set_reloc_info(SectionKind located, Elf_Sxword addend, Symbol *symbol);
 static void set_elf_header
 (
     Elf_Off e_shoff,
@@ -52,21 +37,22 @@ static void set_relocation_table
     ByteBufferType *rela_body
 );
 static void set_symbol_table_entries(void);
-static Elf_Xword get_symtab_index(const RelocationInfo *reloc_info);
+static Elf_Xword get_symtab_index(const Symbol *symbol);
 static void set_relocation_table_entries(void);
 static void generate_statement_list(const List(Statement) *statement_list);
+static void update_symbol_list(Symbol *symbol);
 static void classify_symbol_list(const List(Symbol) *symbol_list, const List(Label) *label_list);
 static void resolve_symbols(const List(Symbol) *symbol_list, const List(Label) *label_list);
 static void generate_sections(const Program *program);
 static void generate_elf_header(Elf_Ehdr *ehdr);
 
 static const size_t RESERVED_SYMTAB_ENTRIES = 4; // number of reserved symbol table entries (undefined, .text, .data, .bss)
-static const Elf_Xword SYMTAB_INDEX_DATA = 2; // index of symbol table entry for .data section
-static const Elf_Xword SYMTAB_INDEX_BSS = 3;  // index of symbol table entry for .bss section
+static const Elf_Xword SYMTAB_INDEX_DATA = 2;    // index of symbol table entry for .data section
+static const Elf_Xword SYMTAB_INDEX_BSS = 3;     // index of symbol table entry for .bss section
 
-static List(Symbol) *local_symbol_list;       // list of local symbols
-static List(Symbol) *global_symbol_list;      // list of global symbols
-static List(RelocationInfo) *reloc_info_list; // list of relocatable symbols
+static List(Symbol) *local_symbol_list;  // list of local symbols
+static List(Symbol) *global_symbol_list; // list of global symbols
+static List(Symbol) *reloc_symbol_list;  // list of relocatable symbols
 
 static ByteBufferType symtab_body = {NULL, 0, 0};    // buffer for section ".symtab"
 static ByteBufferType strtab_body = {NULL, 0, 0};    // buffer for string containing names of symbols
@@ -74,19 +60,13 @@ static ByteBufferType shstrtab_body = {NULL, 0, 0};  // buffer for string contai
 
 
 /*
-make a new relocatable symbol information
+set relocation information
 */
-static RelocationInfo *new_relocation_info(SectionKind source, SectionKind destination, const char *body, Elf_Addr address, Elf_Sxword addend)
+static void set_reloc_info(SectionKind located, Elf_Sxword addend, Symbol *symbol)
 {
-    RelocationInfo *reloc_info = calloc(1, sizeof(RelocationInfo));
-    reloc_info->source = source;
-    reloc_info->destination = destination;
-    reloc_info->body = body;
-    reloc_info->address = address;
-    reloc_info->addend = addend;
-    add_list_entry_tail(RelocationInfo)(reloc_info_list, reloc_info);
-
-    return reloc_info;
+    symbol->located = located;
+    symbol->addend = addend;
+    add_list_entry_tail(Symbol)(reloc_symbol_list, symbol);
 }
 
 
@@ -241,7 +221,7 @@ static void set_symbol_table_entries(void)
                 st_name,
                 ELF_ST_INFO(symbol->bind, STT_NOTYPE),
                 0,
-                get_section(symbol->destination)->index,
+                get_section(symbol->located)->index,
                 symbol->value,
                 0
             );
@@ -255,13 +235,13 @@ static void set_symbol_table_entries(void)
 /*
 get index of symbol table entry for relocatable symbol
 */
-static Elf_Xword get_symtab_index(const RelocationInfo *reloc_info)
+static Elf_Xword get_symtab_index(const Symbol *symbol)
 {
-    if(reloc_info->destination == SC_DATA)
+    if(symbol->located == SC_DATA)
     {
         return SYMTAB_INDEX_DATA;
     }
-    else if(reloc_info->destination == SC_BSS)
+    else if(symbol->located == SC_BSS)
     {
         return SYMTAB_INDEX_BSS;
     }
@@ -270,8 +250,8 @@ static Elf_Xword get_symtab_index(const RelocationInfo *reloc_info)
         Elf_Xword sym_index = RESERVED_SYMTAB_ENTRIES + get_length(Symbol)(local_symbol_list);
         for_each_entry(Symbol, cursor, global_symbol_list)
         {
-            Symbol *symbol = get_element(Symbol)(cursor);
-            if(strcmp(reloc_info->body, symbol->body) == 0)
+            Symbol *global_symbol = get_element(Symbol)(cursor);
+            if(strcmp(symbol->body, global_symbol->body) == 0)
             {
                 break;
             }
@@ -288,16 +268,16 @@ set entries of relocation table
 */
 static void set_relocation_table_entries(void)
 {
-    for_each_entry(RelocationInfo, cursor, reloc_info_list)
+    for_each_entry(Symbol, cursor, reloc_symbol_list)
     {
-        RelocationInfo *reloc_info = get_element(RelocationInfo)(cursor);
-        Elf_Xword sym = get_symtab_index(reloc_info);
-        Elf_Xword type = (reloc_info->source == SC_TEXT) ? R_X86_64_PC32 : R_X86_64_64;
+        Symbol *symbol = get_element(Symbol)(cursor);
+        Elf_Xword sym = get_symtab_index(symbol);
+        Elf_Xword type = (symbol->appeared == SC_TEXT) ? R_X86_64_PC32 : R_X86_64_64;
         set_relocation_table(
-            reloc_info->address,
+            symbol->address,
             ELF_R_INFO(sym, type),
-            reloc_info->addend,
-            get_section(reloc_info->source)->rela_body
+            symbol->addend,
+            get_section(symbol->appeared)->rela_body
         );
     }
 }
@@ -358,6 +338,15 @@ static void generate_statement_list(const List(Statement) *statement_list)
 
 
 /*
+update list of symbols
+*/
+static void update_symbol_list(Symbol *symbol)
+{
+    add_list_entry_tail(Symbol)((symbol->bind == STB_LOCAL) ? local_symbol_list : global_symbol_list, symbol);
+}
+
+
+/*
 classify list of symbols
 */
 static void classify_symbol_list(const List(Symbol) *symbol_list, const List(Label) *label_list)
@@ -376,7 +365,7 @@ static void classify_symbol_list(const List(Symbol) *symbol_list, const List(Lab
             if(search_label(label_list, symbol) == NULL)
             {
                 symbol->bind = STB_GLOBAL;
-                add_list_entry_tail(Symbol)(global_symbol_list, symbol);
+                update_symbol_list(symbol);
             }
         }
         else
@@ -384,21 +373,8 @@ static void classify_symbol_list(const List(Symbol) *symbol_list, const List(Lab
             unsigned char bind = STB_GLOBAL;
             if(symbol->labeled)
             {
-                bool found = false;
-                for_each_entry(Symbol, cursor, symbol_list)
-                {
-                    Symbol *decl_symbol = get_element(Symbol)(cursor);
-                    if(decl_symbol->declared && (strcmp(decl_symbol->body, body) == 0))
-                    {
-                        bind = decl_symbol->bind;
-                        found = true;
-                        break;
-                    }
-                }
-                if(!found)
-                {
-                    bind = STB_LOCAL;
-                }
+                const Symbol *declaration = search_symbol_declaration(symbol_list, body);
+                bind = (declaration == NULL) ? STB_LOCAL : declaration->bind;
             }
             else
             {
@@ -406,12 +382,10 @@ static void classify_symbol_list(const List(Symbol) *symbol_list, const List(Lab
             }
 
             Label *label = search_label(label_list, symbol);
-            assert(label != NULL);
             symbol->value = label->statement->address;
-            symbol->destination = label->statement->section;
-
-            List(Symbol) *list = (bind == STB_LOCAL) ? local_symbol_list : global_symbol_list;
-            add_list_entry_tail(Symbol)(list, symbol);
+            symbol->located = label->statement->section;
+            symbol->bind = bind;
+            update_symbol_list(symbol);
         }
     }
 }
@@ -430,27 +404,32 @@ static void resolve_symbols(const List(Symbol) *symbol_list, const List(Label) *
             continue;
         }
 
+        const char *body = symbol->body;
+        bool resolved = false;
         for_each_entry(Label, label_cursor, label_list)
         {
             Label *label = get_element(Label)(label_cursor);
-            if(strcmp(symbol->body, label->symbol->body) == 0)
+            if(strcmp(label->symbol->body, body) == 0)
             {
-                switch(label->statement->section)
+                Elf_Addr label_address = label->statement->address;
+                SectionKind label_section = label->statement->section;
+                switch(label_section)
                 {
                 case SC_TEXT:
-                    if(search_symbol(global_symbol_list, symbol->body) != NULL)
+                    if(search_symbol(global_symbol_list, body) != NULL)
                     {
-                        new_relocation_info(symbol->section, label->statement->section, symbol->body, symbol->address, -sizeof(uint32_t));
+                        set_reloc_info(label_section, -sizeof(uint32_t), symbol);
                     }
                     else
                     {
-                        *(uint32_t *)&get_section(SC_TEXT)->body->body[symbol->address] = label->statement->address - (symbol->address + sizeof(uint32_t));
+                        uint32_t *reloc_target = (uint32_t *)&get_section(SC_TEXT)->body->body[symbol->address];
+                        *reloc_target = label_address - (symbol->address + sizeof(uint32_t));
                     }
                     break;
 
                 case SC_DATA:
                 case SC_BSS:
-                    new_relocation_info(symbol->section, label->statement->section, NULL, symbol->address, symbol->addend + label->statement->address);
+                    set_reloc_info(label_section, symbol->addend + label_address, symbol);
                     break;
 
                 default:
@@ -458,14 +437,14 @@ static void resolve_symbols(const List(Symbol) *symbol_list, const List(Label) *
                     break;
                 }
 
-                symbol->resolved = true;
+                resolved = true;
                 break;
             }
         }
 
-        if(!symbol->resolved)
+        if(!resolved)
         {
-            new_relocation_info(symbol->section, SC_UND, symbol->body, symbol->address, symbol->addend);
+            set_reloc_info(SC_UND, symbol->addend, symbol);
         }
     }
 }
@@ -515,7 +494,7 @@ void generate(const char *output_file, const Program *program)
     // initialize lists
     local_symbol_list = new_list(Symbol)();
     global_symbol_list = new_list(Symbol)();
-    reloc_info_list = new_list(RelocationInfo)();
+    reloc_symbol_list = new_list(Symbol)();
 
     // generate contents
     generate_sections(program);

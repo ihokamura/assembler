@@ -204,7 +204,7 @@ parse a label
 static Label *parse_label(const Token *token)
 {
     Symbol *symbol = new_symbol(token);
-    symbol->destination = get_current_section();
+    symbol->located = get_current_section();
     symbol->labeled = true;
 
     if(search_label(label_list, symbol) != NULL)

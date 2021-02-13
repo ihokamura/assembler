@@ -17,12 +17,12 @@ Symbol *new_symbol(const Token *token)
 {
     Symbol *symbol = calloc(1, sizeof(Symbol));
     symbol->body = make_identifier(token);
+    symbol->value = 0;
     symbol->address = 0;
     symbol->addend = 0;
-    symbol->section = SC_UND;
-    symbol->destination = SC_UND;
+    symbol->appeared = SC_UND;
+    symbol->located = SC_UND;
     symbol->bind = STB_LOCAL;
-    symbol->resolved = false;
     symbol->labeled = false;
     symbol->declared = false;
     add_list_entry_tail(Symbol)(symbol_list, symbol);
@@ -34,11 +34,11 @@ Symbol *new_symbol(const Token *token)
 /*
 set information of symbol
 */
-Symbol *set_symbol(Elf_Addr address, Elf_Sxword addend, SectionKind section, Symbol *symbol)
+Symbol *set_symbol(Elf_Addr address, Elf_Sxword addend, SectionKind appeared, Symbol *symbol)
 {
     symbol->address = address;
     symbol->addend = addend;
-    symbol->section = section;
+    symbol->appeared = appeared;
 
     return symbol;
 }
@@ -53,6 +53,24 @@ Symbol *search_symbol(const List(Symbol) *symbol_list, const char *body)
     {
         Symbol *symbol = get_element(Symbol)(cursor);
         if(strcmp(symbol->body, body) == 0)
+        {
+            return symbol;
+        }
+    }
+
+    return NULL;
+}
+
+
+/*
+search declared symbol by name
+*/
+Symbol *search_symbol_declaration(const List(Symbol) *symbol_list, const char *body)
+{
+    for_each_entry(Symbol, cursor, symbol_list)
+    {
+        Symbol *symbol = get_element(Symbol)(cursor);
+        if(symbol->declared && strcmp(symbol->body, body) == 0)
         {
             return symbol;
         }
