@@ -123,7 +123,7 @@ void generate_all_test_case_binary(FILE *fp, const BinaryOperationTestDataMaker 
     // <mnemonic> reg, reg
     for(size_t i = 0; i < REG_LIST_SIZE; i++)
     {
-        const RegisterInfo *reg1_info = &reg_list[0];
+        const RegisterInfo *reg1_info = &reg_list[i];
         for(size_t j = 0; j < REG_LIST_SIZE; j++)
         {
             const RegisterInfo *reg2_info = &reg_list[j];

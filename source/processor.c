@@ -29,12 +29,14 @@ struct BinaryOperationOpecode
 static void generate_op_add(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_and(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_or(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_pop(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_push(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_pushfq(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
@@ -45,6 +47,7 @@ static bool is_memory(OperandKind kind);
 static bool is_register_or_memory(OperandKind kind);
 static bool is_eax_register(RegisterKind kind);
 static bool is_type_i_encoding(const Operand *operand1, const Operand *operand2);
+static bool is_signed_8bit_immediate(const Operand *operand);
 static size_t get_operand_size(OperandKind kind);
 static uint8_t get_register_index(RegisterKind kind);
 static uint8_t get_rex_prefix(const Operand *operand, size_t prefix_position, bool specify_size);
@@ -70,18 +73,20 @@ static void may_append_binary_rex_prefix_reg(const Operand *operand, bool specif
 
 const MnemonicInfo mnemonic_info_list[] = 
 {
-    {MN_ADD,  "add",  true,  generate_op_add},
-    {MN_AND,  "and",  true,  generate_op_and},
-    {MN_CALL, "call", true,  generate_op_call},
-    {MN_LEA,  "lea",  true,  generate_op_lea},
-    {MN_MOV,  "mov",  true,  generate_op_mov},
-    {MN_NOP,  "nop",  false, generate_op_nop},
-    {MN_OR,   "or",   true,  generate_op_or},
-    {MN_POP,  "pop",  true,  generate_op_pop},
-    {MN_PUSH, "push", true,  generate_op_push},
-    {MN_RET,  "ret",  false, generate_op_ret},
-    {MN_SUB,  "sub",  true,  generate_op_sub},
-    {MN_XOR,  "xor",  true,  generate_op_xor},
+    {MN_ADD,    "add",    true,  generate_op_add},
+    {MN_AND,    "and",    true,  generate_op_and},
+    {MN_CALL,   "call",   true,  generate_op_call},
+    {MN_CMP,    "cmp",    true,  generate_op_cmp},
+    {MN_LEA,    "lea",    true,  generate_op_lea},
+    {MN_MOV,    "mov",    true,  generate_op_mov},
+    {MN_NOP,    "nop",    false, generate_op_nop},
+    {MN_OR,     "or",     true,  generate_op_or},
+    {MN_POP,    "pop",    true,  generate_op_pop},
+    {MN_PUSH,   "push",   true,  generate_op_push},
+    {MN_PUSHFQ, "pushfq", false, generate_op_pushfq},
+    {MN_RET,    "ret",    false, generate_op_ret},
+    {MN_SUB,    "sub",    true,  generate_op_sub},
+    {MN_XOR,    "xor",    true,  generate_op_xor},
 };
 const size_t MNEMONIC_INFO_LIST_SIZE = sizeof(mnemonic_info_list) / sizeof(mnemonic_info_list[0]);
 
@@ -196,6 +201,8 @@ static const size_t SIB_POSITION_SS = 6;
 static const size_t SIB_POSITION_INDEX = 3;
 static const size_t SIB_POSITION_BASE = 0;
 
+static const size_t SIGN_BIT_MASK_8BIT = 0x80;
+
 
 /*
 generate data
@@ -254,6 +261,16 @@ static void generate_op_call(const List(Operand) *operands, ByteBufferType *buff
         append_binary_opecode(0xe8, buffer);
         append_binary_relocation(SIZEOF_32BIT, operand->symbol, buffer->size, -SIZEOF_32BIT, buffer);
     }
+}
+
+
+/*
+generate cmp operation
+*/
+static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    const BinaryOperationOpecode opecode = {0x3c, 0x3d, 0x07, 0x80, 0x81, 0x83, 0x38, 0x39, 0x3a, 0x3b};
+    generate_binary_arithmetic_operation(&opecode, operands, buffer);
 }
 
 
@@ -486,6 +503,15 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *buff
 
 
 /*
+generate pushfq operation
+*/
+static void generate_op_pushfq(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    append_binary_opecode(0x9c, buffer);
+}
+
+
+/*
 generate ret operation
 */
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *buffer)
@@ -540,7 +566,7 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         may_append_binary_rex_prefix_reg(operand1, true, buffer);
         uint8_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->i_byte : opecode->i;
         append_binary_opecode(op, buffer);
-        append_binary_imm_least(operand2->immediate, buffer);
+        append_binary_imm(operand2->immediate, get_operand_size(operand2->kind), buffer);
     }
     else if(is_register_or_memory(operand1->kind) && is_immediate(operand2->kind))
     {
@@ -550,21 +576,24 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         * <mnemonic> r/m16, imm8
         * <mnemonic> r/m32, imm8
         * <mnemonic> r/m64, imm8
-        * <mnemonic> r/m16, imm32
+        * <mnemonic> r/m16, imm16
         * <mnemonic> r/m32, imm32
         * <mnemonic> r/m64, imm32
         */
-        assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
+        size_t operand1_size = get_operand_size(operand1->kind);
+        size_t operand2_size = get_operand_size(operand2->kind);
+        size_t imm_size = is_signed_8bit_immediate(operand2) ? min(operand1_size, SIZEOF_32BIT) : operand2_size;
+        assert(operand1_size >= operand2_size);
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
-        uint8_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->mi_byte : ((get_operand_size(operand2->kind) == SIZEOF_8BIT) ? opecode->mi_imm8 : opecode->mi);
+        uint8_t op = (operand1_size == SIZEOF_8BIT) ? opecode->mi_byte : (imm_size == SIZEOF_8BIT ? opecode->mi_imm8 : opecode->mi);
         append_binary_opecode(op, buffer);
         append_binary_modrm(get_mod_field(operand1), opecode->reg_field_mi, get_reg_field(operand1->reg), buffer);
         if(is_memory(operand1->kind))
         {
             append_binary_disp(operand1, buffer->size, -SIZEOF_32BIT, buffer);
         }
-        append_binary_imm(operand2->immediate, get_operand_size(operand2->kind), buffer);
+        append_binary_imm(operand2->immediate, imm_size, buffer);
     }
     else if(is_register_or_memory(operand1->kind) && is_register(operand2->kind))
     {
@@ -665,6 +694,22 @@ static bool is_type_i_encoding(const Operand *operand1, const Operand *operand2)
     }
 
     return false;
+}
+
+
+/*
+check if operand is signed 8-bit immediate
+*/
+static bool is_signed_8bit_immediate(const Operand *operand)
+{
+    if(get_operand_size(operand->kind) == SIZEOF_8BIT)
+    {
+        return (operand->immediate & SIGN_BIT_MASK_8BIT) == SIGN_BIT_MASK_8BIT;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 

@@ -3,6 +3,7 @@
 
 void generate_test_add(void);
 void generate_test_and(void);
+void generate_test_cmp(void);
 void generate_test_lea(void);
 void generate_test_mov(void);
 void generate_test_nop(void);
