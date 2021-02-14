@@ -59,7 +59,7 @@ static uint8_t get_mod_field(const Operand *operand);
 static uint8_t get_reg_field(RegisterKind kind);
 static uint8_t get_rm_field(RegisterKind kind);
 static void append_binary_prefix(uint8_t prefix, ByteBufferType *buffer);
-static void append_binary_opecode(uint8_t opecode, ByteBufferType *buffer);
+static void append_binary_opecode(uint32_t opecode, ByteBufferType *buffer);
 static void append_binary_modrm(uint8_t mod, uint8_t reg, uint8_t rm, ByteBufferType *buffer);
 static void append_binary_sib(uint8_t ss, uint8_t index, uint8_t base, ByteBufferType *buffer);
 static void append_binary_disp(const Operand *operand, Elf_Addr address, Elf_Sxword addend, ByteBufferType *buffer);
@@ -201,6 +201,8 @@ static const size_t SIB_POSITION_SS = 6;
 static const size_t SIB_POSITION_INDEX = 3;
 static const size_t SIB_POSITION_BASE = 0;
 
+static const size_t OPECODE_SIZE_MAX = 3;
+static const uint8_t UINT8_T_MASK = 0xff;
 static const size_t SIGN_BIT_MASK_8BIT = 0x80;
 
 
@@ -288,7 +290,7 @@ static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffe
     * LEA r64, m
     */
     may_append_binary_rex_prefix_reg_rm(operand1, operand2, true, buffer);
-    append_binary_opecode(0x8D, buffer);
+    append_binary_opecode(0x8d, buffer);
     append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
     append_binary_disp(operand2, buffer->size, operand2->immediate - SIZEOF_32BIT, buffer);
 }
@@ -315,7 +317,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffe
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
-        uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x88 : 0x89;
+        uint32_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x88 : 0x89;
         append_binary_opecode(opecode, buffer);
         append_binary_modrm(get_mod_field(operand1), get_reg_field(operand2->reg), get_rm_field(operand1->reg), buffer);
         if(is_memory(operand1->kind))
@@ -335,7 +337,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffe
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg_rm(operand1, operand2, true, buffer);
-        uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x8a : 0x8b;
+        uint32_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0x8a : 0x8b;
         append_binary_opecode(opecode, buffer);
         append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
         append_binary_disp(operand2, buffer->size, operand2->immediate - SIZEOF_32BIT, buffer);
@@ -365,7 +367,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffe
             assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
             may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
             may_append_binary_rex_prefix_reg(operand1, true, buffer);
-            size_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0xb0 : 0xb8;
+            uint32_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0xb0 : 0xb8;
             append_binary_opecode(opecode + get_reg_field(operand1->reg), buffer);
             append_binary_imm(operand2->immediate, get_operand_size(operand1->kind), buffer);
         }
@@ -382,7 +384,7 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffe
         assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
-        uint8_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0xc6 : 0xc7;
+        uint32_t opecode = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? 0xc6 : 0xc7;
         append_binary_opecode(opecode, buffer);
         append_binary_modrm(get_mod_field(operand1), 0x00, get_rm_field(operand1->reg), buffer);
         size_t imm_size = min(get_operand_size(operand1->kind), SIZEOF_32BIT);
@@ -564,7 +566,7 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         */
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg(operand1, true, buffer);
-        uint8_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->i_byte : opecode->i;
+        uint32_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->i_byte : opecode->i;
         append_binary_opecode(op, buffer);
         append_binary_imm(operand2->immediate, get_operand_size(operand2->kind), buffer);
     }
@@ -586,7 +588,7 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         assert(operand1_size >= operand2_size);
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
-        uint8_t op = (operand1_size == SIZEOF_8BIT) ? opecode->mi_byte : (imm_size == SIZEOF_8BIT ? opecode->mi_imm8 : opecode->mi);
+        uint32_t op = (operand1_size == SIZEOF_8BIT) ? opecode->mi_byte : (imm_size == SIZEOF_8BIT ? opecode->mi_imm8 : opecode->mi);
         append_binary_opecode(op, buffer);
         append_binary_modrm(get_mod_field(operand1), opecode->reg_field_mi, get_reg_field(operand1->reg), buffer);
         if(is_memory(operand1->kind))
@@ -607,7 +609,7 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
-        uint8_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->mr_byte : opecode->mr;
+        uint32_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->mr_byte : opecode->mr;
         append_binary_opecode(op, buffer);
         append_binary_modrm(get_mod_field(operand1), get_reg_field(operand2->reg), get_rm_field(operand1->reg), buffer);
         if(is_memory(operand1->kind))
@@ -627,7 +629,7 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         assert(get_operand_size(operand1->kind) == get_operand_size(operand2->kind));
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg_rm(operand1, operand2, true, buffer);
-        uint8_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->rm_byte : opecode->rm;
+        uint32_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->rm_byte : opecode->rm;
         append_binary_opecode(op, buffer);
         append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
         append_binary_disp(operand2, buffer->size, -SIZEOF_32BIT, buffer);
@@ -1029,9 +1031,20 @@ static void append_binary_prefix(uint8_t prefix, ByteBufferType *buffer)
 /*
 append binary for opecode
 */
-static void append_binary_opecode(uint8_t opecode, ByteBufferType *buffer)
+static void append_binary_opecode(uint32_t opecode, ByteBufferType *buffer)
 {
-    append_bytes((char *)&opecode, sizeof(opecode), buffer);
+    // append binary for opecode which is more than 1 byte
+    for(size_t i = OPECODE_SIZE_MAX - 1; i > 0; i--)
+    {
+        uint8_t byte = opecode & (UINT8_T_MASK << (8 * i));
+        if(byte != 0x00)
+        {
+            append_bytes((char *)&byte, sizeof(byte), buffer);
+        }
+    }
+
+    uint8_t byte = opecode & UINT8_T_MASK;
+    append_bytes((char *)&byte, sizeof(byte), buffer);
 }
 
 
