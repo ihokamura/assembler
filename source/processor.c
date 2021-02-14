@@ -38,6 +38,7 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_push(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_pushfq(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_seta(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
@@ -85,6 +86,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_PUSH,   "push",   true,  generate_op_push},
     {MN_PUSHFQ, "pushfq", false, generate_op_pushfq},
     {MN_RET,    "ret",    false, generate_op_ret},
+    {MN_SETA,   "seta",   true,  generate_op_seta},
     {MN_SUB,    "sub",    true,  generate_op_sub},
     {MN_XOR,    "xor",    true,  generate_op_xor},
 };
@@ -523,6 +525,20 @@ static void generate_op_ret(const List(Operand) *operands, ByteBufferType *buffe
     * RET
     */
     append_binary_opecode(0xc3, buffer);
+}
+
+
+/*
+generate seta operation
+*/
+static void generate_op_seta(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    const Operand *operand = get_first_element(Operand)(operands);
+
+    may_append_binary_rex_prefix_reg(operand, true, buffer);
+    append_binary_opecode(0x0f97, buffer);
+    append_binary_modrm(get_mod_field(operand), 0x00, get_rm_field(operand->reg), buffer); // reg field of the ModR/M byte is not used
+    append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
 }
 
 
@@ -1036,7 +1052,7 @@ static void append_binary_opecode(uint32_t opecode, ByteBufferType *buffer)
     // append binary for opecode which is more than 1 byte
     for(size_t i = OPECODE_SIZE_MAX - 1; i > 0; i--)
     {
-        uint8_t byte = opecode & (UINT8_T_MASK << (8 * i));
+        uint8_t byte = (opecode >> (8 * i)) & UINT8_T_MASK;
         if(byte != 0x00)
         {
             append_bytes((char *)&byte, sizeof(byte), buffer);

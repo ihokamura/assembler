@@ -128,7 +128,7 @@ static void generate_test_case_cmp_mem_reg(FILE *fp, const CmpInfo *cmp_info, co
 
 static void generate_all_test_case_cmp(FILE *fp)
 {
-    // <mnemonic> reg, imm
+    // cmp reg, imm
     for(size_t i = 0; i < REG_LIST_SIZE; i++)
     {
         const RegisterInfo *reg_info = &reg_list[i];
@@ -147,7 +147,7 @@ static void generate_all_test_case_cmp(FILE *fp)
         }
     }
 
-    // <mnemonic> reg, reg
+    // cmp reg, reg
     for(size_t i = 0; i < REG_LIST_SIZE; i++)
     {
         const RegisterInfo *reg1_info = &reg_list[i];
@@ -166,7 +166,7 @@ static void generate_all_test_case_cmp(FILE *fp)
         }
     }
 
-    // <mnemonic> reg, mem
+    // cmp reg, mem
     for(size_t i = 0; i < REG_LIST_SIZE; i++)
     {
         const RegisterInfo *reg_info = &reg_list[i];
@@ -178,7 +178,7 @@ static void generate_all_test_case_cmp(FILE *fp)
         }
     }
 
-    // <mnemonic> mem, imm
+    // cmp mem, imm
     for(size_t j = 0; j < IMM_LIST_SIZE; j++)
     {
         const ImmediateInfo *imm_info = &imm_list[j];
@@ -194,7 +194,7 @@ static void generate_all_test_case_cmp(FILE *fp)
         }
     }
 
-    // <mnemonic> mem, reg
+    // cmp mem, reg
     for(size_t i = 0; i < REG_LIST_SIZE; i++)
     {
         const RegisterInfo *reg_info = &reg_list[i];

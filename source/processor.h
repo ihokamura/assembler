@@ -49,6 +49,7 @@ enum MnemonicKind
     MN_PUSH,
     MN_PUSHFQ,
     MN_RET,
+    MN_SETA,
     MN_SUB,
     MN_XOR,
 };
