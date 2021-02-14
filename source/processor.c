@@ -126,6 +126,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_SETNBE, "setnbe", true,  generate_op_setnbe},
     {MN_SETNE,  "setne",  true,  generate_op_setne},
     {MN_SETNG,  "setng",  true,  generate_op_setle},
+    {MN_SETNGE, "setnge", true,  generate_op_setl},
     {MN_SUB,    "sub",    true,  generate_op_sub},
     {MN_XOR,    "xor",    true,  generate_op_xor},
 };
