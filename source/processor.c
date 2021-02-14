@@ -46,6 +46,7 @@ static void generate_op_and(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_leave(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_or(const List(Operand) *operands, ByteBufferType *buffer);
@@ -104,6 +105,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_CALL,   "call",   true,  generate_op_call},
     {MN_CMP,    "cmp",    true,  generate_op_cmp},
     {MN_LEA,    "lea",    true,  generate_op_lea},
+    {MN_LEAVE,  "leave",  false, generate_op_leave},
     {MN_MOV,    "mov",    true,  generate_op_mov},
     {MN_NOP,    "nop",    false, generate_op_nop},
     {MN_OR,     "or",     true,  generate_op_or},
@@ -339,6 +341,19 @@ static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffe
     append_binary_opecode(0x8d, buffer);
     append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
     append_binary_disp(operand2, buffer->size, operand2->immediate - SIZEOF_32BIT, buffer);
+}
+
+
+/*
+generate leave operation
+*/
+static void generate_op_leave(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    /*
+    handle the following instructions
+    * LEAVE
+    */
+    append_binary_opecode(0xc9, buffer);
 }
 
 
