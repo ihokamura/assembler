@@ -39,6 +39,7 @@ test()
 test test.s 0
 test test_add.s 0
 test test_and.s 0
+test test_call.s 0
 test test_cmp.s 0
 test test_lea.s 0
 test test_mov.s 0

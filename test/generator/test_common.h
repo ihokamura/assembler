@@ -58,5 +58,7 @@ const char *get_working_register(const size_t *index_list, size_t list_size);
 const char *generate_save_register(FILE *fp, const size_t *index_list, size_t list_size);
 void generate_restore_register(FILE *fp, const char *work_reg);
 void generate_test(const char *filename, size_t stack_size, void (*generate_all_test_case)(FILE *));
+void generate_prologue(FILE *fp, size_t stack_size);
+void generate_epilogue(FILE *fp);
 
 #endif /* !__TEST_COMMON_H__ */

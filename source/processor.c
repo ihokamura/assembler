@@ -315,6 +315,18 @@ static void generate_op_call(const List(Operand) *operands, ByteBufferType *buff
         append_binary_opecode(0xe8, buffer);
         append_binary_relocation(SIZEOF_32BIT, operand->symbol, buffer->size, -SIZEOF_32BIT, buffer);
     }
+    else if(is_register(operand->kind) || is_memory(operand->kind))
+    {
+        /*
+        handle the following instructions
+        * CALL r/m64
+        */
+        assert(get_operand_size(operand->kind) == SIZEOF_64BIT);
+        may_append_binary_rex_prefix_reg(operand, false, buffer);
+        append_binary_opecode(0xff, buffer);
+        append_binary_modrm(get_mod_field(operand), 0x02, get_rm_field(operand->reg), buffer);
+        append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
+    }
 }
 
 
