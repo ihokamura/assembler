@@ -10,6 +10,7 @@ static void (* const generate_test[])(void) =
     generate_test_lea,
     generate_test_mov,
     generate_test_nop,
+    generate_test_not,
     generate_test_or,
     generate_test_pop,
     generate_test_push,

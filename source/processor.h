@@ -45,6 +45,7 @@ enum MnemonicKind
     MN_LEAVE,
     MN_MOV,
     MN_NOP,
+    MN_NOT,
     MN_OR,
     MN_POP,
     MN_PUSH,

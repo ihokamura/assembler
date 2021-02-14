@@ -7,6 +7,7 @@ void generate_test_cmp(void);
 void generate_test_lea(void);
 void generate_test_mov(void);
 void generate_test_nop(void);
+void generate_test_not(void);
 void generate_test_or(void);
 void generate_test_pop(void);
 void generate_test_push(void);

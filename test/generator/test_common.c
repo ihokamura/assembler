@@ -90,10 +90,10 @@ const size_t REG_LIST_SIZE = sizeof(reg_list) / sizeof(reg_list[0]);
 
 const ImmediateInfo imm_list[] = 
 {
-    {sizeof(uint8_t), INT8_MAX},
-    {sizeof(uint16_t), INT16_MAX},
-    {sizeof(uint32_t), INT32_MAX},
-    {sizeof(uint64_t), INT64_MAX},
+    {sizeof(uint8_t), INT8_MAX, UINT8_MAX},
+    {sizeof(uint16_t), INT16_MAX, UINT16_MAX},
+    {sizeof(uint32_t), INT32_MAX, UINT32_MAX},
+    {sizeof(uint64_t), INT64_MAX, UINT64_MAX},
 };
 const size_t IMM_LIST_SIZE = sizeof(imm_list) / sizeof(imm_list[0]);
 

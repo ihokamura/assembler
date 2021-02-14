@@ -131,5 +131,5 @@ static void generate_all_test_case_set(FILE *fp)
 
 void generate_test_set(void)
 {
-    generate_test("test/test_set.s", 0, generate_all_test_case_set);
+    generate_test("test/test_set.s", STACK_ALIGNMENT, generate_all_test_case_set);
 }

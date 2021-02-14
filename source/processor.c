@@ -49,6 +49,7 @@ static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_leave(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_not(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_or(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_pop(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_push(const List(Operand) *operands, ByteBufferType *buffer);
@@ -108,6 +109,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_LEAVE,  "leave",  false, generate_op_leave},
     {MN_MOV,    "mov",    true,  generate_op_mov},
     {MN_NOP,    "nop",    false, generate_op_nop},
+    {MN_NOT,    "not",    true,  generate_op_not},
     {MN_OR,     "or",     true,  generate_op_or},
     {MN_POP,    "pop",    true,  generate_op_pop},
     {MN_PUSH,   "push",   true,  generate_op_push},
@@ -465,6 +467,29 @@ static void generate_op_nop(const List(Operand) *operands, ByteBufferType *buffe
     * NOP
     */
     append_binary_opecode(0x90, buffer);
+}
+
+
+/*
+generate not operation
+*/
+static void generate_op_not(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    const Operand *operand = get_first_element(Operand)(operands);
+
+    /*
+    handle the following instructions
+    * NOT r/m8
+    * NOT r/m16
+    * NOT r/m32
+    * NOT r/m64
+    */
+    may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
+    may_append_binary_rex_prefix_reg(operand, true, buffer);
+    uint32_t opecode = (get_operand_size(operand->kind) == SIZEOF_8BIT) ? 0xf6 : 0xf7;
+    append_binary_opecode(opecode, buffer);
+    append_binary_modrm(get_mod_field(operand), 0x02, get_rm_field(operand->reg), buffer); // reg field of the ModR/M byte is not used
+    append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
 }
 
 

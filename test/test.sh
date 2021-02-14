@@ -43,6 +43,7 @@ test test_cmp.s 0
 test test_lea.s 0
 test test_mov.s 0
 test test_nop.s 0
+test test_not.s 0
 test test_or.s 0
 test test_pop.s 0
 test test_push.s 0

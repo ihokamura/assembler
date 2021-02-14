@@ -31,6 +31,7 @@ struct ImmediateInfo
 {
     size_t size;
     intmax_t sint_max_value;
+    uintmax_t uint_max_value;
 };
 
 struct RegisterInfo
