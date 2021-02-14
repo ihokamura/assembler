@@ -65,6 +65,7 @@ enum MnemonicKind
     MN_SETNE,
     MN_SETNG,
     MN_SETNGE,
+    MN_SETNL,
     MN_SUB,
     MN_XOR,
 };

@@ -19,12 +19,12 @@ enum ConditionCode
     CC_BE  = 0x06,
     CC_E   = 0x04,
     CC_G   = 0x0f,
-    CC_GE  = 0x0d,
     CC_L   = 0x0c,
     CC_LE  = 0x0e,
     CC_NB  = 0x03,
     CC_NBE = 0x07,
     CC_NE  = 0x05,
+    CC_NL  = 0x0d,
 };
 
 struct BinaryOperationOpecode
@@ -57,12 +57,12 @@ static void generate_op_setb(const List(Operand) *operands, ByteBufferType *buff
 static void generate_op_setbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sete(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setg(const List(Operand) *operands, ByteBufferType *buffer);
-static void generate_op_setge(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setl(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setle(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setnb(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setnbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setne(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_setnl(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
@@ -117,7 +117,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_SETBE,  "setbe",  true,  generate_op_setbe},
     {MN_SETE,   "sete",   true,  generate_op_sete},
     {MN_SETG,   "setg",   true,  generate_op_setg},
-    {MN_SETGE,  "setge",  true,  generate_op_setge},
+    {MN_SETGE,  "setge",  true,  generate_op_setnl},
     {MN_SETL,   "setl",   true,  generate_op_setl},
     {MN_SETLE,  "setle",  true,  generate_op_setle},
     {MN_SETNA,  "setna",  true,  generate_op_setbe},
@@ -127,6 +127,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_SETNE,  "setne",  true,  generate_op_setne},
     {MN_SETNG,  "setng",  true,  generate_op_setle},
     {MN_SETNGE, "setnge", true,  generate_op_setl},
+    {MN_SETNL,  "setnl",  true,  generate_op_setnl},
     {MN_SUB,    "sub",    true,  generate_op_sub},
     {MN_XOR,    "xor",    true,  generate_op_xor},
 };
@@ -607,15 +608,6 @@ static void generate_op_setg(const List(Operand) *operands, ByteBufferType *buff
 
 
 /*
-generate setge operation
-*/
-static void generate_op_setge(const List(Operand) *operands, ByteBufferType *buffer)
-{
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_GE, buffer);
-}
-
-
-/*
 generate setl operation
 */
 static void generate_op_setl(const List(Operand) *operands, ByteBufferType *buffer)
@@ -657,6 +649,15 @@ generate setne operation
 static void generate_op_setne(const List(Operand) *operands, ByteBufferType *buffer)
 {
     generate_op_setcc(operands, OPECODE_SET_CC + CC_NE, buffer);
+}
+
+
+/*
+generate setnl operation
+*/
+static void generate_op_setnl(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_setcc(operands, OPECODE_SET_CC + CC_NL, buffer);
 }
 
 
