@@ -20,6 +20,7 @@ enum ConditionCode
     CC_B  = 0x02,
     CC_BE = 0x06,
     CC_E  = 0x04,
+    CC_G  = 0x0f,
 };
 
 struct BinaryOperationOpecode
@@ -53,6 +54,7 @@ static void generate_op_setae(const List(Operand) *operands, ByteBufferType *buf
 static void generate_op_setb(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sete(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_setg(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
@@ -106,6 +108,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_SETB,   "setb",   true,  generate_op_setb},
     {MN_SETBE,  "setbe",  true,  generate_op_setbe},
     {MN_SETE,   "sete",   true,  generate_op_sete},
+    {MN_SETG,   "setg",   true,  generate_op_setg},
     {MN_SUB,    "sub",    true,  generate_op_sub},
     {MN_XOR,    "xor",    true,  generate_op_xor},
 };
@@ -591,6 +594,15 @@ generate sete operation
 static void generate_op_sete(const List(Operand) *operands, ByteBufferType *buffer)
 {
     generate_op_setcc(operands, OPECODE_SET_CC + CC_E, buffer);
+}
+
+
+/*
+generate setg operation
+*/
+static void generate_op_setg(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_setcc(operands, OPECODE_SET_CC + CC_G, buffer);
 }
 
 
