@@ -18,6 +18,7 @@ enum ConditionCode
     CC_A  = 0x07,
     CC_AE = 0x03,
     CC_B  = 0x02,
+    CC_BE = 0x06,
 };
 
 struct BinaryOperationOpecode
@@ -49,6 +50,7 @@ static void generate_op_ret(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_seta(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setae(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setb(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_setbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
@@ -100,6 +102,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_SETA,   "seta",   true,  generate_op_seta},
     {MN_SETAE,  "setae",  true,  generate_op_setae},
     {MN_SETB,   "setb",   true,  generate_op_setb},
+    {MN_SETBE,  "setbe",  true,  generate_op_setbe},
     {MN_SUB,    "sub",    true,  generate_op_sub},
     {MN_XOR,    "xor",    true,  generate_op_xor},
 };
@@ -219,6 +222,8 @@ static const size_t SIB_POSITION_BASE = 0;
 static const size_t OPECODE_SIZE_MAX = 3;
 static const uint8_t UINT8_T_MASK = 0xff;
 static const size_t SIGN_BIT_MASK_8BIT = 0x80;
+
+static const uint32_t OPECODE_SET_CC = 0x0f90;
 
 
 /*
@@ -546,7 +551,7 @@ generate seta operation
 */
 static void generate_op_seta(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, 0x0f90 + CC_A, buffer);
+    generate_op_setcc(operands, OPECODE_SET_CC + CC_A, buffer);
 }
 
 
@@ -555,7 +560,7 @@ generate setae operation
 */
 static void generate_op_setae(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, 0x0f90 + CC_AE, buffer);
+    generate_op_setcc(operands, OPECODE_SET_CC + CC_AE, buffer);
 }
 
 
@@ -564,7 +569,16 @@ generate setb operation
 */
 static void generate_op_setb(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, 0x0f90 + CC_B, buffer);
+    generate_op_setcc(operands, OPECODE_SET_CC + CC_B, buffer);
+}
+
+
+/*
+generate setbe operation
+*/
+static void generate_op_setbe(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_setcc(operands, OPECODE_SET_CC + CC_BE, buffer);
 }
 
 
