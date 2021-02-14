@@ -10,7 +10,14 @@
 
 #define min(a, b)    ((a) < (b) ? (a) : (b))
 
+typedef enum ConditionCode ConditionCode;
 typedef struct BinaryOperationOpecode BinaryOperationOpecode;
+
+enum ConditionCode
+{
+    CC_A  = 0x07,
+    CC_AE = 0x03,
+};
 
 struct BinaryOperationOpecode
 {
@@ -39,9 +46,11 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *buff
 static void generate_op_pushfq(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_seta(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_setae(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_setcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer);
 static bool is_immediate(OperandKind kind);
 static bool is_register(OperandKind kind);
 static bool is_memory(OperandKind kind);
@@ -87,6 +96,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_PUSHFQ, "pushfq", false, generate_op_pushfq},
     {MN_RET,    "ret",    false, generate_op_ret},
     {MN_SETA,   "seta",   true,  generate_op_seta},
+    {MN_SETAE,  "setae",  true,  generate_op_setae},
     {MN_SUB,    "sub",    true,  generate_op_sub},
     {MN_XOR,    "xor",    true,  generate_op_xor},
 };
@@ -533,12 +543,16 @@ generate seta operation
 */
 static void generate_op_seta(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    const Operand *operand = get_first_element(Operand)(operands);
+    generate_op_setcc(operands, 0x0f90 + CC_A, buffer);
+}
 
-    may_append_binary_rex_prefix_reg(operand, true, buffer);
-    append_binary_opecode(0x0f97, buffer);
-    append_binary_modrm(get_mod_field(operand), 0x00, get_rm_field(operand->reg), buffer); // reg field of the ModR/M byte is not used
-    append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
+
+/*
+generate setae operation
+*/
+static void generate_op_setae(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_setcc(operands, 0x0f90 + CC_AE, buffer);
 }
 
 
@@ -650,6 +664,20 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
         append_binary_disp(operand2, buffer->size, -SIZEOF_32BIT, buffer);
     }
+}
+
+
+/*
+generate setcc operation
+*/
+static void generate_op_setcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer)
+{
+    const Operand *operand = get_first_element(Operand)(operands);
+
+    may_append_binary_rex_prefix_reg(operand, true, buffer);
+    append_binary_opecode(opecode, buffer);
+    append_binary_modrm(get_mod_field(operand), 0x00, get_rm_field(operand->reg), buffer); // reg field of the ModR/M byte is not used
+    append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
 }
 
 
