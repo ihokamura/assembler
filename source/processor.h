@@ -53,6 +53,7 @@ enum MnemonicKind
     MN_SETAE,
     MN_SETB,
     MN_SETBE,
+    MN_SETE,
     MN_SUB,
     MN_XOR,
 };
