@@ -54,6 +54,9 @@ static const SetInfo set_info_list[] =
     {"setnbe", 0x01, 0x00, 0x01},
     {"setnbe", 0x01, 0x01, 0x00},
     {"setnbe", 0x00, 0x01, 0x00},
+    {"setne", 0x01, 0x00, 0x01},
+    {"setne", 0x01, 0x01, 0x00},
+    {"setne", 0x00, 0x01, 0x01},
 };
 static const size_t SET_INFO_LIST_SIZE = sizeof(set_info_list) / sizeof(set_info_list[0]);
 

@@ -24,6 +24,7 @@ enum ConditionCode
     CC_LE  = 0x0e,
     CC_NB  = 0x03,
     CC_NBE = 0x07,
+    CC_NE  = 0x05,
 };
 
 struct BinaryOperationOpecode
@@ -61,6 +62,7 @@ static void generate_op_setl(const List(Operand) *operands, ByteBufferType *buff
 static void generate_op_setle(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setnb(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setnbe(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_setne(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
@@ -122,6 +124,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_SETNAE, "setnae", true,  generate_op_setb},
     {MN_SETNB,  "setnb",  true,  generate_op_setnb},
     {MN_SETNBE, "setnbe", true,  generate_op_setnbe},
+    {MN_SETNE,  "setne",  true,  generate_op_setne},
     {MN_SUB,    "sub",    true,  generate_op_sub},
     {MN_XOR,    "xor",    true,  generate_op_xor},
 };
@@ -643,6 +646,15 @@ generate setnbe operation
 static void generate_op_setnbe(const List(Operand) *operands, ByteBufferType *buffer)
 {
     generate_op_setcc(operands, OPECODE_SET_CC + CC_NBE, buffer);
+}
+
+
+/*
+generate setne operation
+*/
+static void generate_op_setne(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_setcc(operands, OPECODE_SET_CC + CC_NE, buffer);
 }
 
 
