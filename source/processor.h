@@ -52,6 +52,7 @@ enum MnemonicKind
     MN_PUSH,
     MN_PUSHFQ,
     MN_RET,
+    MN_SAL,
     MN_SETA,
     MN_SETAE,
     MN_SETB,

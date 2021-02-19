@@ -56,6 +56,7 @@ static void generate_op_pop(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_push(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_pushfq(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_sal(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setb(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sete(const List(Operand) *operands, ByteBufferType *buffer);
@@ -117,6 +118,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_PUSH,   "push",   true,  generate_op_push},
     {MN_PUSHFQ, "pushfq", false, generate_op_pushfq},
     {MN_RET,    "ret",    false, generate_op_ret},
+    {MN_SAL,    "sal",    true,  generate_op_sal},
     {MN_SETA,   "seta",   true,  generate_op_setnbe},
     {MN_SETAE,  "setae",  true,  generate_op_setnb},
     {MN_SETB,   "setb",   true,  generate_op_setb},
@@ -646,6 +648,49 @@ static void generate_op_ret(const List(Operand) *operands, ByteBufferType *buffe
     * RET
     */
     append_binary_opecode(0xc3, buffer);
+}
+
+
+/*
+generate sal operation
+*/
+static void generate_op_sal(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
+    Operand *operand1 = get_element(Operand)(entry);
+    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
+
+    /*
+    handle the following instructions
+    * SAL r/m8, 1
+    * SAL r/m8, CL
+    * SAL r/m8, imm8
+    */
+    assert(get_operand_size(operand2->kind) <= SIZEOF_8BIT);
+    may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
+    may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
+    bool is_op1_8bit = (get_operand_size(operand1->kind) == SIZEOF_8BIT);
+    bool is_op2_imm = is_immediate(operand2->kind);
+    uint32_t op;
+    if(is_op2_imm)
+    {
+        op = ((operand2->immediate == 1) ? 0xd1 : 0xc1) - is_op1_8bit;
+    }
+    else
+    {
+        assert(is_register(operand2->kind) && (operand2->reg == REG_CL));
+        op = 0xd3 - is_op1_8bit;
+    }
+    append_binary_opecode(op, buffer);
+    append_binary_modrm(get_mod_field(operand1), 0x04, get_rm_field(operand1->reg), buffer);
+    if(is_memory(operand1->kind))
+    {
+        append_binary_disp(operand1, buffer->size, -SIZEOF_32BIT, buffer);
+    }
+    if(is_op2_imm && (operand2->immediate != 1))
+    {
+        append_binary_imm_least(operand2->immediate, buffer);
+    }
 }
 
 

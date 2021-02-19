@@ -17,6 +17,7 @@ static void (* const generate_test[])(void) =
     generate_test_pop,
     generate_test_push,
     generate_test_set,
+    generate_test_shift,
     generate_test_sub,
     generate_test_xor,
 };

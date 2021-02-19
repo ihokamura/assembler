@@ -14,6 +14,7 @@ void generate_test_or(void);
 void generate_test_pop(void);
 void generate_test_push(void);
 void generate_test_set(void);
+void generate_test_shift(void);
 void generate_test_sub(void);
 void generate_test_xor(void);
 
