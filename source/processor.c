@@ -45,6 +45,7 @@ static void generate_op_add(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_and(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_leave(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffer);
@@ -110,6 +111,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_AND,    "and",    true,  generate_op_and},
     {MN_CALL,   "call",   true,  generate_op_call},
     {MN_CMP,    "cmp",    true,  generate_op_cmp},
+    {MN_JMP,    "jmp",    true,  generate_op_jmp},
     {MN_LEA,    "lea",    true,  generate_op_lea},
     {MN_LEAVE,  "leave",  false, generate_op_leave},
     {MN_MOV,    "mov",    true,  generate_op_mov},
@@ -345,6 +347,24 @@ static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffe
 {
     const BinaryOperationOpecode opecode = {0x3c, 0x3d, 0x07, 0x80, 0x81, 0x83, 0x38, 0x39, 0x3a, 0x3b};
     generate_binary_arithmetic_operation(&opecode, operands, buffer);
+}
+
+
+/*
+generate jmp operation
+*/
+static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    Operand *operand = get_first_element(Operand)(operands);
+    if(operand->kind == OP_SYMBOL)
+    {
+        /*
+        handle the following instructions
+        * JMP rel32
+        */
+        append_binary_opecode(0xe9, buffer);
+        append_binary_relocation(SIZEOF_32BIT, operand->symbol, buffer->size, -SIZEOF_32BIT, buffer);
+    }
 }
 
 

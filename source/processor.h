@@ -41,6 +41,7 @@ enum MnemonicKind
     MN_AND,
     MN_CALL,
     MN_CMP,
+    MN_JMP,
     MN_LEA,
     MN_LEAVE,
     MN_MOV,
