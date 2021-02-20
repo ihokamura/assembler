@@ -57,6 +57,7 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *buff
 static void generate_op_pushfq(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_ret(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sal(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_sar(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setb(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sete(const List(Operand) *operands, ByteBufferType *buffer);
@@ -71,6 +72,7 @@ static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer);
+static void generate_op_shift(uint8_t rm, const List(Operand) *operands, ByteBufferType *buffer);
 static bool is_immediate(OperandKind kind);
 static bool is_register(OperandKind kind);
 static bool is_memory(OperandKind kind);
@@ -119,6 +121,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_PUSHFQ, "pushfq", false, generate_op_pushfq},
     {MN_RET,    "ret",    false, generate_op_ret},
     {MN_SAL,    "sal",    true,  generate_op_sal},
+    {MN_SAR,    "sar",    true,  generate_op_sar},
     {MN_SETA,   "seta",   true,  generate_op_setnbe},
     {MN_SETAE,  "setae",  true,  generate_op_setnb},
     {MN_SETB,   "setb",   true,  generate_op_setb},
@@ -657,41 +660,16 @@ generate sal operation
 */
 static void generate_op_sal(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
-    Operand *operand1 = get_element(Operand)(entry);
-    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
+    generate_op_shift(0x04, operands, buffer);
+}
 
-    /*
-    handle the following instructions
-    * SAL r/m8, 1
-    * SAL r/m8, CL
-    * SAL r/m8, imm8
-    */
-    assert(get_operand_size(operand2->kind) <= SIZEOF_8BIT);
-    may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
-    may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
-    bool is_op1_8bit = (get_operand_size(operand1->kind) == SIZEOF_8BIT);
-    bool is_op2_imm = is_immediate(operand2->kind);
-    uint32_t op;
-    if(is_op2_imm)
-    {
-        op = ((operand2->immediate == 1) ? 0xd1 : 0xc1) - is_op1_8bit;
-    }
-    else
-    {
-        assert(is_register(operand2->kind) && (operand2->reg == REG_CL));
-        op = 0xd3 - is_op1_8bit;
-    }
-    append_binary_opecode(op, buffer);
-    append_binary_modrm(get_mod_field(operand1), 0x04, get_rm_field(operand1->reg), buffer);
-    if(is_memory(operand1->kind))
-    {
-        append_binary_disp(operand1, buffer->size, -SIZEOF_32BIT, buffer);
-    }
-    if(is_op2_imm && (operand2->immediate != 1))
-    {
-        append_binary_imm_least(operand2->immediate, buffer);
-    }
+
+/*
+generate sar operation
+*/
+static void generate_op_sar(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_shift(0x07, operands, buffer);
 }
 
 
@@ -903,10 +881,57 @@ static void generate_op_setcc(const List(Operand) *operands, uint32_t opecode, B
 {
     const Operand *operand = get_first_element(Operand)(operands);
 
+    /*
+    handle the following instructions
+    * <mnemonic> r/m8
+    */
     may_append_binary_rex_prefix_reg(operand, true, buffer);
     append_binary_opecode(opecode, buffer);
     append_binary_modrm(get_mod_field(operand), 0x00, get_rm_field(operand->reg), buffer); // reg field of the ModR/M byte is not used
     append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
+}
+
+
+/*
+generate shift operation
+*/
+static void generate_op_shift(uint8_t rm, const List(Operand) *operands, ByteBufferType *buffer)
+{
+    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
+    Operand *operand1 = get_element(Operand)(entry);
+    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
+
+    /*
+    handle the following instructions
+    * <mnemonic> r/m8, 1
+    * <mnemonic> r/m8, CL
+    * <mnemonic> r/m8, imm8
+    */
+    assert(get_operand_size(operand2->kind) <= SIZEOF_8BIT);
+    may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
+    may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
+    bool is_op1_8bit = (get_operand_size(operand1->kind) == SIZEOF_8BIT);
+    bool is_op2_imm = is_immediate(operand2->kind);
+    uint32_t op;
+    if(is_op2_imm)
+    {
+        op = ((operand2->immediate == 1) ? 0xd1 : 0xc1) - is_op1_8bit;
+    }
+    else
+    {
+        assert(is_register(operand2->kind) && (operand2->reg == REG_CL));
+        op = 0xd3 - is_op1_8bit;
+    }
+    append_binary_opecode(op, buffer);
+    append_binary_modrm(get_mod_field(operand1), rm, get_rm_field(operand1->reg), buffer);
+    if(is_memory(operand1->kind))
+    {
+        append_binary_disp(operand1, buffer->size, -SIZEOF_32BIT, buffer);
+    }
+    if(is_op2_imm && (operand2->immediate != 1))
+    {
+        append_binary_imm_least(operand2->immediate, buffer);
+    }
 }
 
 

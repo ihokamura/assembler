@@ -17,6 +17,7 @@ static void (* const generate_test[])(void) =
     generate_test_pop,
     generate_test_push,
     generate_test_sal,
+    generate_test_sar,
     generate_test_set,
     generate_test_shl,
     generate_test_sub,
