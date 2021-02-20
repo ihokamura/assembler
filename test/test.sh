@@ -49,8 +49,9 @@ test test_not.s 0
 test test_or.s 0
 test test_pop.s 0
 test test_push.s 0
+test test_sal.s 0
 test test_set.s 0
-test test_shift.s 0
+test test_shl.s 0
 test test_sub.s 0
 test test_xor.s 0
 

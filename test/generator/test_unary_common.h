@@ -2,7 +2,6 @@
 #define __TEST_UNARY_COMMON_H__
 
 #include <stdint.h>
-#include <stdio.h>
 
 typedef struct UnaryOperationInfo UnaryOperationInfo;
 

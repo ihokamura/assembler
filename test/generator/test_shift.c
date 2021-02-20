@@ -2,16 +2,7 @@
 #include <stdio.h>
 
 #include "test_common.h"
-
-typedef struct ShiftOperationInfo ShiftOperationInfo;
-
-struct ShiftOperationInfo
-{
-    const char *mnemonic;
-    uintmax_t lhs;
-    uint8_t rhs;
-    uintmax_t result;
-};
+#include "test_shift_common.h"
 
 
 static void generate_test_case_shift_reg_imm(FILE *fp, const ShiftOperationInfo *op_info, const RegisterInfo *reg_info)
@@ -72,71 +63,53 @@ static void generate_test_case_shift_mem_reg(FILE *fp, const ShiftOperationInfo 
 }
 
 
-static void generate_all_test_case_shift(FILE *fp)
+void generate_all_test_case_shift(FILE *fp, const ShiftOperationTestDataMaker *make_test_data)
 {
-    // SAL reg, 1
+    // <mnemonic> reg, 1
     for(size_t i = 0; i < REG_LIST_SIZE; i++)
     {
         const RegisterInfo *reg_info = &reg_list[i];
-        uintmax_t lhs = 1;
-        uint8_t rhs = 1;
-        ShiftOperationInfo *op_info = &(ShiftOperationInfo){"sal", lhs, rhs, lhs << rhs};
-        generate_test_case_shift_reg_imm(fp, op_info, reg_info);
+        ShiftOperationInfo op_info = make_test_data->reg_imm(1);
+        generate_test_case_shift_reg_imm(fp, &op_info, reg_info);
         put_line(fp, "");
     }
 
-    // SAL mem, 1
+    // <mnemonic> mem, 1
     {
-        uintmax_t lhs = 1;
-        uint8_t rhs = 1;
-        ShiftOperationInfo *op_info = &(ShiftOperationInfo){"sal", lhs, rhs, lhs << rhs};
-        generate_test_case_shift_mem_imm(fp, op_info);
+        ShiftOperationInfo op_info = make_test_data->mem_imm(1);
+        generate_test_case_shift_mem_imm(fp, &op_info);
         put_line(fp, "");
     }
 
-    // SAL reg, cl
+    // <mnemonic> reg, cl
     for(size_t i = 0; i < REG_LIST_SIZE; i++)
     {
         const RegisterInfo *reg_info = &reg_list[i];
-        uintmax_t lhs = 1;
-        uint8_t rhs = 2;
-        ShiftOperationInfo *op_info = &(ShiftOperationInfo){"sal", lhs, rhs, (reg_info->index == REGISTER_INDEX_ECX) ? (rhs << rhs) : (lhs << rhs)};
-        generate_test_case_shift_reg_reg(fp, op_info, reg_info);
+        ShiftOperationInfo op_info = make_test_data->reg_reg(reg_info, 2);
+        generate_test_case_shift_reg_reg(fp, &op_info, reg_info);
         put_line(fp, "");
     }
 
-    // SAL mem, cl
+    // <mnemonic> mem, cl
     {
-        uintmax_t lhs = 1;
-        uint8_t rhs = 2;
-        ShiftOperationInfo *op_info = &(ShiftOperationInfo){"sal", lhs, rhs, lhs << rhs};
-        generate_test_case_shift_mem_reg(fp, op_info);
+        ShiftOperationInfo op_info = make_test_data->mem_reg(2);
+        generate_test_case_shift_mem_reg(fp, &op_info);
         put_line(fp, "");
     }
 
-    // SAL reg, imm
+    // <mnemonic> reg, imm
     for(size_t i = 0; i < REG_LIST_SIZE; i++)
     {
         const RegisterInfo *reg_info = &reg_list[i];
-        uintmax_t lhs = 1;
-        uint8_t rhs = 2;
-        ShiftOperationInfo *op_info = &(ShiftOperationInfo){"sal", lhs, rhs, lhs << rhs};
-        generate_test_case_shift_reg_imm(fp, op_info, reg_info);
+        ShiftOperationInfo op_info = make_test_data->reg_imm(2);
+        generate_test_case_shift_reg_imm(fp, &op_info, reg_info);
         put_line(fp, "");
     }
 
-    // SAL mem, imm
+    // <mnemonic> mem, imm
     {
-        uintmax_t lhs = 1;
-        uint8_t rhs = 2;
-        ShiftOperationInfo *op_info = &(ShiftOperationInfo){"sal", lhs, rhs, lhs << rhs};
-        generate_test_case_shift_mem_imm(fp, op_info);
+        ShiftOperationInfo op_info = make_test_data->mem_imm(2);
+        generate_test_case_shift_mem_imm(fp, &op_info);
         put_line(fp, "");
     }
-}
-
-
-void generate_test_shift(void)
-{
-    generate_test("test/test_shift.s", 0, generate_all_test_case_shift);
 }
