@@ -73,6 +73,7 @@ enum MnemonicKind
     MN_SETNL,
     MN_SETNLE,
     MN_SHL,
+    MN_SHR,
     MN_SUB,
     MN_XOR,
 };

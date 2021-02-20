@@ -53,6 +53,7 @@ test test_sal.s 0
 test test_sar.s 0
 test test_set.s 0
 test test_shl.s 0
+test test_shr.s 0
 test test_sub.s 0
 test test_xor.s 0
 

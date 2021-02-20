@@ -68,6 +68,7 @@ static void generate_op_setnbe(const List(Operand) *operands, ByteBufferType *bu
 static void generate_op_setne(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setnl(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setnle(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_shr(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
@@ -141,6 +142,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_SETNL,  "setnl",  true,  generate_op_setnl},
     {MN_SETNLE, "setnle", true,  generate_op_setnle},
     {MN_SHL,    "shl",    true,  generate_op_sal},
+    {MN_SHR,    "shr",    true,  generate_op_shr},
     {MN_SUB,    "sub",    true,  generate_op_sub},
     {MN_XOR,    "xor",    true,  generate_op_xor},
 };
@@ -760,6 +762,15 @@ generate setnle operation
 static void generate_op_setnle(const List(Operand) *operands, ByteBufferType *buffer)
 {
     generate_op_setcc(operands, OPECODE_SET_CC + CC_NLE, buffer);
+}
+
+
+/*
+generate shr operation
+*/
+static void generate_op_shr(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_shift(0x05, operands, buffer);
 }
 
 

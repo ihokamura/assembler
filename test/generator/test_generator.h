@@ -17,6 +17,7 @@ void generate_test_sal(void);
 void generate_test_sar(void);
 void generate_test_set(void);
 void generate_test_shl(void);
+void generate_test_shr(void);
 void generate_test_sub(void);
 void generate_test_xor(void);
 

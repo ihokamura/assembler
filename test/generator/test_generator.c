@@ -20,6 +20,7 @@ static void (* const generate_test[])(void) =
     generate_test_sar,
     generate_test_set,
     generate_test_shl,
+    generate_test_shr,
     generate_test_sub,
     generate_test_xor,
 };
