@@ -365,6 +365,18 @@ static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffe
         append_binary_opecode(0xe9, buffer);
         append_binary_relocation(SIZEOF_32BIT, operand->symbol, buffer->size, -SIZEOF_32BIT, buffer);
     }
+    else if(is_register(operand->kind) || is_memory(operand->kind))
+    {
+        /*
+        handle the following instructions
+        * JMP r/m64
+        */
+        assert(get_operand_size(operand->kind) == SIZEOF_64BIT);
+        may_append_binary_rex_prefix_reg(operand, false, buffer);
+        append_binary_opecode(0xff, buffer);
+        append_binary_modrm(get_mod_field(operand), 0x04, get_rm_field(operand->reg), buffer);
+        append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
+    }
 }
 
 
