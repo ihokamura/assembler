@@ -52,12 +52,15 @@ static const JccInfo jcc_info_list[] =
     {"jng", 0x01, 0x00, false},
     {"jng", 0x01, 0x01, true},
     {"jng", 0x00, 0x01, true},
-    {"jnl", 0x01, 0x00, true},
-    {"jnl", 0x01, 0x01, true},
-    {"jnl", 0x00, 0x01, false},
     {"jnge", 0x01, 0x00, false},
     {"jnge", 0x01, 0x01, false},
     {"jnge", 0x00, 0x01, true},
+    {"jnl", 0x01, 0x00, true},
+    {"jnl", 0x01, 0x01, true},
+    {"jnl", 0x00, 0x01, false},
+    {"jnle", 0x01, 0x00, true},
+    {"jnle", 0x01, 0x01, false},
+    {"jnle", 0x00, 0x01, false},
 };
 static const size_t JCC_INFO_LIST_SIZE = sizeof(jcc_info_list) / sizeof(jcc_info_list[0]);
 
