@@ -45,6 +45,7 @@ enum MnemonicKind
     MN_JBE,
     MN_JE,
     MN_JMP,
+    MN_JNA,
     MN_JNAE,
     MN_JNE,
     MN_LEA,

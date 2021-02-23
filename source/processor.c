@@ -120,6 +120,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_JBE,    "jbe",    true,  generate_op_jbe},
     {MN_JE,     "je",     true,  generate_op_je},
     {MN_JMP,    "jmp",    true,  generate_op_jmp},
+    {MN_JNA,    "jna",    true,  generate_op_jbe},
     {MN_JNAE,   "jnae",   true,  generate_op_jb},
     {MN_JNE,    "jne",    true,  generate_op_jne},
     {MN_LEA,    "lea",    true,  generate_op_lea},
