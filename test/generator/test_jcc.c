@@ -16,6 +16,9 @@ struct JccInfo
 
 static const JccInfo jcc_info_list[] =
 {
+    {"ja", 0x01, 0x00, true},
+    {"ja", 0x01, 0x01, false},
+    {"ja", 0x00, 0x01, false},
     {"jb", 0x01, 0x00, false},
     {"jb", 0x01, 0x01, false},
     {"jb", 0x00, 0x01, true},

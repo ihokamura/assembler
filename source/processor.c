@@ -117,6 +117,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_AND,    "and",    true,  generate_op_and},
     {MN_CALL,   "call",   true,  generate_op_call},
     {MN_CMP,    "cmp",    true,  generate_op_cmp},
+    {MN_JA,     "ja",     true,  generate_op_jnbe},
     {MN_JB,     "jb",     true,  generate_op_jb},
     {MN_JBE,    "jbe",    true,  generate_op_jbe},
     {MN_JE,     "je",     true,  generate_op_je},
