@@ -75,8 +75,8 @@ static void generate_op_shr(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
-static void generate_op_jcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer);
-static void generate_op_setcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer);
+static void generate_op_jcc(ConditionCode code, const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_setcc(ConditionCode code, const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_shift(uint8_t rm, const List(Operand) *operands, ByteBufferType *buffer);
 static bool is_immediate(OperandKind kind);
 static bool is_register(OperandKind kind);
@@ -270,9 +270,6 @@ static const size_t OPECODE_SIZE_MAX = 3;
 static const uint8_t UINT8_T_MASK = 0xff;
 static const size_t SIGN_BIT_MASK_8BIT = 0x80;
 
-static const uint32_t OPECODE_JCC = 0x0f80;
-static const uint32_t OPECODE_SET_CC = 0x0f90;
-
 
 /*
 generate data
@@ -361,7 +358,7 @@ generate je operation
 */
 static void generate_op_je(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_jcc(operands, OPECODE_JCC + CC_E, buffer);
+    generate_op_jcc(CC_E, operands, buffer);
 }
 
 
@@ -400,7 +397,7 @@ generate jne operation
 */
 static void generate_op_jne(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_jcc(operands, OPECODE_JCC + CC_NE, buffer);
+    generate_op_jcc(CC_NE, operands, buffer);
 }
 
 
@@ -736,7 +733,7 @@ generate setb operation
 */
 static void generate_op_setb(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_B, buffer);
+    generate_op_setcc(CC_B, operands, buffer);
 }
 
 
@@ -745,7 +742,7 @@ generate setbe operation
 */
 static void generate_op_setbe(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_BE, buffer);
+    generate_op_setcc(CC_BE, operands, buffer);
 }
 
 
@@ -754,7 +751,7 @@ generate sete operation
 */
 static void generate_op_sete(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_E, buffer);
+    generate_op_setcc(CC_E, operands, buffer);
 }
 
 
@@ -763,7 +760,7 @@ generate setl operation
 */
 static void generate_op_setl(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_L, buffer);
+    generate_op_setcc(CC_L, operands, buffer);
 }
 
 
@@ -772,7 +769,7 @@ generate setle operation
 */
 static void generate_op_setle(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_LE, buffer);
+    generate_op_setcc(CC_LE, operands, buffer);
 }
 
 
@@ -781,7 +778,7 @@ generate setnb operation
 */
 static void generate_op_setnb(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_NB, buffer);
+    generate_op_setcc(CC_NB, operands, buffer);
 }
 
 
@@ -790,7 +787,7 @@ generate setnbe operation
 */
 static void generate_op_setnbe(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_NBE, buffer);
+    generate_op_setcc(CC_NBE, operands, buffer);
 }
 
 
@@ -799,7 +796,7 @@ generate setne operation
 */
 static void generate_op_setne(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_NE, buffer);
+    generate_op_setcc(CC_NE, operands, buffer);
 }
 
 
@@ -808,7 +805,7 @@ generate setnl operation
 */
 static void generate_op_setnl(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_NL, buffer);
+    generate_op_setcc(CC_NL, operands, buffer);
 }
 
 
@@ -817,7 +814,7 @@ generate setnle operation
 */
 static void generate_op_setnle(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    generate_op_setcc(operands, OPECODE_SET_CC + CC_NLE, buffer);
+    generate_op_setcc(CC_NLE, operands, buffer);
 }
 
 
@@ -944,7 +941,7 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
 /*
 generate jcc operation
 */
-static void generate_op_jcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer)
+static void generate_op_jcc(ConditionCode code, const List(Operand) *operands, ByteBufferType *buffer)
 {
     Operand *operand = get_first_element(Operand)(operands);
 
@@ -954,7 +951,7 @@ static void generate_op_jcc(const List(Operand) *operands, uint32_t opecode, Byt
         handle the following instructions
         * <mnemonic> rel32
         */
-        append_binary_opecode(opecode, buffer);
+        append_binary_opecode(0x0f80 + code, buffer);
         append_binary_relocation(SIZEOF_32BIT, operand->symbol, buffer->size, -SIZEOF_32BIT, buffer);
     }
 }
@@ -963,7 +960,7 @@ static void generate_op_jcc(const List(Operand) *operands, uint32_t opecode, Byt
 /*
 generate setcc operation
 */
-static void generate_op_setcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer)
+static void generate_op_setcc(ConditionCode code, const List(Operand) *operands, ByteBufferType *buffer)
 {
     const Operand *operand = get_first_element(Operand)(operands);
 
@@ -972,7 +969,7 @@ static void generate_op_setcc(const List(Operand) *operands, uint32_t opecode, B
     * <mnemonic> r/m8
     */
     may_append_binary_rex_prefix_reg(operand, true, buffer);
-    append_binary_opecode(opecode, buffer);
+    append_binary_opecode(0x0f90 + code, buffer);
     append_binary_modrm(get_mod_field(operand), 0x00, get_rm_field(operand->reg), buffer); // reg field of the ModR/M byte is not used
     append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
 }
