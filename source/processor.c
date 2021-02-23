@@ -47,6 +47,7 @@ static void generate_op_call(const List(Operand) *operands, ByteBufferType *buff
 static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_je(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_jne(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_leave(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffer);
@@ -74,6 +75,7 @@ static void generate_op_shr(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_jcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer);
 static void generate_op_setcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer);
 static void generate_op_shift(uint8_t rm, const List(Operand) *operands, ByteBufferType *buffer);
 static bool is_immediate(OperandKind kind);
@@ -114,6 +116,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_CMP,    "cmp",    true,  generate_op_cmp},
     {MN_JE,     "je",     true,  generate_op_je},
     {MN_JMP,    "jmp",    true,  generate_op_jmp},
+    {MN_JNE,    "jne",    true,  generate_op_jne},
     {MN_LEA,    "lea",    true,  generate_op_lea},
     {MN_LEAVE,  "leave",  false, generate_op_leave},
     {MN_MOV,    "mov",    true,  generate_op_mov},
@@ -267,6 +270,7 @@ static const size_t OPECODE_SIZE_MAX = 3;
 static const uint8_t UINT8_T_MASK = 0xff;
 static const size_t SIGN_BIT_MASK_8BIT = 0x80;
 
+static const uint32_t OPECODE_JCC = 0x0f80;
 static const uint32_t OPECODE_SET_CC = 0x0f90;
 
 
@@ -357,16 +361,7 @@ generate je operation
 */
 static void generate_op_je(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    Operand *operand = get_first_element(Operand)(operands);
-    if(operand->kind == OP_SYMBOL)
-    {
-        /*
-        handle the following instructions
-        * JE rel32
-        */
-        append_binary_opecode(0x0f84, buffer);
-        append_binary_relocation(SIZEOF_32BIT, operand->symbol, buffer->size, -SIZEOF_32BIT, buffer);
-    }
+    generate_op_jcc(operands, OPECODE_JCC + CC_E, buffer);
 }
 
 
@@ -397,6 +392,15 @@ static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffe
         append_binary_modrm(get_mod_field(operand), 0x04, get_rm_field(operand->reg), buffer);
         append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
     }
+}
+
+
+/*
+generate jne operation
+*/
+static void generate_op_jne(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_jcc(operands, OPECODE_JCC + CC_NE, buffer);
 }
 
 
@@ -933,6 +937,25 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         append_binary_opecode(op, buffer);
         append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
         append_binary_disp(operand2, buffer->size, -SIZEOF_32BIT, buffer);
+    }
+}
+
+
+/*
+generate jcc operation
+*/
+static void generate_op_jcc(const List(Operand) *operands, uint32_t opecode, ByteBufferType *buffer)
+{
+    Operand *operand = get_first_element(Operand)(operands);
+
+    if(operand->kind == OP_SYMBOL)
+    {
+        /*
+        handle the following instructions
+        * <mnemonic> rel32
+        */
+        append_binary_opecode(opecode, buffer);
+        append_binary_relocation(SIZEOF_32BIT, operand->symbol, buffer->size, -SIZEOF_32BIT, buffer);
     }
 }
 

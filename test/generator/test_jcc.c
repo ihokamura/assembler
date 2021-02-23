@@ -19,6 +19,9 @@ static const JccInfo jcc_info_list[] =
     {"je", 0x01, 0x00, false},
     {"je", 0x01, 0x01, true},
     {"je", 0x00, 0x01, false},
+    {"jne", 0x01, 0x00, true},
+    {"jne", 0x01, 0x01, false},
+    {"jne", 0x00, 0x01, true},
 };
 static const size_t JCC_INFO_LIST_SIZE = sizeof(jcc_info_list) / sizeof(jcc_info_list[0]);
 

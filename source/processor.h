@@ -43,6 +43,7 @@ enum MnemonicKind
     MN_CMP,
     MN_JE,
     MN_JMP,
+    MN_JNE,
     MN_LEA,
     MN_LEAVE,
     MN_MOV,
