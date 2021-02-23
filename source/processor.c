@@ -12,6 +12,7 @@
 
 typedef enum ConditionCode ConditionCode;
 typedef struct BinaryOperationOpecode BinaryOperationOpecode;
+typedef struct UnaryOperationOpecode UnaryOperationOpecode;
 
 enum ConditionCode
 {
@@ -39,6 +40,13 @@ struct BinaryOperationOpecode
     uint8_t mr;           // encoding of type MR
     uint8_t rm_byte;      // encoding of type RM for 8-bit operands
     uint8_t rm;           // encoding of type RM
+};
+
+struct UnaryOperationOpecode
+{
+    uint8_t op_byte;   // opecode for 8-bit operands
+    uint8_t op;        // opecode
+    uint8_t reg_field; // reg field
 };
 
 static void generate_op_add(const List(Operand) *operands, ByteBufferType *buffer);
@@ -82,6 +90,7 @@ static void generate_op_shr(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_sub(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_xor(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_unary_arithmetic_operation(const UnaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jcc(ConditionCode code, const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_setcc(ConditionCode code, const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_shift(uint8_t rm, const List(Operand) *operands, ByteBufferType *buffer);
@@ -621,21 +630,8 @@ generate neg operation
 */
 static void generate_op_neg(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    const Operand *operand = get_first_element(Operand)(operands);
-
-    /*
-    handle the following instructions
-    * NEG r/m8
-    * NEG r/m16
-    * NEG r/m32
-    * NEG r/m64
-    */
-    may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
-    may_append_binary_rex_prefix_reg(operand, true, buffer);
-    uint32_t opecode = (get_operand_size(operand->kind) == SIZEOF_8BIT) ? 0xf6 : 0xf7;
-    append_binary_opecode(opecode, buffer);
-    append_binary_modrm(get_mod_field(operand), 0x03, get_rm_field(operand->reg), buffer);
-    append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
+    const UnaryOperationOpecode opecode = {0xf6, 0xf7, 0x03};
+    generate_unary_arithmetic_operation(&opecode, operands, buffer);
 }
 
 
@@ -657,21 +653,8 @@ generate not operation
 */
 static void generate_op_not(const List(Operand) *operands, ByteBufferType *buffer)
 {
-    const Operand *operand = get_first_element(Operand)(operands);
-
-    /*
-    handle the following instructions
-    * NOT r/m8
-    * NOT r/m16
-    * NOT r/m32
-    * NOT r/m64
-    */
-    may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
-    may_append_binary_rex_prefix_reg(operand, true, buffer);
-    uint32_t opecode = (get_operand_size(operand->kind) == SIZEOF_8BIT) ? 0xf6 : 0xf7;
-    append_binary_opecode(opecode, buffer);
-    append_binary_modrm(get_mod_field(operand), 0x02, get_rm_field(operand->reg), buffer);
-    append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
+    const UnaryOperationOpecode opecode = {0xf6, 0xf7, 0x02};
+    generate_unary_arithmetic_operation(&opecode, operands, buffer);
 }
 
 
@@ -1019,6 +1002,29 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
         append_binary_disp(operand2, buffer->size, -SIZEOF_32BIT, buffer);
     }
+}
+
+
+/*
+generate unary arithmetic operation
+*/
+static void generate_unary_arithmetic_operation(const UnaryOperationOpecode *opecode, const List(Operand) *operands, ByteBufferType *buffer)
+{
+    const Operand *operand = get_first_element(Operand)(operands);
+
+    /*
+    handle the following instructions
+    * <mnemonic> r/m8
+    * <mnemonic> r/m16
+    * <mnemonic> r/m32
+    * <mnemonic> r/m64
+    */
+    may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
+    may_append_binary_rex_prefix_reg(operand, true, buffer);
+    uint32_t op = (get_operand_size(operand->kind) == SIZEOF_8BIT) ? opecode->op_byte : opecode->op;
+    append_binary_opecode(op, buffer);
+    append_binary_modrm(get_mod_field(operand), opecode->reg_field, get_rm_field(operand->reg), buffer);
+    append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
 }
 
 
