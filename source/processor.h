@@ -42,6 +42,7 @@ enum MnemonicKind
     MN_CALL,
     MN_CMP,
     MN_JB,
+    MN_JBE,
     MN_JE,
     MN_JMP,
     MN_JNAE,

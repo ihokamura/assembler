@@ -46,6 +46,7 @@ static void generate_op_and(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jb(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_jbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_je(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jne(const List(Operand) *operands, ByteBufferType *buffer);
@@ -116,6 +117,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_CALL,   "call",   true,  generate_op_call},
     {MN_CMP,    "cmp",    true,  generate_op_cmp},
     {MN_JB,     "jb",     true,  generate_op_jb},
+    {MN_JBE,    "jbe",    true,  generate_op_jbe},
     {MN_JE,     "je",     true,  generate_op_je},
     {MN_JMP,    "jmp",    true,  generate_op_jmp},
     {MN_JNAE,   "jnae",   true,  generate_op_jb},
@@ -353,6 +355,15 @@ static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffe
 {
     const BinaryOperationOpecode opecode = {0x3c, 0x3d, 0x07, 0x80, 0x81, 0x83, 0x38, 0x39, 0x3a, 0x3b};
     generate_binary_arithmetic_operation(&opecode, operands, buffer);
+}
+
+
+/*
+generate jbe operation
+*/
+static void generate_op_jbe(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_jcc(CC_BE, operands, buffer);
 }
 
 
