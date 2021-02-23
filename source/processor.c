@@ -48,6 +48,7 @@ static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_jb(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_je(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_jl(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jnbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jne(const List(Operand) *operands, ByteBufferType *buffer);
@@ -121,6 +122,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_JB,     "jb",     true,  generate_op_jb},
     {MN_JBE,    "jbe",    true,  generate_op_jbe},
     {MN_JE,     "je",     true,  generate_op_je},
+    {MN_JL,     "jl",     true,  generate_op_jl},
     {MN_JMP,    "jmp",    true,  generate_op_jmp},
     {MN_JNA,    "jna",    true,  generate_op_jbe},
     {MN_JNAE,   "jnae",   true,  generate_op_jb},
@@ -363,15 +365,6 @@ static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffe
 
 
 /*
-generate jbe operation
-*/
-static void generate_op_jbe(const List(Operand) *operands, ByteBufferType *buffer)
-{
-    generate_op_jcc(CC_BE, operands, buffer);
-}
-
-
-/*
 generate jb operation
 */
 static void generate_op_jb(const List(Operand) *operands, ByteBufferType *buffer)
@@ -381,11 +374,29 @@ static void generate_op_jb(const List(Operand) *operands, ByteBufferType *buffer
 
 
 /*
+generate jbe operation
+*/
+static void generate_op_jbe(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_jcc(CC_BE, operands, buffer);
+}
+
+
+/*
 generate je operation
 */
 static void generate_op_je(const List(Operand) *operands, ByteBufferType *buffer)
 {
     generate_op_jcc(CC_E, operands, buffer);
+}
+
+
+/*
+generate jl operation
+*/
+static void generate_op_jl(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_jcc(CC_L, operands, buffer);
 }
 
 
