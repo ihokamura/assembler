@@ -49,6 +49,7 @@ static void generate_op_jb(const List(Operand) *operands, ByteBufferType *buffer
 static void generate_op_jbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_je(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_jnbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jne(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_leave(const List(Operand) *operands, ByteBufferType *buffer);
@@ -122,6 +123,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_JMP,    "jmp",    true,  generate_op_jmp},
     {MN_JNA,    "jna",    true,  generate_op_jbe},
     {MN_JNAE,   "jnae",   true,  generate_op_jb},
+    {MN_JNBE,   "jnbe",   true,  generate_op_jnbe},
     {MN_JNE,    "jne",    true,  generate_op_jne},
     {MN_LEA,    "lea",    true,  generate_op_lea},
     {MN_LEAVE,  "leave",  false, generate_op_leave},
@@ -413,6 +415,15 @@ static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffe
         append_binary_modrm(get_mod_field(operand), 0x04, get_rm_field(operand->reg), buffer);
         append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
     }
+}
+
+
+/*
+generate jnbe operation
+*/
+static void generate_op_jnbe(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_jcc(CC_NBE, operands, buffer);
 }
 
 
