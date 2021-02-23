@@ -49,6 +49,7 @@ static void generate_op_jb(const List(Operand) *operands, ByteBufferType *buffer
 static void generate_op_jbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_je(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jl(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_jle(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jmp(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jnbe(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jne(const List(Operand) *operands, ByteBufferType *buffer);
@@ -125,6 +126,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_JE,     "je",     true,  generate_op_je},
     {MN_JGE,    "jge",    true,  generate_op_jnl},
     {MN_JL,     "jl",     true,  generate_op_jl},
+    {MN_JLE,    "jle",    true,  generate_op_jle},
     {MN_JMP,    "jmp",    true,  generate_op_jmp},
     {MN_JNA,    "jna",    true,  generate_op_jbe},
     {MN_JNAE,   "jnae",   true,  generate_op_jb},
@@ -401,6 +403,15 @@ generate jl operation
 static void generate_op_jl(const List(Operand) *operands, ByteBufferType *buffer)
 {
     generate_op_jcc(CC_L, operands, buffer);
+}
+
+
+/*
+generate jle operation
+*/
+static void generate_op_jle(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    generate_op_jcc(CC_LE, operands, buffer);
 }
 
 
