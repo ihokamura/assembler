@@ -54,6 +54,7 @@ intmax_t convert_size_to_sint_max_value(size_t size);
 const char *get_size_specifier(size_t size);
 const char *get_1st_argument_register(size_t size);
 const char *get_2nd_argument_register(size_t size);
+const char *get_register_by_index_and_size(size_t index, size_t size);
 const char *get_working_register(const size_t *index_list, size_t list_size);
 const char *generate_save_register(FILE *fp, const size_t *index_list, size_t list_size);
 void generate_restore_register(FILE *fp, const char *work_reg);

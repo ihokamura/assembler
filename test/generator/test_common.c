@@ -175,39 +175,40 @@ const char *get_2nd_argument_register(size_t size)
 }
 
 
+const char *get_register_by_index_and_size(size_t index, size_t size)
+{
+    return reg_list[16 * convert_size_to_index(size) + index].name;
+}
+
+
 const char *get_working_register(const size_t *index_list, size_t list_size)
 {
-    static const size_t REGISTER_INDEX_EAX_SET = 0;
-    static const size_t REGISTER_INDEX_ECX_SET = 1;
+    typedef struct FlagRegMap {bool flag; const char *reg;} FlagRegMap;
+    FlagRegMap flag_reg_map[] = {{true, "rax"}, {true, "rcx"}, {true, "rdx"}, {true, "rbx"}};
+    size_t map_size = sizeof(flag_reg_map) / sizeof(flag_reg_map[0]);
 
-    bool use_rax = true;
-    bool use_rcx = true;
     for(size_t i = 0; i < list_size; i++)
     {
         size_t index = index_list[i];
-
-        if(index == REGISTER_INDEX_EAX_SET)
+        for(size_t j = 0; j < map_size; j++)
         {
-            use_rax = false;
-        }
-        if(index == REGISTER_INDEX_ECX_SET)
-        {
-            use_rcx = false;
+            if(index == j)
+            {
+                flag_reg_map[j].flag = false;
+            }
         }
     }
 
-    if(use_rax)
+    for(size_t j = 0; j < map_size; j++)
     {
-        return "rax";
+        const FlagRegMap *map = &flag_reg_map[j];
+        if(map->flag)
+        {
+            return map->reg;
+        }
     }
-    else if(use_rcx)
-    {
-        return "rcx";
-    }
-    else
-    {
-        return "rdx";
-    }
+
+    return NULL;
 }
 
 
