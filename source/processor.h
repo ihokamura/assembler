@@ -40,6 +40,7 @@ enum MnemonicKind
     MN_ADD,
     MN_AND,
     MN_CALL,
+    MN_CDQ,
     MN_CMP,
     MN_CWD,
     MN_IDIV,

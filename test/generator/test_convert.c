@@ -17,6 +17,8 @@ static const ConvertInfo convert_info_list[] =
 {
     {"cwd", sizeof(uint16_t), 0x0000, 0x0000},
     {"cwd", sizeof(uint16_t), 0x8000, 0xffff},
+    {"cdq", sizeof(uint32_t), 0x00000000, 0x0000},
+    {"cdq", sizeof(uint32_t), 0x80000000, 0xffffffff},
 };
 static const size_t CONVERT_INFO_LIST_SIZE = sizeof(convert_info_list) / sizeof(convert_info_list[0]);
 
@@ -27,16 +29,15 @@ static void generate_test_case_cwd(FILE *fp, const ConvertInfo *convert_info)
     const char *arg1 = get_1st_argument_register(size);
     const char *arg2 = get_2nd_argument_register(size);
     const char *eax_reg = get_register_by_index_and_size(REGISTER_INDEX_EAX, size);
-    const char *edx_reg = get_register_by_index_and_size(REGISTER_INDEX_EDX, size);
 
     put_line_with_tab(fp, "mov %s, 0x%llx", eax_reg, convert_info->eax_value);
     put_line_with_tab(fp, "%s    # test target", convert_info->mnemonic);
-    put_line_with_tab(fp, "push %s", edx_reg);
+    put_line_with_tab(fp, "push rdx");
     put_line_with_tab(fp, "mov %s, %s", arg2, eax_reg);
     put_line_with_tab(fp, "mov %s, 0x%llx", arg1, convert_info->eax_value);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
-    put_line_with_tab(fp, "pop si");
-    put_line_with_tab(fp, "mov di, 0x%llx", convert_info->edx_value);
+    put_line_with_tab(fp, "pop rsi");
+    put_line_with_tab(fp, "mov %s, 0x%llx", arg1, convert_info->edx_value);
     put_line_with_tab(fp, "call assert_equal_uint%ld", convert_size_to_bit(size));
 }
 
