@@ -41,6 +41,7 @@ test test_add.s 0
 test test_and.s 0
 test test_call.s 0
 test test_cmp.s 0
+test test_idiv.s 0
 test test_imul.s 0
 test test_jcc.s 0
 test test_jmp.s 0
@@ -59,7 +60,6 @@ test test_shl.s 0
 test test_shr.s 0
 test test_sub.s 0
 test test_xor.s 0
-
 
 # restore the directory
 popd > /dev/null

@@ -41,6 +41,7 @@ enum MnemonicKind
     MN_AND,
     MN_CALL,
     MN_CMP,
+    MN_IDIV,
     MN_IMUL,
     MN_JA,
     MN_JB,

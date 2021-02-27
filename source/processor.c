@@ -53,6 +53,7 @@ static void generate_op_add(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_and(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_idiv(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_imul(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jb(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jbe(const List(Operand) *operands, ByteBufferType *buffer);
@@ -131,6 +132,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_AND,    "and",    true,  generate_op_and},
     {MN_CALL,   "call",   true,  generate_op_call},
     {MN_CMP,    "cmp",    true,  generate_op_cmp},
+    {MN_IDIV,   "idiv",   true,  generate_op_idiv},
     {MN_IMUL,   "imul",   true,  generate_op_imul},
     {MN_JA,     "ja",     true,  generate_op_jnbe},
     {MN_JB,     "jb",     true,  generate_op_jb},
@@ -382,6 +384,30 @@ static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffe
 {
     const BinaryOperationOpecode opecode = {0x3c, 0x3d, 0x07, 0x80, 0x81, 0x83, 0x38, 0x39, 0x3a, 0x3b};
     generate_binary_arithmetic_operation(&opecode, operands, buffer);
+}
+
+
+/*
+generate idiv operation
+*/
+static void generate_op_idiv(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    /*
+    handle the following instructions
+    * IDIV r8
+    * IDIV r16
+    * IDIV r32
+    * IDIV r64
+    */
+    Operand *operand = get_first_element(Operand)(operands);
+    assert(is_register(operand->kind) || is_memory(operand->kind));
+
+    may_append_binary_instruction_prefix(operand->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
+    may_append_binary_rex_prefix_reg(operand, true, buffer);
+    uint32_t opecode = (get_operand_size(operand->kind) == SIZEOF_8BIT) ? 0xf6 : 0xf7;
+    append_binary_opecode(opecode, buffer);
+    append_binary_modrm(get_mod_field(operand), 0x07, get_rm_field(operand->reg), buffer);
+    append_binary_disp(operand, buffer->size, -SIZEOF_32BIT, buffer);
 }
 
 
