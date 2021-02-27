@@ -8,6 +8,7 @@ static void (* const generate_test[])(void) =
     generate_test_and,
     generate_test_call,
     generate_test_cmp,
+    generate_test_convert,
     generate_test_idiv,
     generate_test_imul,
     generate_test_jcc,

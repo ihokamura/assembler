@@ -5,6 +5,7 @@ void generate_test_add(void);
 void generate_test_and(void);
 void generate_test_call(void);
 void generate_test_cmp(void);
+void generate_test_convert(void);
 void generate_test_idiv(void);
 void generate_test_imul(void);
 void generate_test_jcc(void);

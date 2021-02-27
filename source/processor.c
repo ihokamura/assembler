@@ -53,6 +53,7 @@ static void generate_op_add(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_and(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_cwd(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_idiv(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_imul(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_jb(const List(Operand) *operands, ByteBufferType *buffer);
@@ -132,6 +133,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_AND,    "and",    true,  generate_op_and},
     {MN_CALL,   "call",   true,  generate_op_call},
     {MN_CMP,    "cmp",    true,  generate_op_cmp},
+    {MN_CWD,    "cwd",    false, generate_op_cwd},
     {MN_IDIV,   "idiv",   true,  generate_op_idiv},
     {MN_IMUL,   "imul",   true,  generate_op_imul},
     {MN_JA,     "ja",     true,  generate_op_jnbe},
@@ -384,6 +386,16 @@ static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffe
 {
     const BinaryOperationOpecode opecode = {0x3c, 0x3d, 0x07, 0x80, 0x81, 0x83, 0x38, 0x39, 0x3a, 0x3b};
     generate_binary_arithmetic_operation(&opecode, operands, buffer);
+}
+
+
+/*
+generate cwd operation
+*/
+static void generate_op_cwd(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    append_binary_prefix(PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
+    append_binary_opecode(0x99, buffer);
 }
 
 
