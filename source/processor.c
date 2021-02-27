@@ -54,6 +54,7 @@ static void generate_op_and(const List(Operand) *operands, ByteBufferType *buffe
 static void generate_op_call(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_cdq(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_cqo(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_cwd(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_idiv(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_imul(const List(Operand) *operands, ByteBufferType *buffer);
@@ -135,6 +136,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_CALL,   "call",   true,  generate_op_call},
     {MN_CDQ,    "cdq",    false, generate_op_cdq},
     {MN_CMP,    "cmp",    true,  generate_op_cmp},
+    {MN_CQO,    "cqo",    false, generate_op_cqo},
     {MN_CWD,    "cwd",    false, generate_op_cwd},
     {MN_IDIV,   "idiv",   true,  generate_op_idiv},
     {MN_IMUL,   "imul",   true,  generate_op_imul},
@@ -397,6 +399,16 @@ static void generate_op_cmp(const List(Operand) *operands, ByteBufferType *buffe
 {
     const BinaryOperationOpecode opecode = {0x3c, 0x3d, 0x07, 0x80, 0x81, 0x83, 0x38, 0x39, 0x3a, 0x3b};
     generate_binary_arithmetic_operation(&opecode, operands, buffer);
+}
+
+
+/*
+generate cqo operation
+*/
+static void generate_op_cqo(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    append_binary_prefix(get_rex_prefix_from_position(PREFIX_POSITION_REX_W), buffer);
+    generate_op_cdq(operands, buffer);
 }
 
 

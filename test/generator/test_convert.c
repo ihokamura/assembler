@@ -17,8 +17,10 @@ static const ConvertInfo convert_info_list[] =
 {
     {"cwd", sizeof(uint16_t), 0x0000, 0x0000},
     {"cwd", sizeof(uint16_t), 0x8000, 0xffff},
-    {"cdq", sizeof(uint32_t), 0x00000000, 0x0000},
+    {"cdq", sizeof(uint32_t), 0x00000000, 0x00000000},
     {"cdq", sizeof(uint32_t), 0x80000000, 0xffffffff},
+    {"cqo", sizeof(uint64_t), 0x0000000000000000, 0x0000000000000000},
+    {"cqo", sizeof(uint64_t), 0x8000000000000000, 0xffffffffffffffff},
 };
 static const size_t CONVERT_INFO_LIST_SIZE = sizeof(convert_info_list) / sizeof(convert_info_list[0]);
 
@@ -44,7 +46,7 @@ static void generate_test_case_cwd(FILE *fp, const ConvertInfo *convert_info)
 
 static void generate_all_test_case_convert(FILE *fp)
 {
-    // CWD
+    // CWD/CDQ/CQO
     for(size_t i = 0; i < CONVERT_INFO_LIST_SIZE; i++)
     {
         const ConvertInfo *convert_info = &convert_info_list[i];

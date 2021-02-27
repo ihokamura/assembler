@@ -42,6 +42,7 @@ enum MnemonicKind
     MN_CALL,
     MN_CDQ,
     MN_CMP,
+    MN_CQO,
     MN_CWD,
     MN_IDIV,
     MN_IMUL,
