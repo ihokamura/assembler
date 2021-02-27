@@ -71,6 +71,7 @@ static void generate_op_jnle(const List(Operand) *operands, ByteBufferType *buff
 static void generate_op_lea(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_leave(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffer);
+static void generate_op_movzx(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_neg(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_nop(const List(Operand) *operands, ByteBufferType *buffer);
 static void generate_op_not(const List(Operand) *operands, ByteBufferType *buffer);
@@ -160,6 +161,7 @@ const MnemonicInfo mnemonic_info_list[] =
     {MN_LEA,    "lea",    true,  generate_op_lea},
     {MN_LEAVE,  "leave",  false, generate_op_leave},
     {MN_MOV,    "mov",    true,  generate_op_mov},
+    {MN_MOVZX,  "movzx",  true,  generate_op_movzx},
     {MN_NEG,    "neg",    true,  generate_op_neg},
     {MN_NOP,    "nop",    false, generate_op_nop},
     {MN_NOT,    "not",    true,  generate_op_not},
@@ -773,6 +775,34 @@ static void generate_op_mov(const List(Operand) *operands, ByteBufferType *buffe
         append_binary_disp(operand1, buffer->size, -(SIZEOF_32BIT + imm_size), buffer);
         append_binary_imm(operand2->immediate, imm_size, buffer);
     }
+}
+
+
+/*
+generate movzx operation
+*/
+static void generate_op_movzx(const List(Operand) *operands, ByteBufferType *buffer)
+{
+    ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
+    Operand *operand1 = get_element(Operand)(entry);
+    Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
+    assert(is_register(operand1->kind) && is_register_or_memory(operand2->kind));
+    assert((get_operand_size(operand1->kind) > get_operand_size(operand2->kind)) && (get_operand_size(operand2->kind) <= SIZEOF_16BIT));
+
+    /*
+    handle the following instructions
+    * MOVZX r16, r/m8
+    * MOVZX r32, r/m8
+    * MOVZX r64, r/m8
+    * MOVZX r32, r/m16
+    * MOVZX r64, r/m16
+    */
+    may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
+    may_append_binary_rex_prefix_reg_rm(operand1, operand2, true, buffer);
+    uint32_t opecode = (get_operand_size(operand2->kind) == SIZEOF_8BIT) ? 0x0fb6 : 0x0fb7;
+    append_binary_opecode(opecode, buffer);
+    append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
+    append_binary_disp(operand2, buffer->size, -SIZEOF_32BIT, buffer);
 }
 
 

@@ -12,6 +12,7 @@ void generate_test_jcc(void);
 void generate_test_jmp(void);
 void generate_test_lea(void);
 void generate_test_mov(void);
+void generate_test_movzx(void);
 void generate_test_neg(void);
 void generate_test_nop(void);
 void generate_test_not(void);

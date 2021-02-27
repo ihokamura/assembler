@@ -151,6 +151,12 @@ intmax_t convert_size_to_sint_max_value(size_t size)
 }
 
 
+uintmax_t convert_size_to_sint_max_plus_1(size_t size)
+{
+    return 1 << (size * 8 - 1);
+}
+
+
 const char *get_size_specifier(size_t size)
 {
     static const char *size_specs[] = {"byte ptr", "word ptr", "dword ptr", "qword ptr"};

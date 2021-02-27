@@ -51,6 +51,7 @@ void put_line_with_tab(FILE *fp, const char *format, ...);
 size_t convert_size_to_index(size_t size);
 size_t convert_size_to_bit(size_t size);
 intmax_t convert_size_to_sint_max_value(size_t size);
+uintmax_t convert_size_to_sint_max_plus_1(size_t size);
 const char *get_size_specifier(size_t size);
 const char *get_1st_argument_register(size_t size);
 const char *get_2nd_argument_register(size_t size);

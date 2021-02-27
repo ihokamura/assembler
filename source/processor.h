@@ -66,6 +66,7 @@ enum MnemonicKind
     MN_LEA,
     MN_LEAVE,
     MN_MOV,
+    MN_MOVZX,
     MN_NEG,
     MN_NOP,
     MN_NOT,
