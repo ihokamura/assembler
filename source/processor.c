@@ -415,6 +415,27 @@ static void generate_op_imul(const List(Operand) *operands, ByteBufferType *buff
         break;
 
     case 2:
+        {
+        /*
+        handle the following instructions
+        * IMUL r16, r/m16
+        * IMUL r32, r/m32
+        * IMUL r64, r/m64
+        */
+        ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
+        Operand *operand1 = get_element(Operand)(entry);
+        Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
+        assert(is_register(operand1->kind) && (is_register(operand2->kind) || is_memory(operand2->kind)));
+        assert((get_operand_size(operand1->kind) > SIZEOF_8BIT) && (get_operand_size(operand1->kind) == get_operand_size(operand2->kind)));
+
+        may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
+        may_append_binary_rex_prefix_reg_rm(operand1, operand2, true, buffer);
+        append_binary_opecode(0x0faf, buffer);
+        append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
+        append_binary_disp(operand2, buffer->size, -SIZEOF_32BIT, buffer);
+        }
+        break;
+
     case 3:
     default:
         assert(0);
