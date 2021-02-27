@@ -437,6 +437,35 @@ static void generate_op_imul(const List(Operand) *operands, ByteBufferType *buff
         break;
 
     case 3:
+        {
+        /*
+        handle the following instructions
+        * IMUL r16, r/m16, imm8
+        * IMUL r32, r/m32, imm8
+        * IMUL r64, r/m64, imm8
+        * IMUL r16, r/m16, imm16
+        * IMUL r32, r/m32, imm32
+        * IMUL r64, r/m64, imm32
+        */
+        ListEntry(Operand) *entry = get_first_entry(Operand)(operands);
+        Operand *operand1 = get_element(Operand)(entry);
+        Operand *operand2 = get_element(Operand)(next_entry(Operand, entry));
+        Operand *operand3 = get_element(Operand)(next_entry(Operand, next_entry(Operand, entry)));
+        assert(is_register(operand1->kind) && (is_register(operand2->kind) || is_memory(operand2->kind)) && is_immediate(operand3->kind));
+        assert((get_operand_size(operand1->kind) > SIZEOF_8BIT) && (get_operand_size(operand1->kind) == get_operand_size(operand2->kind)));
+
+        bool is_imm8 = (get_operand_size(operand3->kind) == SIZEOF_8BIT);
+        may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
+        may_append_binary_rex_prefix_reg_rm(operand1, operand2, true, buffer);
+        uint32_t opecode = is_imm8 ? 0x6b : 0x69;
+        append_binary_opecode(opecode, buffer);
+        append_binary_modrm(get_mod_field(operand2), get_reg_field(operand1->reg), get_rm_field(operand2->reg), buffer);
+        append_binary_disp(operand2, buffer->size, -SIZEOF_32BIT, buffer);
+        size_t size = is_imm8 ? SIZEOF_8BIT : min(get_operand_size(operand2->kind), SIZEOF_32BIT);
+        append_binary_imm(operand3->immediate, size, buffer);
+        }
+        break;
+
     default:
         assert(0);
         break;
