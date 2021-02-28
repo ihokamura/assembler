@@ -231,73 +231,39 @@ void expect_reserved(const char *str)
 
 
 /*
-parse an identifier
-* If the next token is an identifier, this function parses and returns the token.
+parse a token
+* If the next token is an expected kind, this function parses and returns the token.
 * Otherwise, it reports an error.
 */
-Token *expect_identifier(void)
+Token *expect_token(TokenKind kind)
 {
     Token *current = get_element(Token)(current_token);
-    if(current->kind != TK_IDENTIFIER)
+
+    if(current->kind != kind)
     {
-        report_error(current->str, "expected an identifier.");
-    }
+        const char *message;
+        switch(kind)
+        {
+        case TK_IDENTIFIER:
+            message = "expected an identifier.";
+            break;
 
-    current_token = next_entry(Token, current_token);
+        case TK_IMMEDIATE:
+            message = "expected an immediate.";
+            break;
 
-    return current;
-}
+        case TK_REGISTER:
+            message = "expected a register.";
+            break;
 
+        case TK_STRING:
+            message = "expected a string-literal.";
+            break;
 
-/*
-parse an immediate
-* If the next token is an immediate, this function parses and returns the token.
-* Otherwise, it reports an error.
-*/
-Token *expect_immediate(void)
-{
-    Token *current = get_element(Token)(current_token);
-    if(current->kind != TK_IMMEDIATE)
-    {
-        report_error(current->str, "expected an immediate.");
-    }
-
-    current_token = next_entry(Token, current_token);
-
-    return current;
-}
-
-
-/*
-parse a register
-* If the next token is a register, this function parses and returns the token.
-* Otherwise, it reports an error.
-*/
-Token *expect_register(void)
-{
-    Token *current = get_element(Token)(current_token);
-    if(current->kind != TK_REGISTER)
-    {
-        report_error(current->str, "expected a register.");
-    }
-
-    current_token = next_entry(Token, current_token);
-
-    return current;
-}
-
-
-/*
-parse a string-literal
-* If the next token is a string-literal, this function parses and returns the token.
-* Otherwise, it reports an error.
-*/
-Token *expect_string(void)
-{
-    Token *current = get_element(Token)(current_token);
-    if(current->kind != TK_STRING)
-    {
-        report_error(current->str, "expected a string-literal.");
+        default:
+            break;
+        }
+        report_error(current->str, message);
     }
 
     current_token = next_entry(Token, current_token);

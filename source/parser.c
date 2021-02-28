@@ -19,6 +19,7 @@ static void program(void);
 static void statement(void);
 static void parse_directive(Label *label);
 static void parse_directive_size(size_t size, Label *label);
+static void parse_directive_string(Label *label);
 static void parse_directive_zero(Label *label);
 static Label *parse_label(const Token *token);
 static Operation *parse_operation(const Token *token, Label *label);
@@ -31,6 +32,7 @@ static Bss *new_bss(size_t size, Label *label);
 static Data *new_data(DataKind kind, size_t size, Label *label);
 static Data *new_data_immediate(size_t size, uintmax_t value, Label *label);
 static Data *new_data_symbol(size_t size, const Token *token, Label *label);
+static Data *new_data_string(const char *str, Label *label, size_t *len);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, Label *label);
 static Operand *new_operand(OperandKind kind);
 static Operand *new_operand_immediate(uintmax_t immediate);
@@ -113,13 +115,15 @@ static void statement(void)
 /*
 parse a directive
 ```
-directive ::= ".bss"
+directive ::= ".align"
+            | ".bss"
             | ".byte"
             | ".data"
             | ".globl" symbol
             | ".intel_syntax noprefix"
             | ".long"
             | ".quad"
+            | ".string"
             | ".text"
             | ".word"
             | ".zero"
@@ -129,7 +133,7 @@ static void parse_directive(Label *label)
 {
     if(consume_reserved(".align"))
     {
-        set_current_alignment(expect_immediate()->value);
+        set_current_alignment(expect_token(TK_IMMEDIATE)->value);
     }
     else if(consume_reserved(".bss"))
     {
@@ -147,7 +151,7 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved(".globl"))
     {
-        Token *token = expect_identifier();
+        Token *token = expect_token(TK_IDENTIFIER);
         Symbol *symbol = new_symbol(token);
         symbol->bind = STB_GLOBAL;
         symbol->declared = true;
@@ -166,31 +170,7 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved(".string"))
     {
-        // save the current alignment
-        Elf_Xword saved_alignment = get_current_alignment();
-        reset_current_alignment();
-
-        Token *token = expect_string();
-        int value;
-
-        size_t bytes = 1;
-        size_t len = convert_escape_sequence(&token->str[0], &value);
-        new_data_immediate(sizeof(char), value, label);
-        while(len < token->len)
-        {
-            bytes++;
-            len += convert_escape_sequence(&token->str[len], &value);
-            new_data_immediate(SIZEOF_8BIT, value, NULL);
-        }
-
-        // fill paddings to adjust alignment
-        for(size_t bound = align_to(bytes, saved_alignment); bytes < bound; bytes++)
-        {
-            new_data_immediate(SIZEOF_8BIT, 0x00, NULL);
-        }
-
-        // restore the saved alignment
-        set_current_alignment(saved_alignment);
+        parse_directive_string(label);
     }
     else if(consume_reserved(".text"))
     {
@@ -224,8 +204,39 @@ static void parse_directive_size(size_t size, Label *label)
     }
     else
     {
-        new_data_immediate(size, expect_immediate()->value, label);
+        new_data_immediate(size, expect_token(TK_IMMEDIATE)->value, label);
     }
+}
+
+
+/*
+parse directive for string
+*/
+static void parse_directive_string(Label *label)
+{
+    // save the current alignment
+    Elf_Xword saved_alignment = get_current_alignment();
+    reset_current_alignment();
+
+    // make data of string body
+    Token *token = expect_token(TK_STRING);
+    size_t len = 0;
+    new_data_string(token->str, label, &len);
+    size_t bytes = 1;
+    while(len < token->len)
+    {
+        new_data_string(token->str, NULL, &len);
+        bytes++;
+    }
+
+    // fill paddings to adjust alignment
+    for(size_t end = align_to(bytes, saved_alignment); bytes < end; bytes++)
+    {
+        new_data_immediate(SIZEOF_8BIT, 0x00, NULL);
+    }
+
+    // restore the saved alignment
+    set_current_alignment(saved_alignment);
 }
 
 
@@ -234,7 +245,7 @@ parse directive for zero
 */
 static void parse_directive_zero(Label *label)
 {
-    new_bss(expect_immediate()->value, label);
+    new_bss(expect_token(TK_IMMEDIATE)->value, label);
 }
 
 
@@ -439,6 +450,19 @@ static Data *new_data_symbol(size_t size, const Token *token, Label *label)
 
 
 /*
+make a new data for a character in string
+*/
+static Data *new_data_string(const char *str, Label *label, size_t *len)
+{
+    int value;
+    const char *pos = &str[*len];
+    *len += convert_escape_sequence(pos, &value);
+
+    return new_data_immediate(SIZEOF_8BIT, value, label);
+}
+
+
+/*
 make a new operation
 */
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, Label *label)
@@ -521,7 +545,7 @@ static Operand *new_operand_memory(OperandKind kind)
     Operand *operand = new_operand(kind);
 
     expect_reserved("[");
-    Token *token = expect_register();
+    Token *token = expect_token(TK_REGISTER);
     operand->reg = get_register_info(token)->reg_kind;
     while(true)
     {
@@ -533,12 +557,12 @@ static Operand *new_operand_memory(OperandKind kind)
             }
             else
             {
-                operand->immediate += expect_immediate()->value;
+                operand->immediate += expect_token(TK_IMMEDIATE)->value;
             }
         }
         else if(consume_reserved("-"))
         {
-            operand->immediate -= expect_immediate()->value;
+            operand->immediate -= expect_token(TK_IMMEDIATE)->value;
         }
         else
         {
