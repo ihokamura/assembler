@@ -1,5 +1,5 @@
-#ifndef __TEST_GENERATOR_H__
-#define __TEST_GENERATOR_H__
+#ifndef TEST_GENERATOR_H
+#define TEST_GENERATOR_H
 
 void generate_test_add(void);
 void generate_test_and(void);
@@ -28,4 +28,4 @@ void generate_test_shr(void);
 void generate_test_sub(void);
 void generate_test_xor(void);
 
-#endif /* __TEST_GENERATOR_H__ */
+#endif /* TEST_GENERATOR_H */

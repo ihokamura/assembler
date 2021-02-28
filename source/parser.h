@@ -1,5 +1,5 @@
-#ifndef __PARSER_H__
-#define __PARSER_H__
+#ifndef PARSER_H
+#define PARSER_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -59,4 +59,4 @@ struct Statement
 void construct(Program *prog);
 Label *search_label(const List(Label) *label_list, const Symbol *symbol);
 
-#endif /* !__PARSER_H__ */
+#endif /* !PARSER_H */

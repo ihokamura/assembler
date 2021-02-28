@@ -1,5 +1,5 @@
-#ifndef __IDENTIFIER_H__
-#define __IDENTIFIER_H__
+#ifndef IDENTIFIER_H
+#define IDENTIFIER_H
 
 #include <stdbool.h>
 
@@ -33,4 +33,4 @@ Symbol *search_symbol_declaration(const List(Symbol) *symbol_list, const char *b
 void initialize_symbol_list(void);
 List(Symbol) *get_symbol_list(void);
 
-#endif /* !__IDENTIFIER_H__ */
+#endif /* !IDENTIFIER_H */

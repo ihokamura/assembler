@@ -1,5 +1,5 @@
-#ifndef __TEST_COMMON_H__
-#define __TEST_COMMON_H__
+#ifndef TEST_COMMON_H
+#define TEST_COMMON_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -63,4 +63,4 @@ void generate_test(const char *filename, size_t stack_size, void (*generate_all_
 void generate_prologue(FILE *fp, size_t stack_size);
 void generate_epilogue(FILE *fp);
 
-#endif /* !__TEST_COMMON_H__ */
+#endif /* !TEST_COMMON_H */

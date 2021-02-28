@@ -1,5 +1,5 @@
-#ifndef __PROCESSOR_H__
-#define __PROCESSOR_H__
+#ifndef PROCESSOR_H
+#define PROCESSOR_H
 
 #include <stdbool.h>
 
@@ -252,4 +252,4 @@ void generate_data(const Data *data, ByteBufferType *buffer);
 void generate_operation(const Operation *operation, ByteBufferType *text_body);
 size_t get_least_size(uintmax_t value);
 
-#endif /* !__PROCESSOR_H__ */
+#endif /* !PROCESSOR_H */

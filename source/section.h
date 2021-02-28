@@ -1,5 +1,5 @@
-#ifndef __SECTION_H__
-#define __SECTION_H__
+#ifndef SECTION_H
+#define SECTION_H
 
 #include <stddef.h>
 #include <stdio.h>
@@ -57,4 +57,4 @@ void generate_section_header_table_entries(size_t symtab_shinfo);
 size_t output_section_bodies(size_t start_pos, FILE *fp);
 void output_section_header_table_entries(FILE *fp);
 
-#endif /* !__SECTION_H__ */
+#endif /* !SECTION_H */

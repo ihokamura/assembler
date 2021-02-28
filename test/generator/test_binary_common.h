@@ -1,5 +1,5 @@
-#ifndef __TEST_BINARY_COMMON_H__
-#define __TEST_BINARY_COMMON_H__
+#ifndef TEST_BINARY_COMMON_H
+#define TEST_BINARY_COMMON_H
 
 #include <stdint.h>
 #include <stdio.h>
@@ -28,4 +28,4 @@ struct BinaryOperationTestDataMaker
 
 void generate_all_test_case_binary(FILE *fp, const BinaryOperationTestDataMaker *make_test_data);
 
-#endif /* __TEST_BINARY_COMMON_H__ */
+#endif /* TEST_BINARY_COMMON_H */

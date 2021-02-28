@@ -1,5 +1,5 @@
-#ifndef __BUFFER_H__
-#define __BUFFER_H__
+#ifndef BUFFER_H
+#define BUFFER_H
 
 #include <stddef.h>
 
@@ -14,4 +14,4 @@ size_t align_to(size_t n, size_t alignment);
 ByteBufferType *append_bytes(const char *bytes, size_t size, ByteBufferType *buffer);
 ByteBufferType *fill_bytes(char byte, size_t size, ByteBufferType *buffer);
 
-#endif /* !__BUFFER_H__ */
+#endif /* !BUFFER_H */

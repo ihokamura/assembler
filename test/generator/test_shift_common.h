@@ -1,5 +1,5 @@
-#ifndef __TEST_SHIFT_COMMON_H__
-#define __TEST_SHIFT_COMMON_H__
+#ifndef TEST_SHIFT_COMMON_H
+#define TEST_SHIFT_COMMON_H
 
 #include <stdint.h>
 #include <stdio.h>
@@ -25,4 +25,4 @@ struct ShiftOperationTestDataMaker
 
 void generate_all_test_case_shift(FILE *fp, const ShiftOperationTestDataMaker *make_test_data);
 
-#endif /* __TEST_SHIFT_COMMON_H__ */
+#endif /* TEST_SHIFT_COMMON_H */

@@ -1,5 +1,5 @@
-#ifndef __TOKENIZER_H__
-#define __TOKENIZER_H__
+#ifndef TOKENIZER_H
+#define TOKENIZER_H
 
 #include <stddef.h>
 
@@ -42,4 +42,4 @@ void report_warning(const char *loc, const char *fmt, ...);
 void report_error(const char *loc, const char *fmt, ...);
 int convert_escape_sequence(const char *str, int *value);
 
-#endif /* !__TOKENIZER_H__ */
+#endif /* !TOKENIZER_H */

@@ -1,5 +1,5 @@
-#ifndef __ELF_WRAP_H__
-#define __ELF_WRAP_H__
+#ifndef ELF_WRAP_H
+#define ELF_WRAP_H
 
 #include <elf.h>
 
@@ -31,4 +31,4 @@ typedef Elf64_Sym     Elf_Sym;
 typedef Elf64_Xword   Elf_Xword;
 typedef Elf64_Word    Elf_Word;
 
-#endif /* !__ELF_WRAP_H__ */
+#endif /* !ELF_WRAP_H */

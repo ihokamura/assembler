@@ -1,7 +1,8 @@
-#ifndef __LIST_H__
-#define __LIST_H__
+#ifndef LIST_H
+#define LIST_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 // macro
 #define List(type) type##List // type-name of list
@@ -173,4 +174,4 @@ List(type) *concatenate_list(type)(List(type) *self, List(type) *other)\
     return self;\
 }\
 
-#endif /* !__LIST_H__ */
+#endif /* !LIST_H */

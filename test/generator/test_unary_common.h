@@ -1,5 +1,5 @@
-#ifndef __TEST_UNARY_COMMON_H__
-#define __TEST_UNARY_COMMON_H__
+#ifndef TEST_UNARY_COMMON_H
+#define TEST_UNARY_COMMON_H
 
 #include <stdint.h>
 
@@ -11,4 +11,4 @@ struct UnaryOperationInfo
     uintmax_t result;
 };
 
-#endif /* __TEST_UNARY_COMMON_H__ */
+#endif /* TEST_UNARY_COMMON_H */
