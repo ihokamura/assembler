@@ -46,7 +46,6 @@ static const char *punctuator_list[] = {
     "+",
     ",",
     "-",
-    ".",
     ":",
     "[",
     "]",
@@ -60,16 +59,16 @@ static const char *size_specifier_list[] = {
 };
 // list of directives
 static const char *directive_list[] = {
-    "bss",
-    "byte",
-    "data",
-    "globl",
-    "intel_syntax noprefix",
-    "long",
-    "quad",
-    "text",
-    "word",
-    "zero",
+    ".bss",
+    ".byte",
+    ".data",
+    ".globl",
+    ".intel_syntax noprefix",
+    ".long",
+    ".quad",
+    ".text",
+    ".word",
+    ".zero",
 };
 // information on reserved words
 static const ReservedWordInfo reserved_word_info[] = 
@@ -548,15 +547,16 @@ check if the following string is an identifier
 */
 static int is_identifier(const char *str)
 {
+    static const char *other_chars = "_.";
     int len = 0;
 
-    if(isalpha(*str) || (*str == '_'))
+    if(isalpha(*str) || strchr(other_chars, *str))
     {
         len++;
         str++;
 
         // there may be a digit after second character
-        while(isalnum(*str) || (*str == '_'))
+        while(isalnum(*str) || strchr(other_chars, *str))
         {
             len++;
             str++;

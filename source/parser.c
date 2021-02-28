@@ -94,13 +94,13 @@ static void statement(void)
         expect_reserved(":");
     }
 
-    if(consume_reserved("."))
-    {
-        parse_directive(label);
-    }
-    else if(consume_token(TK_MNEMONIC, &token))
+    if(consume_token(TK_MNEMONIC, &token))
     {
         parse_operation(token, label);
+    }
+    else
+    {
+        parse_directive(label);
     }
 }
 
@@ -122,46 +122,46 @@ directive ::= ".bss"
 */
 static void parse_directive(Label *label)
 {
-    if(consume_reserved("bss"))
+    if(consume_reserved(".bss"))
     {
         set_current_section(".bss");
     }
-    else if(consume_reserved("byte"))
+    else if(consume_reserved(".byte"))
     {
         parse_directive_size(SIZEOF_8BIT, label);
     }
-    else if(consume_reserved("data"))
+    else if(consume_reserved(".data"))
     {
         set_current_section(".data");
     }
-    else if(consume_reserved("globl"))
+    else if(consume_reserved(".globl"))
     {
         Token *token = expect_identifier();
         Symbol *symbol = new_symbol(token);
         symbol->bind = STB_GLOBAL;
         symbol->declared = true;
     }
-    else if(consume_reserved("intel_syntax noprefix"))
+    else if(consume_reserved(".intel_syntax noprefix"))
     {
         // do nothing
     }
-    else if(consume_reserved("long"))
+    else if(consume_reserved(".long"))
     {
         parse_directive_size(SIZEOF_32BIT, label);
     }
-    else if(consume_reserved("quad"))
+    else if(consume_reserved(".quad"))
     {
         parse_directive_size(SIZEOF_64BIT, label);
     }
-    else if(consume_reserved("text"))
+    else if(consume_reserved(".text"))
     {
         set_current_section(".text");
     }
-    else if(consume_reserved("word"))
+    else if(consume_reserved(".word"))
     {
         parse_directive_size(SIZEOF_16BIT, label);
     }
-    else if(consume_reserved("zero"))
+    else if(consume_reserved(".zero"))
     {
         parse_directive_zero(label);
     }
