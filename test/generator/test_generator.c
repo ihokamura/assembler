@@ -15,6 +15,7 @@ static void (* const generate_test[])(void) =
     generate_test_jmp,
     generate_test_lea,
     generate_test_mov,
+    generate_test_movsx,
     generate_test_movzx,
     generate_test_neg,
     generate_test_nop,

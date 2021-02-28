@@ -153,7 +153,7 @@ intmax_t convert_size_to_sint_max_value(size_t size)
 
 uintmax_t convert_size_to_sint_max_plus_1(size_t size)
 {
-    return 1 << (size * 8 - 1);
+    return (uintmax_t)1 << (8 * size - 1);
 }
 
 
