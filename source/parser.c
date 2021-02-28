@@ -39,6 +39,7 @@ static Operand *new_operand_memory(OperandKind kind);
 static Operand *new_operand_symbol(const Token *token);
 static const RegisterInfo *get_register_info(const Token *token);
 static bool consume_size_specifier(OperandKind *kind);
+static size_t get_current_alignment(void);
 static void set_current_alignment(size_t alignment);
 static void reset_current_alignment(void);
 
@@ -162,6 +163,34 @@ static void parse_directive(Label *label)
     else if(consume_reserved(".quad"))
     {
         parse_directive_size(SIZEOF_64BIT, label);
+    }
+    else if(consume_reserved(".string"))
+    {
+        // save the current alignment
+        Elf_Xword saved_alignment = get_current_alignment();
+        reset_current_alignment();
+
+        Token *token = expect_string();
+        int value;
+
+        size_t bytes = 1;
+        size_t len = convert_escape_sequence(&token->str[0], &value);
+        new_data_immediate(sizeof(char), value, label);
+        while(len < token->len)
+        {
+            bytes++;
+            len += convert_escape_sequence(&token->str[len], &value);
+            new_data_immediate(SIZEOF_8BIT, value, NULL);
+        }
+
+        // fill paddings to adjust alignment
+        for(size_t bound = align_to(bytes, saved_alignment); bytes < bound; bytes++)
+        {
+            new_data_immediate(SIZEOF_8BIT, 0x00, NULL);
+        }
+
+        // restore the saved alignment
+        set_current_alignment(saved_alignment);
     }
     else if(consume_reserved(".text"))
     {
@@ -602,6 +631,15 @@ static bool consume_size_specifier(OperandKind *kind)
     }
 
     return consumed;
+}
+
+
+/*
+get current alignment
+*/
+static size_t get_current_alignment(void)
+{
+    return current_alignment;
 }
 
 

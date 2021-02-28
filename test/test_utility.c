@@ -68,3 +68,14 @@ uint32_t assert_equal_uint64(uint64_t expected, uint64_t actual)
         return 1;
     }
 }
+
+
+/*
+print a string-literal
+*/
+uint32_t print_string_literal(const char *string)
+{
+    printf("%s", string);
+
+    return 0;
+}

@@ -16,6 +16,8 @@ test_data_pointer_to_internal_data_uint8:
 	.quad test_data_uint8
 test_data_pointer_to_external_data_uint8:
 	.quad test_external_data_uint8
+test_string:
+	.string "This is a test string.\n"
 
 	.bss
 test_bss_uint8:
@@ -38,6 +40,7 @@ main:
 	call test_internal_data
 	call test_external_data
 	call test_internal_bss
+	call test_internal_string_literal
 
 	mov rax, 0
 	ret
@@ -167,6 +170,14 @@ test_internal_bss:
 	mov rsi, qword ptr [rip+test_bss_uint64]
 	mov rdi, 0
 	call assert_equal_uint64
+
+	mov rax, 0
+	ret
+
+# test access to string-literal
+test_internal_string_literal:
+	lea rdi, qword ptr [rip+test_string]
+	call print_string_literal
 
 	mov rax, 0
 	ret

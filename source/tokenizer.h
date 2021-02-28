@@ -14,6 +14,7 @@ enum TokenKind
     TK_MNEMONIC,   // mnemonic
     TK_IMMEDIATE,  // immediate
     TK_REGISTER,   // register
+    TK_STRING,     // string-literal
 };
 
 // structure for token
@@ -35,11 +36,13 @@ void expect_reserved(const char *str);
 Token *expect_identifier(void);
 Token *expect_immediate(void);
 Token *expect_register(void);
+Token *expect_string(void);
 void tokenize(char *str);
 bool at_eof(void);
 char *make_identifier(const Token *token);
 char *read_file(const char *path);
 void report_warning(const char *loc, const char *fmt, ...);
 void report_error(const char *loc, const char *fmt, ...);
+int convert_escape_sequence(const char *str, int *value);
 
 #endif /* !__TOKENIZER_H__ */

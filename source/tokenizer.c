@@ -31,10 +31,12 @@ static int is_comment(const char *str);
 static int is_reserved(const char *str);
 static int is_mnemonic(const char *str);
 static int is_identifier(const char *str);
+static int is_string(const char *str);
 static int is_register(const char *str);
 static int is_immediate(const char *str, uintmax_t *value);
 static int is_octal_digit(int character);
 static int is_hexadeciaml_digit(int character);
+static int parse_escape_sequence(const char *str);
 static uintmax_t convert_immediate(const char *start, int base);
 static void report_position(const char *loc);
 
@@ -67,6 +69,7 @@ static const char *directive_list[] = {
     ".intel_syntax noprefix",
     ".long",
     ".quad",
+    ".string",
     ".text",
     ".word",
     ".zero",
@@ -79,6 +82,21 @@ static const ReservedWordInfo reserved_word_info[] =
     {directive_list, sizeof(directive_list) / sizeof(directive_list[0])},
 };
 static size_t RESERVED_WORD_INFO_SIZE = sizeof(reserved_word_info) / sizeof(reserved_word_info[0]); // size of information on reserved words
+// map of simple escape sequences (excluding "\")
+static const struct {int character; int value;} simple_escape_sequence_map[] = {
+    {'\'', '\''},
+    {'\"', '\"'},
+    {'\?', '\?'},
+    {'\\', '\\'},
+    {'a', '\a'},
+    {'b', '\b'},
+    {'f', '\f'},
+    {'n', '\n'},
+    {'r', '\r'},
+    {'t', '\t'},
+    {'v', '\v'},
+};
+static const size_t SIMPLE_ESCAPE_SEQUENCE_SIZE = sizeof(simple_escape_sequence_map) / sizeof(simple_escape_sequence_map[0]); // number of simple escape sequences
 static char *user_input; // input of assembler
 static List(Token) *token_list; // list of tokens
 static ListEntry(Token) *current_token; // currently parsing token
@@ -270,6 +288,25 @@ Token *expect_register(void)
 
 
 /*
+parse a string-literal
+* If the next token is a string-literal, this function parses and returns the token.
+* Otherwise, it reports an error.
+*/
+Token *expect_string(void)
+{
+    Token *current = get_element(Token)(current_token);
+    if(current->kind != TK_STRING)
+    {
+        report_error(current->str, "expected a string-literal.");
+    }
+
+    current_token = next_entry(Token, current_token);
+
+    return current;
+}
+
+
+/*
 tokenize a given string
 */
 void tokenize(char *str)
@@ -325,6 +362,16 @@ void tokenize(char *str)
         if(len > 0)
         {
             Token *token = new_token(TK_REGISTER, str, len);
+            current_token = add_list_entry_tail(Token)(token_list, token);
+            str += len;
+            continue;
+        }
+
+        // parse a string-literal
+        len = is_string(str);
+        if(len > 0)
+        {
+            Token *token = new_token(TK_STRING, str + 1, len - 2);
             current_token = add_list_entry_tail(Token)(token_list, token);
             str += len;
             continue;
@@ -569,6 +616,43 @@ static int is_identifier(const char *str)
 
 
 /*
+check if the following string is a string-literal
+*/
+static int is_string(const char *str)
+{
+    int len = 0;
+
+    if(*str == '"')
+    {
+        len++;
+        while((str[len] != '\0') && (str[len] != '"'))
+        {
+            if(str[len] == '\\')
+            {
+                len++;
+                len += parse_escape_sequence(&str[len]);
+            }
+            else
+            {
+                len++;
+            }
+        }
+
+        if(str[len] == '"')
+        {
+            len++;
+        }
+        else
+        {
+            report_error(str, "expected '\"'");
+        }
+    }
+
+    return len;
+}
+
+
+/*
 check if the following string is a register
 */
 static int is_register(const char *str)
@@ -650,6 +734,75 @@ check if the character is a hexadecimal digit
 static int is_hexadeciaml_digit(int character)
 {
     return (strchr("0123456789abcdefABCDEF", character) != NULL);
+}
+
+
+/*
+parse an escape sequence
+*/
+static int parse_escape_sequence(const char *str)
+{
+    int len = 0;
+
+    // check simple escape sequence
+    for(size_t i = 0; i < SIMPLE_ESCAPE_SEQUENCE_SIZE; i++)
+    {
+        if(str[len] == simple_escape_sequence_map[i].character)
+        {
+            len++;
+            break;
+        }
+    }
+    if(len > 0)
+    {
+        return len;
+    }
+
+    // check octal escape sequence
+    // An octal escape sequence consists of up to 3 octal digits.
+    for(size_t count = 0; count < 3; count++)
+    {
+        if(is_octal_digit(str[len]))
+        {
+            len++;
+        }
+    }
+    if(len > 0)
+    {
+        return len;
+    }
+
+    report_error(str, "unknown escape sequence");
+    return len;
+}
+
+
+/*
+convert an escape sequence
+*/
+int convert_escape_sequence(const char *str, int *value)
+{
+    int len = 1;
+
+    if(str[0] == '\\')
+    {
+        len++;
+        int character = str[1];
+        for(size_t i = 0; i < SIMPLE_ESCAPE_SEQUENCE_SIZE; i++)
+        {
+            if(character == simple_escape_sequence_map[i].character)
+            {
+                *value =simple_escape_sequence_map[i].value;
+                break;
+            }
+        }
+    }
+    else
+    {
+        *value = str[0];
+    }
+
+    return len;
 }
 
 
