@@ -3,10 +3,13 @@
 	.data
 test_data_uint8:
 	.byte 0xff
+	.align 2
 test_data_uint16:
 	.word 0xffff
+	.align 4
 test_data_uint32:
 	.long 0xffffffff
+	.align 8
 test_data_uint64:
 	.quad 0xffffffffffffffff
 test_data_pointer_to_internal_data_uint8:
@@ -17,10 +20,13 @@ test_data_pointer_to_external_data_uint8:
 	.bss
 test_bss_uint8:
 	.zero 1
+	.align 2
 test_bss_uint16:
 	.zero 2
+	.align 4
 test_bss_uint32:
 	.zero 4
+	.align 8
 test_bss_uint64:
 	.zero 8
 
@@ -169,12 +175,15 @@ test_internal_bss:
 test_data_uint8_array:
 	.byte 0x81
 	.byte 0x93
+	.align 2
 test_data_uint16_array:
 	.word 0x8001
 	.word 0x9003
+	.align 4
 test_data_uint32_array:
 	.long 0x80000001
 	.long 0x90000003
+	.align 8
 test_data_uint64_array:
 	.quad 0x8000000000000001
 	.quad 0x9000000000000003

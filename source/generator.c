@@ -289,12 +289,15 @@ update section
 static void update_section(Statement *statement, Section *section)
 {
     size_t section_size = 0;
-    statement->address = section->size;
+    statement->address = align_to(section->size, statement->alignment);
+    size_t padding_size = statement->address - section->size;
+    section->size = statement->address;
     switch(statement->kind)
     {
     case ST_INSTRUCTION:
         {
         ByteBufferType *body = section->body;
+        fill_bytes(0x00, padding_size, body);
         Operation *operation = statement->operation;
         generate_operation(operation, body);
         section_size = body->size;
@@ -304,6 +307,7 @@ static void update_section(Statement *statement, Section *section)
     case ST_VALUE:
         {
         ByteBufferType *body = section->body;
+        fill_bytes(0x00, padding_size, body);
         Data *data = statement->data;
         generate_data(data, body);
         section_size = body->size;

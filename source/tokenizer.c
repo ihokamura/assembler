@@ -59,6 +59,7 @@ static const char *size_specifier_list[] = {
 };
 // list of directives
 static const char *directive_list[] = {
+    ".align",
     ".bss",
     ".byte",
     ".data",

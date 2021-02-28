@@ -32,3 +32,17 @@ ByteBufferType *append_bytes(const char *bytes, size_t size, ByteBufferType *buf
 
     return buffer;
 }
+
+
+/*
+fill value to buffer
+*/
+ByteBufferType *fill_bytes(char byte, size_t size, ByteBufferType *buffer)
+{
+    for(size_t i = 0; i < size; i++)
+    {
+        append_bytes(&byte, sizeof(byte), buffer);
+    }
+
+    return buffer;
+}

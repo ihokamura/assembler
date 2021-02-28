@@ -11,7 +11,8 @@ asm <input-file> -c -o <output-file>
 ```
 program ::= statement*
 statement ::= (label ":")? directive | operation
-directive ::= ".bss"
+directive ::= ".align"
+            | ".bss"
             | ".byte"
             | ".data"
             | ".globl" symbol

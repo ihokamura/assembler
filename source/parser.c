@@ -39,10 +39,14 @@ static Operand *new_operand_memory(OperandKind kind);
 static Operand *new_operand_symbol(const Token *token);
 static const RegisterInfo *get_register_info(const Token *token);
 static bool consume_size_specifier(OperandKind *kind);
+static void set_current_alignment(size_t alignment);
+static void reset_current_alignment(void);
 
 // global variable
 static List(Statement) *statement_list = NULL; // list of statements
 static List(Label) *label_list = NULL; // list of labels
+
+static size_t current_alignment = 1; // current alignment
 
 
 /*
@@ -122,8 +126,13 @@ directive ::= ".bss"
 */
 static void parse_directive(Label *label)
 {
-    if(consume_reserved(".bss"))
+    if(consume_reserved(".align"))
     {
+        set_current_alignment(expect_immediate()->value);
+    }
+    else if(consume_reserved(".bss"))
+    {
+        reset_current_alignment();
         set_current_section(".bss");
     }
     else if(consume_reserved(".byte"))
@@ -132,6 +141,7 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved(".data"))
     {
+        reset_current_alignment();
         set_current_section(".data");
     }
     else if(consume_reserved(".globl"))
@@ -155,6 +165,7 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved(".text"))
     {
+        reset_current_alignment();
         set_current_section(".text");
     }
     else if(consume_reserved(".word"))
@@ -310,6 +321,7 @@ static Statement *new_statement(StatementKind kind, Label *label)
     Statement *statement = calloc(1, sizeof(Statement));
     statement->kind = kind;
     statement->section = get_current_section();
+    statement->alignment = current_alignment;
 
     // update list of statements
     add_list_entry_tail(Statement)(statement_list, statement);
@@ -590,4 +602,29 @@ static bool consume_size_specifier(OperandKind *kind)
     }
 
     return consumed;
+}
+
+
+/*
+set current alignment
+*/
+static void set_current_alignment(size_t alignment)
+{
+    current_alignment = alignment;
+
+    // update alignment of the current section
+    Section *section = get_section(get_current_section());
+    if(section->alignment < alignment)
+    {
+        section->alignment = alignment;
+    }
+}
+
+
+/*
+reset current alignment
+*/
+static void reset_current_alignment(void)
+{
+    current_alignment = 1;
 }

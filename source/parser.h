@@ -47,6 +47,7 @@ struct Statement
     StatementKind kind;       // kind of statement
     SectionKind section;      // section of statement
     Elf_Addr address;         // address of statement
+    Elf_Xword alignment;      // alignment of statement
     union
     {
         Operation *operation; // instruction
