@@ -119,6 +119,7 @@ directive ::= ".align"
             | ".bss"
             | ".byte"
             | ".data"
+            | ".global" symbol
             | ".globl" symbol
             | ".intel_syntax noprefix"
             | ".long"
@@ -150,7 +151,7 @@ static void parse_directive(Label *label)
         reset_current_alignment();
         set_current_section(".data");
     }
-    else if(consume_reserved(".globl"))
+    else if(consume_reserved(".global") || consume_reserved(".globl"))
     {
         Token *token = expect_token(TK_IDENTIFIER);
         Symbol *symbol = new_symbol(token);

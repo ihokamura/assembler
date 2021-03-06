@@ -65,6 +65,7 @@ static const char *directive_list[] = {
     ".bss",
     ".byte",
     ".data",
+    ".global",
     ".globl",
     ".intel_syntax noprefix",
     ".long",

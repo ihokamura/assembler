@@ -15,6 +15,7 @@ directive ::= ".align"
             | ".bss"
             | ".byte"
             | ".data"
+            | ".global" symbol
             | ".globl" symbol
             | ".intel_syntax noprefix"
             | ".long"
