@@ -200,10 +200,11 @@ struct Bss
 // structure for data
 struct Data
 {
-    DataKind kind;      // kind of data
-    size_t size;        // size of data
-    uintmax_t value;    // value of data
-    Symbol *symbol;     // body of symbol
+    DataKind kind;     // kind of data
+    size_t size;       // size of data
+    uintmax_t value;   // value of data
+    Elf_Sxword addend; // addend of symbol
+    Symbol *symbol;    // body of symbol
 };
 
 // structure for mapping from string to kind of mnemonic

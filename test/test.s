@@ -109,6 +109,14 @@ test_internal_data:
 	lea rdi, byte ptr [rip+test_data_uint8]
 	call assert_equal_uint64
 
+	mov rsi, qword ptr [rip+test_data_pointer_to_internal_data_uint8_plus_1]
+	lea rdi, byte ptr [rip+test_data_uint8_array+1]
+	call assert_equal_uint64
+
+	mov rsi, qword ptr [rip+test_data_pointer_to_internal_data_uint16_plus_2]
+	lea rdi, word ptr [rip+test_data_uint16_array+2]
+	call assert_equal_uint64
+
 	mov rdi, qword ptr [rip+test_data_pointer_to_external_data_uint8]
 	call assert_pointer_to_external_data_uint8
 
@@ -198,3 +206,7 @@ test_data_uint32_array:
 test_data_uint64_array:
 	.quad 0x8000000000000001
 	.quad 0x9000000000000003
+test_data_pointer_to_internal_data_uint8_plus_1:
+	.quad test_data_uint8_array+1
+test_data_pointer_to_internal_data_uint16_plus_2:
+	.quad test_data_uint16_array+2

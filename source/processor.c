@@ -324,7 +324,7 @@ void generate_data(const Data *data, ByteBufferType *buffer)
 {
     if(data->kind == DT_SYMBOL)
     {
-        set_symbol(buffer->size, 0, SC_DATA, data->symbol);
+        set_symbol(buffer->size, data->addend, SC_DATA, data->symbol);
     }
     append_binary_imm(data->value, data->size, buffer);
 }

@@ -11,20 +11,20 @@ asm <input-file> -c -o <output-file>
 ```
 program ::= statement*
 statement ::= (label ":")* directive | operation
-directive ::= ".align"
+directive ::= ".align" immediate
             | ".bss"
-            | ".byte"
+            | ".byte" (immediate | symbol (("+" | "-") immediate)?)
             | ".data"
             | ".global" symbol
             | ".globl" symbol
             | ".intel_syntax noprefix"
-            | ".long"
-            | ".quad"
-            | ".string"
+            | ".long" (immediate | symbol (("+" | "-") immediate)?)
+            | ".quad" (immediate | symbol (("+" | "-") immediate)?)
+            | ".string" string-literal
             | ".text"
-            | ".value"
-            | ".word"
-            | ".zero"
+            | ".value" (immediate | symbol (("+" | "-") immediate)?)
+            | ".word" (immediate | symbol (("+" | "-") immediate)?)
+            | ".zero" immediate
 operation ::= mnemonic operands?
 mnemonic ::= "add"
            | "and"

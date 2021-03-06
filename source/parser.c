@@ -29,9 +29,9 @@ static Operand *parse_operand(void);
 static Statement *new_statement(StatementKind kind, List(Label) *labels);
 static Label *new_label(const Symbol *symbol);
 static Bss *new_bss(size_t size, List(Label) *labels);
-static Data *new_data(DataKind kind, size_t size, List(Label) *labels);
+static Data *new_data(DataKind kind, size_t size, Elf_Sxword addend, List(Label) *labels);
 static Data *new_data_immediate(size_t size, uintmax_t value, List(Label) *labels);
-static Data *new_data_symbol(size_t size, const Token *token, List(Label) *labels);
+static Data *new_data_symbol(size_t size, Elf_Sxword addend, const Token *token, List(Label) *labels);
 static Data *new_data_string(const char *str, List(Label) *labels, size_t *len);
 static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, List(Label) *labels);
 static Operand *new_operand(OperandKind kind);
@@ -115,20 +115,20 @@ static void statement(void)
 /*
 parse a directive
 ```
-directive ::= ".align"
+directive ::= ".align" immediate
             | ".bss"
-            | ".byte"
+            | ".byte" (immediate | symbol (("+" | "-") immediate)?)
             | ".data"
             | ".global" symbol
             | ".globl" symbol
             | ".intel_syntax noprefix"
-            | ".long"
-            | ".quad"
-            | ".string"
+            | ".long" (immediate | symbol (("+" | "-") immediate)?)
+            | ".quad" (immediate | symbol (("+" | "-") immediate)?)
+            | ".string" string-literal
             | ".text"
-            | ".value"
-            | ".word"
-            | ".zero"
+            | ".value" (immediate | symbol (("+" | "-") immediate)?)
+            | ".word" (immediate | symbol (("+" | "-") immediate)?)
+            | ".zero" immediate
 ```
 */
 static void parse_directive(List(Label) *labels)
@@ -202,7 +202,20 @@ static void parse_directive_size(size_t size, List(Label) *labels)
     Token *token;
     if(consume_token(TK_IDENTIFIER, &token))
     {
-        new_data_symbol(size, token, labels);
+        Elf_Sxword addend;
+        if(consume_reserved("+"))
+        {
+            addend = expect_token(TK_IMMEDIATE)->value;
+        }
+        else if(consume_reserved("-"))
+        {
+            addend = -expect_token(TK_IMMEDIATE)->value;
+        }
+        else
+        {
+            addend = 0;
+        }
+        new_data_symbol(size, addend, token, labels);
     }
     else
     {
@@ -416,12 +429,13 @@ static Bss *new_bss(size_t size, List(Label) *labels)
 /*
 make a new data
 */
-static Data *new_data(DataKind kind, size_t size, List(Label) *labels)
+static Data *new_data(DataKind kind, size_t size, Elf_Sxword addend, List(Label) *labels)
 {
     Data *data = calloc(1, sizeof(Data));
     data->kind = kind;
     data->size = size;
     data->value = 0;
+    data->addend = addend;
     data->symbol = NULL;
 
     Statement *statement = new_statement(ST_VALUE, labels);
@@ -436,7 +450,7 @@ make a new data for immediate
 */
 static Data *new_data_immediate(size_t size, uintmax_t value, List(Label) *labels)
 {
-    Data *data = new_data(DT_IMMEDIATE, size, labels);
+    Data *data = new_data(DT_IMMEDIATE, size, 0, labels);
     data->value = value;
 
     return data;
@@ -446,9 +460,9 @@ static Data *new_data_immediate(size_t size, uintmax_t value, List(Label) *label
 /*
 make a new data for memory
 */
-static Data *new_data_symbol(size_t size, const Token *token, List(Label) *labels)
+static Data *new_data_symbol(size_t size, Elf_Sxword addend, const Token *token, List(Label) *labels)
 {
-    Data *data = new_data(DT_SYMBOL, size, labels);
+    Data *data = new_data(DT_SYMBOL, size, addend, labels);
     data->symbol = new_symbol(token);
 
     return data;
