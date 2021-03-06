@@ -17,23 +17,23 @@ define_list_operations(Statement)
 // function prototype
 static void program(void);
 static void statement(void);
-static void parse_directive(Label *label);
-static void parse_directive_size(size_t size, Label *label);
-static void parse_directive_string(Label *label);
-static void parse_directive_zero(Label *label);
+static void parse_directive(List(Label) *labels);
+static void parse_directive_size(size_t size, List(Label) *labels);
+static void parse_directive_string(List(Label) *labels);
+static void parse_directive_zero(List(Label) *label);
 static Label *parse_label(const Token *token);
-static Operation *parse_operation(const Token *token, Label *label);
+static Operation *parse_operation(const Token *token, List(Label) *labels);
 static const MnemonicInfo *parse_mnemonic(const Token *token);
 static List(Operand) *parse_operands(void);
 static Operand *parse_operand(void);
-static Statement *new_statement(StatementKind kind, Label *label);
+static Statement *new_statement(StatementKind kind, List(Label) *labels);
 static Label *new_label(const Symbol *symbol);
-static Bss *new_bss(size_t size, Label *label);
-static Data *new_data(DataKind kind, size_t size, Label *label);
-static Data *new_data_immediate(size_t size, uintmax_t value, Label *label);
-static Data *new_data_symbol(size_t size, const Token *token, Label *label);
-static Data *new_data_string(const char *str, Label *label, size_t *len);
-static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, Label *label);
+static Bss *new_bss(size_t size, List(Label) *labels);
+static Data *new_data(DataKind kind, size_t size, List(Label) *labels);
+static Data *new_data_immediate(size_t size, uintmax_t value, List(Label) *labels);
+static Data *new_data_symbol(size_t size, const Token *token, List(Label) *labels);
+static Data *new_data_string(const char *str, List(Label) *labels, size_t *len);
+static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, List(Label) *labels);
 static Operand *new_operand(OperandKind kind);
 static Operand *new_operand_immediate(uintmax_t immediate);
 static Operand *new_operand_register(const Token *token);
@@ -94,20 +94,20 @@ statement ::= (label ":")? directive | operation
 static void statement(void)
 {
     Token *token;
-    Label *label = NULL;
-    if(consume_token(TK_IDENTIFIER, &token))
+    List(Label) *labels = new_list(Label)();
+    while(consume_token(TK_IDENTIFIER, &token))
     {
-        label = parse_label(token);
+        add_list_entry_tail(Label)(labels, parse_label(token));
         expect_reserved(":");
     }
 
     if(consume_token(TK_MNEMONIC, &token))
     {
-        parse_operation(token, label);
+        parse_operation(token, labels);
     }
     else
     {
-        parse_directive(label);
+        parse_directive(labels);
     }
 }
 
@@ -131,7 +131,7 @@ directive ::= ".align"
             | ".zero"
 ```
 */
-static void parse_directive(Label *label)
+static void parse_directive(List(Label) *labels)
 {
     if(consume_reserved(".align"))
     {
@@ -144,7 +144,7 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved(".byte"))
     {
-        parse_directive_size(SIZEOF_8BIT, label);
+        parse_directive_size(SIZEOF_8BIT, labels);
     }
     else if(consume_reserved(".data"))
     {
@@ -164,15 +164,15 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved(".long"))
     {
-        parse_directive_size(SIZEOF_32BIT, label);
+        parse_directive_size(SIZEOF_32BIT, labels);
     }
     else if(consume_reserved(".quad"))
     {
-        parse_directive_size(SIZEOF_64BIT, label);
+        parse_directive_size(SIZEOF_64BIT, labels);
     }
     else if(consume_reserved(".string"))
     {
-        parse_directive_string(label);
+        parse_directive_string(labels);
     }
     else if(consume_reserved(".text"))
     {
@@ -181,11 +181,11 @@ static void parse_directive(Label *label)
     }
     else if(consume_reserved(".value") || consume_reserved(".word"))
     {
-        parse_directive_size(SIZEOF_16BIT, label);
+        parse_directive_size(SIZEOF_16BIT, labels);
     }
     else if(consume_reserved(".zero"))
     {
-        parse_directive_zero(label);
+        parse_directive_zero(labels);
     }
     else
     {
@@ -197,16 +197,16 @@ static void parse_directive(Label *label)
 /*
 parse directive for size
 */
-static void parse_directive_size(size_t size, Label *label)
+static void parse_directive_size(size_t size, List(Label) *labels)
 {
     Token *token;
     if(consume_token(TK_IDENTIFIER, &token))
     {
-        new_data_symbol(size, token, label);
+        new_data_symbol(size, token, labels);
     }
     else
     {
-        new_data_immediate(size, expect_token(TK_IMMEDIATE)->value, label);
+        new_data_immediate(size, expect_token(TK_IMMEDIATE)->value, labels);
     }
 }
 
@@ -214,7 +214,7 @@ static void parse_directive_size(size_t size, Label *label)
 /*
 parse directive for string
 */
-static void parse_directive_string(Label *label)
+static void parse_directive_string(List(Label) *labels)
 {
     // save the current alignment
     Elf_Xword saved_alignment = get_current_alignment();
@@ -223,7 +223,7 @@ static void parse_directive_string(Label *label)
     // make data of string body
     Token *token = expect_token(TK_STRING);
     size_t len = 0;
-    new_data_string(token->str, label, &len);
+    new_data_string(token->str, labels, &len);
     size_t bytes = 1;
     while(len < token->len)
     {
@@ -245,9 +245,9 @@ static void parse_directive_string(Label *label)
 /*
 parse directive for zero
 */
-static void parse_directive_zero(Label *label)
+static void parse_directive_zero(List(Label) *labels)
 {
-    new_bss(expect_token(TK_IMMEDIATE)->value, label);
+    new_bss(expect_token(TK_IMMEDIATE)->value, labels);
 }
 
 
@@ -275,11 +275,11 @@ parse an operation
 operation ::= mnemonic operands?
 ```
 */
-static Operation *parse_operation(const Token *token, Label *label)
+static Operation *parse_operation(const Token *token, List(Label) *labels)
 {
     const MnemonicInfo *map = parse_mnemonic(token);
 
-    return new_operation(map->kind, map->take_operands ? parse_operands() : NULL, label);
+    return new_operation(map->kind, map->take_operands ? parse_operands() : NULL, labels);
 }
 
 
@@ -358,7 +358,7 @@ static Operand *parse_operand(void)
 /*
 make a new statement
 */
-static Statement *new_statement(StatementKind kind, Label *label)
+static Statement *new_statement(StatementKind kind, List(Label) *labels)
 {
     Statement *statement = calloc(1, sizeof(Statement));
     statement->kind = kind;
@@ -368,10 +368,14 @@ static Statement *new_statement(StatementKind kind, Label *label)
     // update list of statements
     add_list_entry_tail(Statement)(statement_list, statement);
 
-    // associate statement with label
-    if(label != NULL)
+    if(labels != NULL)
     {
-        label->statement = statement;
+        // associate statement with label
+        for_each_entry(Label, cursor, labels)
+        {
+            Label *label = get_element(Label)(cursor);
+            label->statement = statement;
+        }
     }
 
     return statement;
@@ -397,12 +401,12 @@ static Label *new_label(const Symbol *symbol)
 /*
 make a new bss
 */
-static Bss *new_bss(size_t size, Label *label)
+static Bss *new_bss(size_t size, List(Label) *labels)
 {
     Bss *bss = calloc(1, sizeof(Bss));
     bss->size = size;
 
-    Statement *statement = new_statement(ST_ZERO, label);
+    Statement *statement = new_statement(ST_ZERO, labels);
     statement->bss = bss;
 
     return bss;
@@ -412,7 +416,7 @@ static Bss *new_bss(size_t size, Label *label)
 /*
 make a new data
 */
-static Data *new_data(DataKind kind, size_t size, Label *label)
+static Data *new_data(DataKind kind, size_t size, List(Label) *labels)
 {
     Data *data = calloc(1, sizeof(Data));
     data->kind = kind;
@@ -420,7 +424,7 @@ static Data *new_data(DataKind kind, size_t size, Label *label)
     data->value = 0;
     data->symbol = NULL;
 
-    Statement *statement = new_statement(ST_VALUE, label);
+    Statement *statement = new_statement(ST_VALUE, labels);
     statement->data = data;
 
     return data;
@@ -430,9 +434,9 @@ static Data *new_data(DataKind kind, size_t size, Label *label)
 /*
 make a new data for immediate
 */
-static Data *new_data_immediate(size_t size, uintmax_t value, Label *label)
+static Data *new_data_immediate(size_t size, uintmax_t value, List(Label) *labels)
 {
-    Data *data = new_data(DT_IMMEDIATE, size, label);
+    Data *data = new_data(DT_IMMEDIATE, size, labels);
     data->value = value;
 
     return data;
@@ -442,9 +446,9 @@ static Data *new_data_immediate(size_t size, uintmax_t value, Label *label)
 /*
 make a new data for memory
 */
-static Data *new_data_symbol(size_t size, const Token *token, Label *label)
+static Data *new_data_symbol(size_t size, const Token *token, List(Label) *labels)
 {
-    Data *data = new_data(DT_SYMBOL, size, label);
+    Data *data = new_data(DT_SYMBOL, size, labels);
     data->symbol = new_symbol(token);
 
     return data;
@@ -454,26 +458,26 @@ static Data *new_data_symbol(size_t size, const Token *token, Label *label)
 /*
 make a new data for a character in string
 */
-static Data *new_data_string(const char *str, Label *label, size_t *len)
+static Data *new_data_string(const char *str, List(Label) *labels, size_t *len)
 {
     int value;
     const char *pos = &str[*len];
     *len += convert_escape_sequence(pos, &value);
 
-    return new_data_immediate(SIZEOF_8BIT, value, label);
+    return new_data_immediate(SIZEOF_8BIT, value, labels);
 }
 
 
 /*
 make a new operation
 */
-static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, Label *label)
+static Operation *new_operation(MnemonicKind kind, const List(Operand) *operands, List(Label) *labels)
 {
     Operation *operation = calloc(1, sizeof(Operation));
     operation->kind = kind;
     operation->operands = operands;
 
-    Statement *statement = new_statement(ST_INSTRUCTION, label);
+    Statement *statement = new_statement(ST_INSTRUCTION, labels);
     statement->operation = operation;
 
     return operation;
