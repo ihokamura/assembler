@@ -189,7 +189,7 @@ test_data_uint8_array:
 	.align 2
 test_data_uint16_array:
 	.word 0x8001
-	.word 0x9003
+	.value 0x9003
 	.align 4
 test_data_uint32_array:
 	.long 0x80000001

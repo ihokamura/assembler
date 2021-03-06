@@ -125,6 +125,7 @@ directive ::= ".align"
             | ".quad"
             | ".string"
             | ".text"
+            | ".value"
             | ".word"
             | ".zero"
 ```
@@ -177,7 +178,7 @@ static void parse_directive(Label *label)
         reset_current_alignment();
         set_current_section(".text");
     }
-    else if(consume_reserved(".word"))
+    else if(consume_reserved(".value") || consume_reserved(".word"))
     {
         parse_directive_size(SIZEOF_16BIT, label);
     }

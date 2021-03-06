@@ -21,6 +21,7 @@ directive ::= ".align"
             | ".quad"
             | ".string"
             | ".text"
+            | ".value"
             | ".word"
             | ".zero"
 operation ::= mnemonic operands?

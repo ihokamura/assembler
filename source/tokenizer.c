@@ -71,6 +71,7 @@ static const char *directive_list[] = {
     ".quad",
     ".string",
     ".text",
+    ".value",
     ".word",
     ".zero",
 };
