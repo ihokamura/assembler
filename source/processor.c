@@ -326,7 +326,15 @@ void generate_data(const Data *data, ByteBufferType *buffer)
     {
         set_symbol(buffer->size, data->addend, SC_DATA, data->symbol);
     }
-    append_binary_imm(data->value, data->size, buffer);
+
+    if(data->value == 0)
+    {
+        fill_bytes(0x00, data->size, buffer);
+    }
+    else
+    {
+        append_binary_imm(data->value, data->size, buffer);
+    }
 }
 
 
@@ -822,9 +830,9 @@ static void generate_op_movsxd(const List(Operand) *operands, ByteBufferType *bu
 
     /*
     handle the following instructions
-    * MOVSX r16, r/m16
-    * MOVSX r32, r/m32
-    * MOVSX r64, r/m32
+    * MOVSXD r16, r/m16
+    * MOVSXD r32, r/m32
+    * MOVSXD r64, r/m32
     */
     may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
     may_append_binary_rex_prefix_reg_rm(operand1, operand2, true, buffer);

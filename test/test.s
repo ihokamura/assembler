@@ -90,6 +90,10 @@ test_internal_data:
 	call assert_equal_uint32
 
 	mov esi, dword ptr [rip+test_data_uint32_array+4]
+	mov edi, 0x00000000
+	call assert_equal_uint32
+
+	mov esi, dword ptr [rip+test_data_uint32_array+8]
 	mov edi, 0x90000003
 	call assert_equal_uint32
 
@@ -201,6 +205,7 @@ test_data_uint16_array:
 	.align 4
 test_data_uint32_array:
 	.long 0x80000001
+	.zero 4
 	.long 0x90000003
 	.align 8
 test_data_uint64_array:

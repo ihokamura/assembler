@@ -260,7 +260,15 @@ parse directive for zero
 */
 static void parse_directive_zero(List(Label) *labels)
 {
-    new_bss(expect_token(TK_IMMEDIATE)->value, labels);
+    size_t size = expect_token(TK_IMMEDIATE)->value;
+    if(get_current_section() == SC_DATA)
+    {
+        new_data_immediate(size, 0, labels);
+    }
+    else
+    {
+        new_bss(size, labels);
+    }
 }
 
 
