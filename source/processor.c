@@ -119,6 +119,7 @@ static uint8_t get_sib_byte(uint8_t ss, uint8_t index, uint8_t base);
 static uint8_t get_mod_field(const Operand *operand);
 static uint8_t get_reg_field(RegisterKind kind);
 static uint8_t get_rm_field(RegisterKind kind);
+static size_t get_imm_field_size_of_binary_arithmetic_operation(const Operand *op_rm, const Operand *op_imm);
 static void append_binary_prefix(uint8_t prefix, ByteBufferType *buffer);
 static void append_binary_opecode(uint32_t opecode, ByteBufferType *buffer);
 static void append_binary_modrm(uint8_t mod, uint8_t reg, uint8_t rm, ByteBufferType *buffer);
@@ -1172,7 +1173,7 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         may_append_binary_rex_prefix_reg(operand1, true, buffer);
         uint32_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->i_byte : opecode->i;
         append_binary_opecode(op, buffer);
-        append_binary_imm(operand2->immediate, get_operand_size(operand2->kind), buffer);
+        append_binary_imm(operand2->immediate, get_imm_field_size_of_binary_arithmetic_operation(operand1, operand2), buffer);
     }
     else if(is_register_or_memory(operand1->kind) && is_immediate(operand2->kind))
     {
@@ -1186,13 +1187,11 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         * <mnemonic> r/m32, imm32
         * <mnemonic> r/m64, imm32
         */
-        size_t operand1_size = get_operand_size(operand1->kind);
-        size_t operand2_size = get_operand_size(operand2->kind);
-        size_t imm_size = is_signed_immediate(operand2->immediate, SIZEOF_8BIT) ? min(operand1_size, SIZEOF_32BIT) : operand2_size;
-        assert(operand1_size >= operand2_size);
+        assert(get_operand_size(operand1->kind) >= get_operand_size(operand2->kind));
+        size_t imm_size = get_imm_field_size_of_binary_arithmetic_operation(operand1, operand2);
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
-        uint32_t op = (operand1_size == SIZEOF_8BIT) ? opecode->mi_byte : (imm_size == SIZEOF_8BIT ? opecode->mi_imm8 : opecode->mi);
+        uint32_t op = (get_operand_size(operand1->kind) == SIZEOF_8BIT) ? opecode->mi_byte : (imm_size == SIZEOF_8BIT ? opecode->mi_imm8 : opecode->mi);
         append_binary_opecode(op, buffer);
         append_binary_modrm(get_mod_field(operand1), opecode->reg_field_mi, get_reg_field(operand1->reg), buffer);
         if(is_memory(operand1->kind))
@@ -1717,6 +1716,30 @@ get value of r/m field
 static uint8_t get_rm_field(RegisterKind kind)
 {
     return get_reg_field(kind);
+}
+
+
+/*
+get size of immediate field for binary arithmetic operation
+*/
+static size_t get_imm_field_size_of_binary_arithmetic_operation(const Operand *op_rm, const Operand *op_imm)
+{
+    if(is_signed_immediate(op_imm->immediate, SIZEOF_8BIT))
+    {
+        return min(get_operand_size(op_rm->kind), SIZEOF_32BIT);
+    }
+    else
+    {
+        size_t imm_size = get_operand_size(op_imm->kind);
+        if((imm_size == SIZEOF_16BIT) && is_signed_immediate(op_imm->immediate, SIZEOF_16BIT))
+        {
+            return SIZEOF_32BIT;
+        }
+        else
+        {
+            return imm_size;
+        }
+    }
 }
 
 
