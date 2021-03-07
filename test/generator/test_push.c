@@ -70,8 +70,13 @@ static void generate_all_test_case_push(FILE *fp)
         size_t size = imm_info->size;
         if(size <= sizeof(uint32_t))
         {
-            generate_test_case_push_imm(fp, size, imm_info->sint_max_value);
+            generate_test_case_push_imm(fp, size, convert_size_to_sint_max_value(size));
             put_line(fp, "");
+            if(size <= sizeof(uint16_t))
+            {
+                generate_test_case_push_imm(fp, size, convert_size_to_sint_max_plus_1(size));
+                put_line(fp, "");
+            }
         }
     }
 

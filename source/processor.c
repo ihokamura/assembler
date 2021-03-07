@@ -108,7 +108,7 @@ static bool is_memory(OperandKind kind);
 static bool is_register_or_memory(OperandKind kind);
 static bool is_eax_register(RegisterKind kind);
 static bool is_type_i_encoding(const Operand *operand1, const Operand *operand2);
-static bool is_signed_8bit_immediate(const Operand *operand);
+static bool is_signed_immediate(uintmax_t imm, size_t size);
 static size_t get_operand_size(OperandKind kind);
 static uint8_t get_register_index(RegisterKind kind);
 static uint8_t get_rex_prefix(const Operand *operand, size_t prefix_position, bool specify_size);
@@ -314,7 +314,6 @@ static const size_t SIB_POSITION_BASE = 0;
 
 static const size_t OPECODE_SIZE_MAX = 3;
 static const uint8_t UINT8_T_MASK = 0xff;
-static const size_t SIGN_BIT_MASK_8BIT = 0x80;
 
 
 /*
@@ -978,7 +977,7 @@ static void generate_op_push(const List(Operand) *operands, ByteBufferType *buff
         * PUSH imm16
         * PUSH imm32
         */
-        if(get_operand_size(operand->kind) == SIZEOF_8BIT)
+        if((get_operand_size(operand->kind) == SIZEOF_8BIT) && !is_signed_immediate(operand->immediate, SIZEOF_8BIT))
         {
             append_binary_opecode(0x6a, buffer);
             append_binary_imm(operand->immediate, SIZEOF_8BIT, buffer);
@@ -1189,7 +1188,7 @@ static void generate_binary_arithmetic_operation(const BinaryOperationOpecode *o
         */
         size_t operand1_size = get_operand_size(operand1->kind);
         size_t operand2_size = get_operand_size(operand2->kind);
-        size_t imm_size = is_signed_8bit_immediate(operand2) ? min(operand1_size, SIZEOF_32BIT) : operand2_size;
+        size_t imm_size = is_signed_immediate(operand2->immediate, SIZEOF_8BIT) ? min(operand1_size, SIZEOF_32BIT) : operand2_size;
         assert(operand1_size >= operand2_size);
         may_append_binary_instruction_prefix(operand1->kind, PREFIX_OPERAND_SIZE_OVERRIDE, buffer);
         may_append_binary_rex_prefix_reg_rm(operand2, operand1, true, buffer);
@@ -1408,18 +1407,12 @@ static bool is_type_i_encoding(const Operand *operand1, const Operand *operand2)
 
 
 /*
-check if operand is signed 8-bit immediate
+check if an immediate value is signed
 */
-static bool is_signed_8bit_immediate(const Operand *operand)
+static bool is_signed_immediate(uintmax_t imm, size_t size)
 {
-    if(get_operand_size(operand->kind) == SIZEOF_8BIT)
-    {
-        return (operand->immediate & SIGN_BIT_MASK_8BIT) == SIGN_BIT_MASK_8BIT;
-    }
-    else
-    {
-        return false;
-    }
+    uintmax_t mask = (uintmax_t)1 << (8 * size - 1);
+    return (imm & mask) == mask;
 }
 
 
